@@ -1,0 +1,48 @@
+---
+pipeline:
+    name: genome
+    description: "download and prepare genome files for binned analysis"
+    # version: v0.0.1
+# suiteVersions:
+#     suiteName: v0.0.0
+actions: 
+    _global:   
+        environment: protamine-tools
+        condaFamilies:
+            - base
+            - genomics
+            # - r-4.4
+    download:
+        order: 1
+        optionFamilies:
+            - download-genome
+        resources:
+            required:
+                total-ram: 8G
+            recommended: 
+                n-cpu: 1
+                ram-per-cpu: 8G
+        job-manager:
+            recommended:
+                time-limit: 4:00:00
+        description: "download a genome and required support files"
+    bin:
+        order: 2
+        optionFamilies:
+            - genome
+            - bin
+        resources:
+            required:
+                total-ram: 8G
+            recommended: 
+                n-cpu: 4
+                ram-per-cpu: 2G
+        job-manager:
+            recommended:
+                time-limit: 4:00:00
+        description: "create a genome-level bin file with exclusion flag and percent GC"
+container:
+    supported: false
+    registry:  ghcr.io  # domain name of your OCI-compatible, oras-accessible, container registry [ghcr.io]
+    owner:     xxxxxxxx # the name of the owner, e.g., user or organization, at 'registry'
+    installer: apt-get  # the installer program used by the container OS, typically apt-get or yum [apt-get]

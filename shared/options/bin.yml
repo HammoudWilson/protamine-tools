@@ -1,0 +1,9 @@
+---
+options:
+    bin-size: 
+        order: 1
+        short: b
+        type: integer
+        required: false
+        default: 1000
+        description: "bin size in base pairs, at the highest required resolution"

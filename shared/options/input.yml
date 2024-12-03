@@ -1,0 +1,16 @@
+---
+options:
+    input-dir: 
+        order: 1
+        short: i
+        type: string
+        required: true
+        default: null
+        description: "path to a directory with all relevant input aligned and sorted bam files"
+    # metadata-file: 
+    #     order: 2
+    #     short: m
+    #     type: string
+    #     required: false
+    #     default: null
+    #     description: "path to a metadata file with sample information, columns: xxxx"

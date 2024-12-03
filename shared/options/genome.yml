@@ -1,0 +1,23 @@
+---
+options:
+    genome: 
+        order: 1
+        short: g
+        type: string
+        required: false
+        default: mm39
+        description: "name of the reference genome to use (e.g., mm39)"
+    genome-dir:
+        order: 2
+        short: G
+        type: string
+        required: false
+        default: null
+        description: "directory with indexed <--genome>.fa or genome.fa file [.../mdi/resources/genomes/<--genome>]"
+    use-all-chroms: 
+        order: 3
+        short: null
+        type: boolean
+        required: false
+        default: false
+        description: "use all chromosomes as they are found in genome fasta file without filtering"

@@ -1,0 +1,42 @@
+---
+pipeline:
+    name: atac
+    description: "prepare protamine ATAC-seq data for analysis in the interactive app"
+    # version: v0.0.1
+# suiteVersions:
+#     suiteName: v0.0.0
+actions: 
+    _global:   
+        environment: protamine-tools
+        condaFamilies:
+            - base
+            - genomics
+            # - r-4.4
+    bin:
+        order: 1
+        optionFamilies:
+            - input
+            - genome
+            - bin
+        resources:
+            required:
+                total-ram: 2G
+            recommended: 
+                n-cpu: 1
+                ram-per-cpu: 2G
+        job-manager:
+            recommended:
+                time-limit: 1:00:00
+        description: "bin input read data across all samples at high resolution"
+package:
+    bin: # the pipeline action after which a data package should assembled
+        uploadType: protamine-atac # a signal to the Stage 2 framework regarding the package contents
+        files:
+            binCounts:
+                type: rds
+                file: $DATA_FILE_PREFIX.binCounts.rds
+container:
+    supported: false
+    registry:  ghcr.io  # domain name of your OCI-compatible, oras-accessible, container registry [ghcr.io]
+    owner:     xxxxxxxx # the name of the owner, e.g., user or organization, at 'registry'
+    installer: apt-get  # the installer program used by the container OS, typically apt-get or yum [apt-get]

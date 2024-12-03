@@ -10,4 +10,4 @@ channels:
     - defaults
 
 dependencies:
-    - pigz=2.6 # parallel handling of gzip files
+    - pigz=2.8 # parallel handling of gzip files

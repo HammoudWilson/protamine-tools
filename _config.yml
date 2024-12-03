@@ -8,8 +8,8 @@ aux_links:
     - "https://github.com/MiDataInt/mdi-suite-template"
 
 # OPTIONAL: uncomment to list any external tool suite dependencies
-# suite_dependencies:
-#   - GIT_USER/REPOSITORY_NAME
+suite_dependencies:
+  - wilsontelab/genomex-mdi-tools
 
 # OPTIONAL: declare support for suite-level singularity containers
 container:
