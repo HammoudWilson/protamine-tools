@@ -11,7 +11,7 @@ actions:
         condaFamilies:
             - base
             - genomics
-            # - r-4.4
+            - r-4.4
     download:
         order: 1
         optionFamilies:
@@ -24,8 +24,8 @@ actions:
                 ram-per-cpu: 8G
         job-manager:
             recommended:
-                time-limit: 4:00:00
-        description: "download a genome and required support files"
+                time-limit: 1:00:00
+        description: "download genomes and required support files"
     bin:
         order: 2
         optionFamilies:
@@ -39,8 +39,8 @@ actions:
                 ram-per-cpu: 2G
         job-manager:
             recommended:
-                time-limit: 4:00:00
-        description: "create a genome-level bin file with exclusion flag and percent GC"
+                time-limit: 1:00:00
+        description: "create genome-level bin files on nuclear chroms with exclusion flag and percent GC"
 container:
     supported: false
     registry:  ghcr.io  # domain name of your OCI-compatible, oras-accessible, container registry [ghcr.io]

@@ -1,0 +1,16 @@
+---
+options:
+    nucleosomal-stage: 
+        order: 1
+        short: u
+        type: character
+        required: true
+        default: null
+        description: "name of the spermatid stage that best represents nucleosomal fragments, e.g., 'early_round'"
+    subnucleosomal-stage: 
+        order: 2
+        short: U
+        type: character
+        required: true
+        default: null
+        description: "name of the spermatid stage that best represents subnucleosomal fragments, e.g., 'early_elong'"

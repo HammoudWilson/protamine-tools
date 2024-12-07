@@ -1,0 +1,46 @@
+---
+#----------------------------------------------------------------------
+# app metadata
+#----------------------------------------------------------------------
+name: protAtac
+description: "Normalize and visualize protamine ATAC-seq data over multiple samples"
+version: v0.0.0
+# suiteVersions:
+#     suiteName: v0.0.0
+
+#----------------------------------------------------------------------
+# project data file type(s) associated with this app
+# the keys in uploadTypes are matched to key uploadType in incoming package.yml
+#----------------------------------------------------------------------
+uploadTypes:
+    protamine-atac: 
+        contentFileTypes: # anything not listed will not be available to the app
+            binCounts:
+                required: true
+            insertSizes:
+                required: true
+
+#----------------------------------------------------------------------
+# labels and definitions for all sequential analysis steps shown in sidebar
+#----------------------------------------------------------------------
+# module = the appSteps module used for a sequential step
+#    the keyed name of a step becomes its namespace in the 'app' object
+# shortLabel = as shown on dashboard menu (required if not provided as module default)
+# shortDescription = as shown on the Overview page (required if not provided as module default)
+# options = passed to both <module>UI and <module>Server functions
+#    longLabel = the title for the appStep tabbed page
+#    alwaysVisible = declares that step is NOT sequential and thus always available
+#    other options are module specific; see module definitions
+#----------------------------------------------------------------------
+appSteps:
+    upload: # nearly always the 1st step of every app
+        module: sourceFileUpload
+    insertSizes:
+        module: protAtac_insertSizes
+    browser:
+        module: genomex-mdi-tools//trackBrowser
+        # options:
+        #     tracks:
+        #         - svWGS # svWGS tracks are shared in global/classes/browserTracks
+        #         - genomex-mdi-tools//read_pileup
+        #         - bruseq-mdi-tools//BruSeq_generic

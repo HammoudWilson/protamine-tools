@@ -1,0 +1,16 @@
+---
+options:
+    spike-in-genome: 
+        order: 1
+        short: s
+        type: string
+        required: false
+        default: dm6
+        description: "name of the spike-in genome used"
+    spike-in-genome-dir:
+        order: 2
+        short: S
+        type: string
+        required: false
+        default: null
+        description: "directory with indexed <--spike-in-genome>.fa or genome.fa file [.../mdi/resources/genomes/<--spike-in-genome>]"

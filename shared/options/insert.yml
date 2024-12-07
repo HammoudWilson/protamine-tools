@@ -1,0 +1,23 @@
+---
+options:
+    min-mapq: 
+        order: 1
+        short: Q
+        type: integer
+        required: false
+        default: 50
+        description: "minimum allowed mapping quality (MAPQ) score"
+    min-insert-size: 
+        order: 2
+        short: z
+        type: integer
+        required: false
+        default: 25
+        description: "minimum allowed insert size in base pairs"
+    max-insert-size: 
+        order: 3
+        short: Z
+        type: integer
+        required: false
+        default: 1000
+        description: "maximum allowed insert size in base pairs, >= --bin-size"

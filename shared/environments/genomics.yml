@@ -3,4 +3,4 @@
 
 dependencies:
     - samtools=1.21
-    - bedtools=2.31.1
+    - bedtools=2.31

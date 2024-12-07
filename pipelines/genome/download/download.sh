@@ -142,6 +142,16 @@ elif [ "$GENOME" == "mm39" ]; then
     download_genome_gaps
     construct_gc5Base
     download_excluderegions mm39.excluderanges.bed
+
+elif [ "$GENOME" == "dm6" ]; then
+    APPEND_EBV=""
+    download_and_index_genome ""
+    download_genome_gaps
+    construct_gc5Base
+    download_ENCODE_exclusions
+else
+    echo "unsupported genome: ${GENOME}"
+    exit 1
 fi
 
 echo
