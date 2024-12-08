@@ -1,9 +1,9 @@
 #----------------------------------------------------------------------
 # ui
 #----------------------------------------------------------------------
-shortLabel:       "protAtac_normalizeGC" # shown on dashboard menu 
-shortDescription: "protAtac_normalizeGC." # shown on Overview page
-longLabel:        "protAtac_normalizeGC" # shown at top of appStep page 
+shortLabel:       "Normalize GC" # shown on dashboard menu 
+shortDescription: "Use interactive plots to set the GC bias normalization of individual samples." # shown on Overview page
+longLabel:        "Normalize GC bias" # shown at top of appStep page 
 
 #----------------------------------------------------------------------
 # server

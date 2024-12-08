@@ -37,6 +37,8 @@ appSteps:
         module: sourceFileUpload
     insertSizes:
         module: protAtac_insertSizes
+    normalizeGC:
+        module: protAtac_normalizeGC
     browser:
         module: genomex-mdi-tools//trackBrowser
         # options:

@@ -57,20 +57,20 @@ normalizeInsertSizes <- function(this, ref){
     setnames(x, seriesNames)
     x
 }
-getInsertSizeData <- function(insertSizes, type, samples, aggregate, normalize){
-    this <- insertSizes[[type]][, .SD, .SDcols = samples$sample_name]
+getInsertSizeData <- function(insertSizes, refType, samples, aggregate, normalize){
+    this <- insertSizes[[refType]][, .SD, .SDcols = samples$sample_name]
     if(aggregate) this <- aggregateInsertSizes(this, samples)
     if(normalize){
-        ref <-insertSizes[["spike_in"]][, .SD, .SDcols = samples$sample_name]
+        ref <-insertSizes$spike_in[, .SD, .SDcols = samples$sample_name]
         if(aggregate) ref <- aggregateInsertSizes(ref, samples)
         normalizeInsertSizes(this, ref)
     } else {
         this[, lapply(.SD, function(x) x / sum(x, na.rm = TRUE))]
     }
 }
-insertSizesPlot <- function(type){
+insertSizesPlot <- function(refType){
     plot <- staticPlotBoxServer(
-        paste("insertSizesPlot", type, sep = "_"),
+        paste("insertSizesPlot", refType, sep = "_"),
         maxHeight = "400px",
         lines   = TRUE,
         legend  = TRUE,
@@ -83,15 +83,15 @@ insertSizesPlot <- function(type){
             isd <- paInsertSizes(sourceId)
             aggregate <- settings$get("Insert_Sizes","Aggregate_Samples_By_Stage")
             normalize <- settings$get("Insert_Sizes","Normalize_To_Spike_In")
-            if(type == "spike_in" && normalize) req(FALSE)
+            if(refType == "spike_in" && normalize) req(FALSE)
             binSize <- isd$bin_size
-            isd <- getInsertSizeData(isd$insertSizes, type, samples, aggregate, normalize)
+            isd <- getInsertSizeData(isd$insertSizes, refType, samples, aggregate, normalize)
             seriesNames <- colnames(isd)
             colors <- stageColors[if(aggregate) seriesNames else samples$stage]
             # colors <- 1:length(seriesNames)
             names(colors) <- seriesNames
             plot$initializeFrame(
-                xlim = c(0, 750),
+                xlim = c(0, 700),
                 ylim = c(0, max(isd)),
                 xlab = "Insert Size (bp)",
                 ylab = "Frequency"
@@ -107,7 +107,7 @@ insertSizesPlot <- function(type){
             plot$addLegend(
                 legend = seriesNames,
                 col = colors,
-                cex = 0.8
+                cex = 0.85
             )
         }
     )

@@ -26,11 +26,9 @@ build.paSampleCompositeTrack <- function(track, reference, coord, layout){
     req(any(windowBinI))
 
     # calculate plot parameters
-    Sample_Height_Pixels  <- track$settings$get("Bin_Display","Sample_Height_Pixels")
-    Max_Fold_Center       <- track$settings$get("Bin_Display","Max_Fold_Center")
-    Bin_Center_Type       <- track$settings$get("Bin_Display","Bin_Center_Type")
-    # Min_Percent_GC        <- track$settings$get("Bin_Filters","Min_Percent_GC")
-    # Max_Percent_GC        <- track$settings$get("Bin_Filters","Max_Percent_GC")
+    Sample_Height_Pixels <- track$settings$get("Bin_Display","Sample_Height_Pixels")
+    Max_Axis_Value       <- track$settings$get("Bin_Display","Max_Axis_Value")
+    Bin_Center_Type      <- track$settings$get("Bin_Display","Bin_Center_Type")
     sampleNames <- bd$samples$sample_name
     nSamples <- length(sampleNames)
     pixelWidth <- as.integer(layout$plotWidth * layout$dpi)
@@ -83,7 +81,11 @@ build.paSampleCompositeTrack <- function(track, reference, coord, layout){
                     switch(
                         Bin_Center_Type,
                         rpba = rowSums(bc),
-                        subnucleosomal_fraction = bc[, "subnucleosomal"] / rowSums(bc, na.rm = TRUE)
+                        subnucleosomal_fraction = bc[, "subnucleosomal"] / rowSums(bc, na.rm = TRUE), 
+                        gc_adj_z_score = {
+                            gc <- bd$bins$genome[windowBinI, pct_gc]
+                            app$normalizeGC$getBinZScore(sourceId, sampleName, gc, nAlleles, rowSums(bc))
+                        }
                     )
                 }
             ),
@@ -102,9 +104,12 @@ build.paSampleCompositeTrack <- function(track, reference, coord, layout){
             ],
             subnucleosomal_fraction = x[, 
                 .(val = {
-                    # sumCount <- sum(count * basesInPixel / bd$bin_size, na.rm = TRUE)
-                    # nBins    <- sum(        basesInPixel / bd$bin_size, na.rm = TRUE)
-                    # if(nBins == 0) NA_real_ else sumCount / nBins / nAlleles
+                    weighted.mean(val, basesInPixel, na.rm = TRUE)
+                }),
+                keyby = .(pixel)
+            ],
+            gc_adj_z_score = x[, 
+                .(val = {
                     weighted.mean(val, basesInPixel, na.rm = TRUE)
                 }),
                 keyby = .(pixel)
@@ -114,11 +119,14 @@ build.paSampleCompositeTrack <- function(track, reference, coord, layout){
 
     startSpinner(session, message = "assigning colors")
     trackMatrix <-  sapply(sampleNames, function(sampleName){
-        rep(bd$raw$col(
-            bd, 
+        cols <- if(centerTypes_isZScore[[Bin_Center_Type]]) bd$z_score_col(
+            d[[sampleName]],
+            Max_Axis_Value
+        ) else bd$fold_change_col(
             d[[sampleName]] / bd$center$genome[[sampleName]][[Bin_Center_Type]],
-            Max_Fold_Center
-        ), Sample_Height_Pixels)
+            Max_Axis_Value
+        )
+        rep(cols, Sample_Height_Pixels)
     })
 
     startSpinner(session, message = "rendering image")
@@ -150,7 +158,7 @@ build.paSampleCompositeTrack <- function(track, reference, coord, layout){
         image = pngToMdiTrackImage( # for tracks that generate images, not plots
             pngFile, 
             layout, 
-            verticalPadding = 0L, # in pixels
+            verticalPadding = 5L, # in pixels
             hasLeft  = FALSE,
             hasRight = FALSE
         )

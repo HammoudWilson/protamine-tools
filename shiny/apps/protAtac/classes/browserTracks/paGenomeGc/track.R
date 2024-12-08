@@ -18,7 +18,6 @@ new_paGenomeGcTrack <- function(trackId) {
 
 # build method for the S3 class; REQUIRED
 build.paGenomeGcTrack <- function(track, reference, coord, layout){
-    genome <- reference$genome$genome
     startSpinner(session, message = "getting bin data")
     sourceId <- track$settings$items()[[1]]$Source_ID
     bd <- paBinData(sourceId)
@@ -26,8 +25,8 @@ build.paGenomeGcTrack <- function(track, reference, coord, layout){
     req(any(windowBinI))
 
     # calculate plot parameters
-    Height_Pixels   <- track$settings$get("Bin_Display","Height_Pixels")
-    Max_Fold_Center <- track$settings$get("Bin_Display","Max_Fold_Center")
+    Height_Pixels <- track$settings$get("Bin_Display","Height_Pixels")
+    Max_Z_Score   <- track$settings$get("Bin_Display","Max_Z_Score")
     pixelWidth <- as.integer(layout$plotWidth * layout$dpi)
     basesPerPixel <- coord$width / pixelWidth
     coordStart1 <- as.integer(coord$start) # comes in as bit64, incompatible with some functions below
@@ -64,27 +63,21 @@ build.paGenomeGcTrack <- function(track, reference, coord, layout){
     )
     b[excluded == 1, basesInPixel := 0]
 
-# TODO: use genome from source
-# get genome from composite track
-
     startSpinner(session, message = "aggregating bin data")
-    gc <- b[, 
-        .(gc = {
-            sumCount <- sum(pct_gc * basesInPixel / bd$bin_size, na.rm = TRUE)
-            nBins    <- sum(         basesInPixel / bd$bin_size, na.rm = TRUE)
-            if(nBins == 0) NA_real_ else sumCount / nBins
+    gcz <- b[, 
+        .(gcz = {
+            z <- (pct_gc - bd$gc$genome$mean) / bd$gc$genome$sd
+            weighted.mean(z, basesInPixel, na.rm = TRUE) 
         }),
         keyby = .(pixel)
     ][, 
-        gc
+        gcz
     ]
-
     startSpinner(session, message = "assigning colors")
     trackMatrix <-  matrix(
-        rep(bd$raw$col(
-            bd, 
-            gc / bd$gc_center$genome,
-            Max_Fold_Center
+        rep(bd$z_score_col(
+            gcz,
+            Max_Z_Score
         ), Height_Pixels),
         ncol = 1
     )

@@ -1,6 +1,16 @@
+# limit values
+gcLimits <- c(0.25, 0.65) # optimal for mm39 genome
+
+# data types
 refTypes <- c('genome', 'spike_in')
-insertTypes <- c('subnucleosomal', 'nucleosomal')
-centerTypes <- c("rpba", "subnucleosomal_fraction")
+insertTypes <- c('subnucleosomal', 'nucleosomal') # TODO: additional type for intermediate sizes?
+centerTypes_isZScore <- list(
+    rpba = FALSE,
+    subnucleosomal_fraction = FALSE, 
+    gc_adj_z_score = TRUE
+)
+
+# standardized color palettes
 paColors <- list(
     # BROWN  = rgb(0.2, 0,   0),   # extreme gain    
     # RED    = rgb(0.9, 0,   0),   # 3, CN3, full gain
@@ -20,6 +30,11 @@ stageColors <- c(
     early_elong = CONSTANTS$plotlyColors$orange,
     int_elong   = CONSTANTS$plotlyColors$green,
     late_elong  = CONSTANTS$plotlyColors$purple
+)
+nTrackMapColorsPerSide <- 30
+trackMapColors <- list(
+    low  = colorRampPalette(c(paColors$GREY, paColors$BLUE))(nTrackMapColorsPerSide + 1), # blue color is cold/depleted,
+    high = colorRampPalette(c(paColors$GREY, paColors$RED))( nTrackMapColorsPerSide + 1) # red  color is hot/ enriched
 )
 
 # 1,24290X4,day35-wt-rs-rep1,early_round,Early Round Spermatids,1,#440154FF
