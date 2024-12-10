@@ -7,8 +7,10 @@
 # objects instantiated here are available to all appStep modules in a session
 
 # session cache objects
-binsCache        <- new_dataCache('binsCache')
-insertSizesCache <- new_dataCache('insertSizesCache')
+binsCache          <- new_dataCache('binsCache')
+insertSizesCache   <- new_dataCache('insertSizesCache')
+segmentationCache  <- new_dataCache('segmentationCache')
+gcZScoreDeltaCache <- new_dataCache('gcZScoreDeltaCache')
 
 # track and other reactives
 binsWorkingSourceId <- reactiveVal(NULL)

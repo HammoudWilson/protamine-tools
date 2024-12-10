@@ -58,6 +58,17 @@ protAtac_insertSizesUI <- function(id, options) {
                 solidHeader = TRUE
             )
         ),
+        fluidRow(
+            staticPlotBoxUI(
+                ns("insertSizesPlot_NRLL"), 
+                "Normalized Relative Log Likelihood",
+                width = 6,
+                status = "primary",
+                collapsible = TRUE,
+                solidHeader = TRUE,
+                collapsed = FALSE
+            )
+        ),
         NULL
     )
 }

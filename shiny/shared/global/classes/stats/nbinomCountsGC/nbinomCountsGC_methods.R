@@ -2,6 +2,12 @@
 # nbinomCountsGC class generic methods, called as method(obj)
 #----------------------------------------------------------------------
 
+# prevent errors that arise when the GC fraction is outside the range of the model
+suppressGcOutliers.nbinomCountsGC <- function(nb, fractionGC){
+    allowedGC <- range(nb$model$fractionGC)
+    pmax(allowedGC[1], pmin(allowedGC[2], fractionGC))
+}
+
 # returns an object with both x and y data (since x may have been our default) binned fraction GC
 predict.nbinomCountsGC <- function(nb, fractionGC=NULL, type=c('mu', 'peak', 'adjustedPeak'), peakThreshold=10){
     rows <- if(is.null(fractionGC)) TRUE else round(fractionGC * nb$nGcSteps, 0) - nb$indexGC_offset
@@ -83,4 +89,11 @@ viterbi.nbinomCountsGC <- function(nb, # a nbinomCountsGC model
         cn = if(asRle) rle(results) else results,
         maxCN = maxCN
     )
+}
+
+# calculate the z-score of a set of bin counts given a nbinomCountsGC model
+zScore <- function(nb, binCounts, fractionGC, binCN = 2){
+    mu <- predict(nb, suppressGcOutliers(nb, fractionGC), type = 'mu') * binCN # expectedReadCount = rpa * nAlleles
+    variance <- mu + mu**2 / nb$theta
+    (binCounts - mu) / sqrt(variance)
 }

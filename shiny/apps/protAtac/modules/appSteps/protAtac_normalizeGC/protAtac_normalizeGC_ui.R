@@ -18,19 +18,20 @@ protAtac_normalizeGCUI <- function(id, options) {
             width = 6,
             solidHeader = TRUE,
             status = "primary",
-            # collapsible = TRUE,
-            column(
-                width = 3,
-                column1UI
-            ),
-            column(
-                width = 9,
-                column2UI
-            ),
-            column(
-                width = 12,
-                column3UI
-            )
+            collapsible = TRUE,
+            column1UI
+            # column(
+            #     width = 3,
+            #     column1UI
+            # ),
+            # column(
+            #     width = 9,
+            #     column2UI
+            # ),
+            # column(
+            #     width = 12,
+            #     column3UI
+            # )
         )
     }
 
@@ -47,7 +48,7 @@ protAtac_normalizeGCUI <- function(id, options) {
         # terminal = TRUE,
         console = serverEnv$IS_DEVELOPER,
         code = serverEnv$IS_DEVELOPER,
-        # settings = TRUE,
+        settings = TRUE,
 
         # data source selectors
         fluidRow(
@@ -72,19 +73,33 @@ protAtac_normalizeGCUI <- function(id, options) {
         fluidRow(
             plotBox_(
                 "GC Bias",
-                tags$div(
-                    numericInput(ns("nBiasBins"), "# Plotted Bins", value = 10000, min = 1000, max = 50000, step = 1000)
-                ),
                 interactiveScatterplotUI(ns("gcBiasPlot"), height = '400px')
             ),
             plotBox_(
                 title = "GC Bias Residuals",
-                tags$div(
-                    numericInput(ns("nResidualBiasBins"), "# Plotted Bins", value = 10000, min = 1000, max = 50000, step = 1000)
-                ),
                 interactiveScatterplotUI(ns("gcResidualBiasPlot"), height = '400px')
             )
         ),
+        # fluidRow(
+        #     staticPlotBoxUI(
+        #         ns("gcBiasFitComposite"), 
+        #         "Composite of GC Bias Fits",
+        #         width = 6,
+        #         status = "primary",
+        #         collapsible = TRUE,
+        #         solidHeader = TRUE,
+        #         collapsed = FALSE
+        #     ),
+        #     staticPlotBoxUI(
+        #         ns("gcDeltaZPlot"), 
+        #         "Distribution of GC Z-Score Deltas",
+        #         width = 6,
+        #         status = "primary",
+        #         collapsible = TRUE,
+        #         solidHeader = TRUE,
+        #         collapsed = FALSE
+        #     )
+        # ),
         NULL
     )
 }

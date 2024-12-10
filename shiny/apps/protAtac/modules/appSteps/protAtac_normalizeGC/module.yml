@@ -29,11 +29,14 @@ packages: # required R packages
 #----------------------------------------------------------------------
 # module-level settings
 #----------------------------------------------------------------------
-# settings:
-#     <settingsTabName>:
-#         <settingName>:
-#             type:   textInput
-#             value:  abc  
+settings:
+    GC_Bias:
+        N_Plotted_Bins:
+            type:   numericInput
+            value:  20000
+            min:    5000
+            max:    50000
+            step:   5000
 #         <settingName>:
 #             type:   numericInput
 #             value:  1

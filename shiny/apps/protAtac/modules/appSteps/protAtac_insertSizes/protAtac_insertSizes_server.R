@@ -109,12 +109,61 @@ insertSizesPlot <- function(refType){
                 col = colors,
                 cex = 0.85
             )
+            stopSpinner(session)
         }
     )
     plot
 }
 genomePlot  <- insertSizesPlot("genome")
 spikeInPlot <- insertSizesPlot("spike_in")
+
+#----------------------------------------------------------------------
+# plot outputs
+#----------------------------------------------------------------------
+NRLLPlot <- staticPlotBoxServer(
+    "insertSizesPlot_NRLL",
+    maxHeight = "400px",
+    lines   = TRUE,
+    legend  = TRUE,
+    margins = TRUE,
+    title   = TRUE,
+    create = function() {
+        sourceId <- sourceId()
+        seg <- paSegmentation(sourceId)
+        samples <- spermatidStages$selectedSamples()
+        req(sourceId, seg, samples)
+        bd <- paBinData(sourceId)
+        d <- sapply(samples$sample_name, function(sample_name){
+            x <- seg$NRLL[[sample_name]][bd$bins$genome$excluded == 0]
+            x <- as.integer(round(x[x != 0.0] / 0.1)) * 0.1
+            data.table(x = x)[, .(y = .N), keyby = .(x)]
+        }, simplify = FALSE, USE.NAMES = TRUE)
+        colors <- sapply(samples$sample_name, function(sample_name_){
+            stageColors[samples[sample_name == sample_name_, stage]]
+        })
+        names(colors) <- samples$sample_name
+        NRLLPlot$initializeFrame(
+            xlim = c(-2, 1.5),
+            ylim = c(0, 0.25),
+            xlab = "Normalized Relative Log Likelihood (NRLL)",
+            ylab = "Frequency"
+        )
+        abline(v = 0, col = CONSTANTS$plotlyColors$grey)
+        for(sample_name in samples$sample_name){
+            NRLLPlot$addLines(
+                x = d[[sample_name]]$x,
+                y = d[[sample_name]]$y / sum(d[[sample_name]]$y, na.rm = TRUE),
+                col = colors[sample_name]
+            )
+        }
+        NRLLPlot$addLegend(
+            legend = samples$sample_name,
+            col = colors,
+            cex = 0.8
+        )
+        stopSpinner(session)
+    }
+)
 
 #----------------------------------------------------------------------
 # define bookmarking actions
@@ -126,6 +175,7 @@ bookmarkObserver <- observe({
     if(!is.null(bm$outcomes)){
         genomePlot$settings$replace(bm$outcomes$genomePlotSettings)
         spikeInPlot$settings$replace(bm$outcomes$spikeInPlotSettings)
+        NRLLPlot$settings$replace(bm$outcomes$NRLLPlotSettings)
     }
     # updateTextInput(session, 'xxx', value = bm$outcomes$xxx)
     # xxx <- bm$outcomes$xxx
@@ -140,7 +190,8 @@ list(
     settings = settings$all_,
     outcomes = list(
         genomePlotSettings  = genomePlot$settings$all_,
-        spikeInPlotSettings = spikeInPlot$settings$all_
+        spikeInPlotSettings = spikeInPlot$settings$all_,
+        NRLLPlotSettings    = NRLLPlot$settings$all_
     ),
     # isReady = reactive({ getStepReadiness(options$source, ...) }),
     NULL

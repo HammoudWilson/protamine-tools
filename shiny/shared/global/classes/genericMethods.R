@@ -7,3 +7,6 @@
 #         UseMethod("genericName", x)
 #     }
 #----------------------------------------------------------------------
+suppressGcOutliers <- function(x, ...) {
+    UseMethod("suppressGcOutliers", x)
+}

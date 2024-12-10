@@ -1,6 +1,8 @@
 # action:
 #     prepare bam alignments for bin counting and insert size assessment
 # expects:
+#     $ENFORCE_EXCLUSIONS as arg1
+#     $GENOME_EXCLUSIONS_BED and $GENOME_GAPS_FILE, as dictated by $ENFORCE_EXCLUSIONS
 #     $BAM_FILE
 #     $CHROM, can be empty to assess all chromosomes
 #     $BIN_SIZE
@@ -9,6 +11,13 @@
 #     $MAX_INSERT_SIZE
 # outputs:
 #     distinct insert endpoints in format "start1\tend1_1[,end1_2,...]"on STDOUT
+
+# parse arguments
+ENFORCE_EXCLUSIONS=$1
+EXCLUDE_COMMAND="cat"
+if [ "$ENFORCE_EXCLUSIONS" != "" ]; then
+    EXCLUDE_COMMAND="bedtools intersect -v -a - -b ${GENOME_EXCLUSIONS_BED}"
+fi
 
 # if needed, remove "chr" from $CHROM to match the bam file
 RNAME=`samtools view $BAM_FILE | head -n 1 | cut -f 3`
@@ -34,7 +43,12 @@ fi
 #       read is PCR or optical duplicate (0x400)
 #       supplementary alignment (0x800)
 # enforce minimum mapping quality
-samtools view --require-flags 3 --exclude-flags 3868 --min-MQ $MIN_MAPQ $BAM_FILE $CHROM_WRK | 
+samtools view --bam --require-flags 3 --exclude-flags 3868 --min-MQ $MIN_MAPQ $BAM_FILE $CHROM_WRK | 
+
+# remove excluded regions as requested
+# TODO: this doesn't work propery when CHROM_WRK has been changed, i.e., when GENOME_EXCLUSIONS_BED and BAM_FILE have different chromosome naming conventions
+$EXCLUDE_COMMAND |
+samtools view |
 
 # enforce insert size length filters
 # also, disallow inserts longer than the bin size, so all reads will be counted in at most two bins (one per endpoint)

@@ -37,7 +37,8 @@ checkEnvVars(list(
         'SPIKE_IN_FASTA',
         'GENOME_BINS_BED',
         'SPIKE_IN_BINS_BED',
-        'ACTION_DIR'
+        'ACTION_DIR',
+        'DATA_FILE_PREFIX'
     ),
     integer = c(
         'MIN_MAPQ',
@@ -123,9 +124,6 @@ binCounts <- sapply(refTypes, function(refType) { # so, one list entry for genom
 
 message("processing insert size distributions")
 getInsertSizes <- paste('bash', file.path(env$ACTION_DIR, 'get_insert_sizes.sh'))
-
-# TODO: makes sure this enforces exclusions (and only uses sex chroms?)
-
 insertSizes <- sapply(refTypes, function(refType) { # so, one list entry for genome, one for spike-in, same as bins
     message(paste(' ', refType))
     ref <- references[[refType]]

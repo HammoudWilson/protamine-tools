@@ -6,9 +6,16 @@ refTypes <- c('genome', 'spike_in')
 insertTypes <- c('subnucleosomal', 'nucleosomal') # TODO: additional type for intermediate sizes?
 centerTypes_isZScore <- list(
     rpba = FALSE,
+    gc_adj_z_score = TRUE,
     subnucleosomal_fraction = FALSE, 
-    gc_adj_z_score = TRUE
+    subnucleosomal_nrll = TRUE
 )
+stageTypes <- list(
+    round = c('early_round', 'late_round'),
+    elong = c('early_elong', 'int_elong')   # not late elongating, too few reads
+)
+typedStages <- unlist(stageTypes)
+allStages <- c(typedStages, 'late_elong')
 
 # standardized color palettes
 paColors <- list(

@@ -21,7 +21,7 @@ settings <- activateMdiHeaderLinks( # uncomment as needed
     # dir = appStepDir, # for terminal emulator
     envir = environment(), # for R console
     baseDirs = appStepDir, # for code viewer/editor
-    # settings = id, # for step-level settings
+    settings = id, # for step-level settings
     # immediate = TRUE # plus any other arguments passed to settingsServer()
 )
 
@@ -79,10 +79,6 @@ gcBiasModel <- reactive({
     sample <- sample()
     gcBiasModels[[sample$sample_name]]
 })
-suppressGcOutliers <- function(nb, gc){
-    allowedGC <- range(nb$model$fractionGC)
-    pmax(allowedGC[1], pmin(allowedGC[2], gc))
-}
 
 #----------------------------------------------------------------------
 # interactive GC bias plots, selection cascades to solving negative binomial
@@ -91,16 +87,16 @@ gcBiasPlotData <- function(){
     sourceId <- sourceId()
     sample <- sample()
     req(sourceId, sample)
-    startSpinner(session, message = paste("plotting", sample$sample_name))
+    startSpinner(session, message = paste("plotting", sample$sample_name))    
     bd <- paBinData(sourceId)
-    I <- bd$bins$genome[, excluded == 0 & nAlleles == 2] # 
+    I <- bd$bins$genome[, excluded == 0 & nAlleles == 2]
     nAlleles <- bd$bins$genome[I, nAlleles]
     data.table(
-        x = bd$bins$genome[I, pct_gc],
+        x = bd$bins$genome[I, pct_gc], # same as fractionGC
         y = rowSums(bd$binCounts$genome[I, , sample$sample_name], na.rm = TRUE), # rpb = reads per bin
-        nAlleles = nAlleles,
-        color = ifelse(nAlleles == 2, CONSTANTS$plotlyColors$blue, CONSTANTS$plotlyColors$orange)
-    )[sample.int(.N, min(.N, input$nBiasBins))]
+        nAlleles = nAlleles, # same as binCN
+        color = CONSTANTS$plotlyColors$blue
+    )[sample.int(.N, min(.N, settings$get("GC_Bias","N_Plotted_Bins")))]
 }
 gcOverplotData <- function(){
     gcBiasModel <- gcBiasModel()
@@ -122,10 +118,6 @@ gcBiasPlot <- interactiveScatterplotServer(
         x
     }),
     accelerate = TRUE,
-    # color = reactive({
-    #     x <- gcBiasPlotData() 
-        
-    # }),
     overplot = reactive({
         x <- gcOverplotData()
         stopSpinner(session)
@@ -165,15 +157,19 @@ gcResidualBiasPlotData <- function(){
     req(gcBiasModel, sourceId, sample)
     startSpinner(session, message = paste("plotting", sample$sample_name))
     bd <- paBinData(sourceId)
+    startSpinner(session, message = "rendering GC bias")
     I  <- bd$bins$genome[, excluded == 0]
-    gc <- bd$bins$genome[I, pct_gc]
-    nAlleles <- bd$bins$genome[I, nAlleles]
-    rpb_fit <- predict(gcBiasModel$fit, fractionGC = gc, type = "mu") * nAlleles
+    fractionGC <- bd$bins$genome[I, pct_gc]
+    binCN <- bd$bins$genome[I, nAlleles]
+    rpb_fit <- predict(gcBiasModel$fit, fractionGC, type = "mu") * binCN
+    binCounts <- rowSums(bd$binCounts$genome[I, , sample$sample_name], na.rm = TRUE)
+    gcrz <- gcResidualZScores(sourceId, gcBiasModels())
     data.table(
-        x = gc,
-        y = (rowSums(bd$binCounts$genome[I, , sample$sample_name], na.rm = TRUE) - rpb_fit) / sqrt(rpb_fit), # rbp z-score under Poisson variance = mean,
-        color = ifelse(nAlleles == 2, CONSTANTS$plotlyColors$blue, CONSTANTS$plotlyColors$orange)
-    )[sample.int(.N, min(.N, input$nResidualBiasBins))]
+        x = fractionGC,
+        y = zScore(gcBiasModel$fit, binCounts, fractionGC, binCN),
+        # color = ifelse(binCN == 2, CONSTANTS$plotlyColors$blue, CONSTANTS$plotlyColors$orange)
+        color = z_score_color(gcrz$stageType_delta$z[I], 2)
+    )[sample.int(.N, min(.N, settings$get("GC_Bias","N_Plotted_Bins")))]
 }
 gcResidualBiasPlot <- interactiveScatterplotServer(
     "gcResidualBiasPlot",
@@ -190,6 +186,89 @@ gcResidualBiasPlot <- interactiveScatterplotServer(
     yrange = function(...) range_both(..., foldIQR = 5),
     selectable = "lasso"
 )
+
+# #----------------------------------------------------------------------
+# # composite of all fits
+# #----------------------------------------------------------------------
+# gcBiasFitCompositePlot <- staticPlotBoxServer(
+#     "gcBiasFitComposite",
+#     maxHeight = "400px",
+#     lines   = TRUE,
+#     legend  = TRUE,
+#     margins = TRUE,
+#     title   = TRUE,
+#     create = function() {
+#         sourceId <- sourceId()
+#         bd <- paBinData(sourceId)
+#         gcBiasModels<- gcBiasModels()
+#         samples <- samples()
+
+#         maxY <- 0
+#         d <- sapply(samples$sample_name, function(sample_name){
+#             gcBiasModel <- gcBiasModels[[sample_name]]
+#             if(!isTruthy(gcBiasModel)) return(NULL)
+#             fit <- gcBiasModel$fit
+#             I  <- bd$bins$genome[, excluded == 0]
+#             binCounts <- rowSums(bd$binCounts$genome[I, , sample_name], na.rm = TRUE)
+#             y <- predict(fit, fit$model$fractionGC, type = 'mu') * 2 / sum(binCounts, na.rm = TRUE)
+#             maxY <<- max(maxY, max(y, na.rm = TRUE))
+#             data.table(
+#                 x = fit$model$fractionGC,
+#                 y = y
+#             )
+#         }, simplify = FALSE, USE.NAMES = TRUE)
+#         colors <- sapply(samples$sample_name, function(sample_name_){
+#             stageColors[samples[sample_name == sample_name_, stage]]
+#         })
+#         names(colors) <- samples$sample_name
+#         gcBiasFitCompositePlot$initializeFrame(
+#             xlim = gcLimits,
+#             ylim = c(0, maxY),
+#             xlab = "Fraction GC",
+#             ylab = "Normalized Reads Per Bin"
+#         )
+#         for(sample_name in samples$sample_name){
+#             gcBiasFitCompositePlot$addLines(
+#                 x = d[[sample_name]]$x,
+#                 y = d[[sample_name]]$y,
+#                 col = colors[sample_name]
+#             )
+#         }
+#         gcBiasFitCompositePlot$addLegend(
+#             legend = samples$sample_name,
+#             col = colors,
+#             cex = 0.8
+#         )
+#         stopSpinner(session)
+#     }
+# )
+# gcDeltaZPlot <- staticPlotBoxServer(
+#     "gcDeltaZPlot",
+#     maxHeight = "400px",
+#     lines   = TRUE,
+#     legend  = TRUE,
+#     margins = TRUE,
+#     title   = TRUE,
+#     create = function() {
+#         sourceId <- sourceId()
+#         gcBiasModels<- gcBiasModels()
+#         gczd <- gcZScoreDelta(sourceId, gcBiasModels)$gczd
+#         gczd <- data.table(x = as.integer(round(gczd / 0.1, 0)) * 0.1)[, .(y = .N), keyby = .(x)]
+#         gczd[, y := y / sum(y, na.rm = TRUE)]
+#         gcDeltaZPlot$initializeFrame(
+#             xlim = c(-4, 4),
+#             ylim = c(0, max(gczd$y, na.rm = TRUE)),
+#             xlab = "GC Z-Score Delta",
+#             ylab = "Frequency"
+#         )
+#         abline(v = 0, col = "grey")
+#         gcDeltaZPlot$addLines(
+#             x = gczd$x,
+#             y = gczd$y
+#         )
+#         stopSpinner(session)
+#     }
+# )
 
 #----------------------------------------------------------------------
 # fit negative binomial distribution to GC bias
@@ -224,27 +303,23 @@ getGcBiasModels_externalCall <- function(sourceId){
     if(isTruthy(gcSourceId) && gcSourceId == sourceId) gcBiasModels()
     else getGcBiasModels(sourceId = sourceId)
 }
-getExpectedReadsPerBin <- function(sourceId, sampleName, gc, nAlleles){ # for plotting GC-normalized copy number at bin level
+getBinZScore <- function(sourceId, sampleName, binCounts, fractionGC, binCN){
     gcBiasModels <- getGcBiasModels_externalCall(sourceId)
     gcBiasModel <- gcBiasModels[[sampleName]]
     if(!isTruthy(gcBiasModel)) return(NULL)
-    predict(gcBiasModel$fit, suppressGcOutliers(gcBiasModel$fit, gc), type = 'mu') * nAlleles
-}
-getBinZScore <- function(sourceId, sampleName, gc, nAlleles, binCounts){
-    rpb <- getExpectedReadsPerBin(sourceId, sampleName, gc, nAlleles)
-    if(!isTruthy(rpb)) return(NULL)
-    (binCounts - rpb) / sqrt(rpb) # assuming Poisson variance
+    zScore(gcBiasModel$fit, binCounts, fractionGC, binCN)
 }
 
 #----------------------------------------------------------------------
 # define bookmarking actions
 #----------------------------------------------------------------------
-observe({
+bookmarkObserver <- observe({
     bm <- getModuleBookmark(id, module, bookmark, locks)
     req(bm)
-    # settings$replace(bm$settings)
+    settings$replace(bm$settings)
     # updateTextInput(session, 'xxx', value = bm$outcomes$xxx)
     # xxx <- bm$outcomes$xxx
+    bookmarkObserver$destroy()
 })
 
 #----------------------------------------------------------------------
@@ -252,11 +327,10 @@ observe({
 #----------------------------------------------------------------------
 list(
     input = input,
-    # settings = settings$all_,
+    settings = settings$all_,
     outcomes = list(),
     # isReady = reactive({ getStepReadiness(options$source, ...) }),
     getGcBiasModels_externalCall = getGcBiasModels_externalCall,
-    getExpectedReadsPerBin = getExpectedReadsPerBin,
     getBinZScore = getBinZScore,
     NULL
 )

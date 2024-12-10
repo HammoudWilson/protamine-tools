@@ -1,4 +1,4 @@
-# template for settings relevant to the paSampleComposite browserTrack type
+# template for settings relevant to the paGenomeGc browserTrack type
 
 # uncomment this section to include standard settings from widgets/browserTrack/settings.yml
 # see: https://github.com/wilsontelab/genomex-mdi-tools
@@ -13,24 +13,16 @@
 # see: https://midataint.github.io/mdi-apps-framework/docs/settings/yaml-declarations.html
 settings:
     Bin_Display:
-        Bin_Data_Type:
-            type:   selectInput
-            value:  rpba
-            choices:
-                - rpba
-                - gc_adj_z_score
-                - subnucleosomal_fraction
-                - subnucleosomal_nrll
-        Sample_Height_Pixels:
+        Max_Z_Score:
+            type:   numericInput
+            value:  1.4
+            min:    1
+            max:    2
+            step:   0.1
+        Height_Pixels:
             type:   numericInput
             value:  10
             min:    6
-            max:    25
-            step:   1
-        Max_Axis_Value:
-            type:   numericInput
-            value:  10
-            min:    1
             max:    25
             step:   1
 # uncomment this section to specify track-specific settings

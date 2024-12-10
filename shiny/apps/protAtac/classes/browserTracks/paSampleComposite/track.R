@@ -28,7 +28,7 @@ build.paSampleCompositeTrack <- function(track, reference, coord, layout){
     # calculate plot parameters
     Sample_Height_Pixels <- track$settings$get("Bin_Display","Sample_Height_Pixels")
     Max_Axis_Value       <- track$settings$get("Bin_Display","Max_Axis_Value")
-    Bin_Center_Type      <- track$settings$get("Bin_Display","Bin_Center_Type")
+    Bin_Data_Type        <- track$settings$get("Bin_Display","Bin_Data_Type")
     sampleNames <- bd$samples$sample_name
     nSamples <- length(sampleNames)
     pixelWidth <- as.integer(layout$plotWidth * layout$dpi)
@@ -79,13 +79,14 @@ build.paSampleCompositeTrack <- function(track, reference, coord, layout){
                 val = {
                     bc <- bd$binCounts$genome[windowBinI, , sampleName]
                     switch(
-                        Bin_Center_Type,
+                        Bin_Data_Type,
                         rpba = rowSums(bc),
-                        subnucleosomal_fraction = bc[, "subnucleosomal"] / rowSums(bc, na.rm = TRUE), 
                         gc_adj_z_score = {
                             gc <- bd$bins$genome[windowBinI, pct_gc]
-                            app$normalizeGC$getBinZScore(sourceId, sampleName, gc, nAlleles, rowSums(bc))
-                        }
+                            app$normalizeGC$getBinZScore(sourceId, sampleName, rowSums(bc), gc, nAlleles)
+                        },
+                        subnucleosomal_fraction = bc[, "subnucleosomal"] / rowSums(bc, na.rm = TRUE), 
+                        subnucleosomal_nrll = paSegmentation(sourceId)$NRLL[windowBinI][[sampleName]]
                     )
                 }
             ),
@@ -93,7 +94,7 @@ build.paSampleCompositeTrack <- function(track, reference, coord, layout){
             all.x = TRUE
         )
         switch(
-            Bin_Center_Type,
+            Bin_Data_Type,
             rpba = x[, 
                 .(val = {
                     sumCount <- sum(val * basesInPixel / bd$bin_size, na.rm = TRUE)
@@ -102,13 +103,7 @@ build.paSampleCompositeTrack <- function(track, reference, coord, layout){
                 }),
                 keyby = .(pixel)
             ],
-            subnucleosomal_fraction = x[, 
-                .(val = {
-                    weighted.mean(val, basesInPixel, na.rm = TRUE)
-                }),
-                keyby = .(pixel)
-            ],
-            gc_adj_z_score = x[, 
+            x[, 
                 .(val = {
                     weighted.mean(val, basesInPixel, na.rm = TRUE)
                 }),
@@ -119,11 +114,11 @@ build.paSampleCompositeTrack <- function(track, reference, coord, layout){
 
     startSpinner(session, message = "assigning colors")
     trackMatrix <-  sapply(sampleNames, function(sampleName){
-        cols <- if(centerTypes_isZScore[[Bin_Center_Type]]) bd$z_score_col(
+        cols <- if(centerTypes_isZScore[[Bin_Data_Type]]) bd$z_score_col(
             d[[sampleName]],
             Max_Axis_Value
         ) else bd$fold_change_col(
-            d[[sampleName]] / bd$center$genome[[sampleName]][[Bin_Center_Type]],
+            d[[sampleName]] / bd$center$genome[[sampleName]][[Bin_Data_Type]],
             Max_Axis_Value
         )
         rep(cols, Sample_Height_Pixels)
