@@ -1,0 +1,37 @@
+---
+options:
+    nucleosomal-stage: 
+        order: 1
+        short: l
+        type: character
+        required: false
+        default: early_round
+        description: "name of a single spermatid stage that best represents nucleosomal fragments"
+    subnucleosomal-stage: 
+        order: 2
+        short: L
+        type: character
+        required: false
+        default: int_elong
+        description: "name of a single spermatid stage that best represents subnucleosomal fragments"
+    stage-types:
+        order: 3
+        short: y
+        type: character
+        required: false
+        default: round:early_round,late_round;elong:early_elong,int_elong # deliberately omit late_elong which has low signal
+        description: "assignment of spermatid stages into two stage types as stageType1:stage1[,stage2...];stageType2:stage3[,stage4...]"
+    transcription-bed:
+        order: 4
+        short: B
+        type: character
+        required: false
+        default: NA
+        description: "path to a BED6 file containing transcription RPKM/FPKM values for genome regions or genes"
+    gc-limits:
+        order: 5
+        short: c
+        type: character
+        required: false
+        default: 0.25,0.65
+        description: "comma-delimited lower and upper bin GC content limits; bins outside these limits are excluded"

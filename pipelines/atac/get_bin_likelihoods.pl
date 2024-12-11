@@ -6,7 +6,7 @@
 #     stream of distinct insert endpoints in format "start1\tend1_1[,end1_2,...]"
 # outputs:
 #     LL_nuc, LL_subnuc, nInserts for each bin on STDOUT
-#     formatted to support segment.pl and calculating NRLL for each bin and called HMM segment
+#     to support downstream parsing for bin-level NRLL calculation or HMM
 
 use strict;
 use warnings;
@@ -57,15 +57,9 @@ while(<STDIN>){
 
 # print the counts
 foreach my $binI0(0..$ENV{MAX_BIN_I0}){
-    my $LL_nuc    = $logLikelihoods{nucleosomal   }[$binI0]; # TODO: divide by 2?
-    my $LL_subnuc = $logLikelihoods{subnucleosomal}[$binI0];
-    my $nInserts  = $nInserts[$binI0];
     print join("\t", 
-        join(",", $LL_nuc, $LL_subnuc), # will be replaced with 0|1 HMM state by segment.pl
-        $LL_nuc,
-        $LL_subnuc,
-        $nInserts
-        # ,
-        # $nInserts > 0 ? ($LL_subnuc - $LL_nuc) / $nInserts : 0
+        $logLikelihoods{nucleosomal   }[$binI0],
+        $logLikelihoods{subnucleosomal}[$binI0],
+        $nInserts[$binI0]
     ), "\n";
 }

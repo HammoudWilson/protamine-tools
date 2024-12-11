@@ -28,7 +28,7 @@ settings <- activateMdiHeaderLinks( # uncomment as needed
 #----------------------------------------------------------------------
 # data package sources and source-level data objects derived from pipeline
 #----------------------------------------------------------------------
-sourceId <- dataSourceTableServer("source", selection = "single") 
+sourceId <- dataSourceTableServer("source", selection = "single")
 samples <- reactive({ # vector of the names of all co-analyzed samples
     sourceId <- sourceId()
     req(sourceId)
@@ -163,12 +163,12 @@ gcResidualBiasPlotData <- function(){
     binCN <- bd$bins$genome[I, nAlleles]
     rpb_fit <- predict(gcBiasModel$fit, fractionGC, type = "mu") * binCN
     binCounts <- rowSums(bd$binCounts$genome[I, , sample$sample_name], na.rm = TRUE)
-    gcrz <- gcResidualZScores(sourceId, gcBiasModels())
+    # gcrz <- gcResidualZScores(sourceId, gcBiasModels())
     data.table(
         x = fractionGC,
         y = zScore(gcBiasModel$fit, binCounts, fractionGC, binCN),
-        # color = ifelse(binCN == 2, CONSTANTS$plotlyColors$blue, CONSTANTS$plotlyColors$orange)
-        color = z_score_color(gcrz$stageType_delta$z[I], 2)
+        color = ifelse(binCN == 2, CONSTANTS$plotlyColors$blue, CONSTANTS$plotlyColors$orange)
+        # color = z_score_color(gcrz$stageType_delta$z[I], 2)
     )[sample.int(.N, min(.N, settings$get("GC_Bias","N_Plotted_Bins")))]
 }
 gcResidualBiasPlot <- interactiveScatterplotServer(
@@ -187,88 +187,57 @@ gcResidualBiasPlot <- interactiveScatterplotServer(
     selectable = "lasso"
 )
 
-# #----------------------------------------------------------------------
-# # composite of all fits
-# #----------------------------------------------------------------------
-# gcBiasFitCompositePlot <- staticPlotBoxServer(
-#     "gcBiasFitComposite",
-#     maxHeight = "400px",
-#     lines   = TRUE,
-#     legend  = TRUE,
-#     margins = TRUE,
-#     title   = TRUE,
-#     create = function() {
-#         sourceId <- sourceId()
-#         bd <- paBinData(sourceId)
-#         gcBiasModels<- gcBiasModels()
-#         samples <- samples()
-
-#         maxY <- 0
-#         d <- sapply(samples$sample_name, function(sample_name){
-#             gcBiasModel <- gcBiasModels[[sample_name]]
-#             if(!isTruthy(gcBiasModel)) return(NULL)
-#             fit <- gcBiasModel$fit
-#             I  <- bd$bins$genome[, excluded == 0]
-#             binCounts <- rowSums(bd$binCounts$genome[I, , sample_name], na.rm = TRUE)
-#             y <- predict(fit, fit$model$fractionGC, type = 'mu') * 2 / sum(binCounts, na.rm = TRUE)
-#             maxY <<- max(maxY, max(y, na.rm = TRUE))
-#             data.table(
-#                 x = fit$model$fractionGC,
-#                 y = y
-#             )
-#         }, simplify = FALSE, USE.NAMES = TRUE)
-#         colors <- sapply(samples$sample_name, function(sample_name_){
-#             stageColors[samples[sample_name == sample_name_, stage]]
-#         })
-#         names(colors) <- samples$sample_name
-#         gcBiasFitCompositePlot$initializeFrame(
-#             xlim = gcLimits,
-#             ylim = c(0, maxY),
-#             xlab = "Fraction GC",
-#             ylab = "Normalized Reads Per Bin"
-#         )
-#         for(sample_name in samples$sample_name){
-#             gcBiasFitCompositePlot$addLines(
-#                 x = d[[sample_name]]$x,
-#                 y = d[[sample_name]]$y,
-#                 col = colors[sample_name]
-#             )
-#         }
-#         gcBiasFitCompositePlot$addLegend(
-#             legend = samples$sample_name,
-#             col = colors,
-#             cex = 0.8
-#         )
-#         stopSpinner(session)
-#     }
-# )
-# gcDeltaZPlot <- staticPlotBoxServer(
-#     "gcDeltaZPlot",
-#     maxHeight = "400px",
-#     lines   = TRUE,
-#     legend  = TRUE,
-#     margins = TRUE,
-#     title   = TRUE,
-#     create = function() {
-#         sourceId <- sourceId()
-#         gcBiasModels<- gcBiasModels()
-#         gczd <- gcZScoreDelta(sourceId, gcBiasModels)$gczd
-#         gczd <- data.table(x = as.integer(round(gczd / 0.1, 0)) * 0.1)[, .(y = .N), keyby = .(x)]
-#         gczd[, y := y / sum(y, na.rm = TRUE)]
-#         gcDeltaZPlot$initializeFrame(
-#             xlim = c(-4, 4),
-#             ylim = c(0, max(gczd$y, na.rm = TRUE)),
-#             xlab = "GC Z-Score Delta",
-#             ylab = "Frequency"
-#         )
-#         abline(v = 0, col = "grey")
-#         gcDeltaZPlot$addLines(
-#             x = gczd$x,
-#             y = gczd$y
-#         )
-#         stopSpinner(session)
-#     }
-# )
+#----------------------------------------------------------------------
+# composite of all fits
+#----------------------------------------------------------------------
+gcBiasFitCompositePlot <- staticPlotBoxServer(
+    "gcBiasFitComposite",
+    maxHeight = "400px",
+    lines   = TRUE,
+    legend  = TRUE,
+    margins = TRUE,
+    title   = TRUE,
+    create = function() {
+        sourceId <- sourceId()
+        bd <- paBinData(sourceId)
+        gcBiasModels<- gcBiasModels()
+        samples <- samples()
+        maxY <- 0
+        d <- sapply(samples$sample_name, function(sample_name){
+            gcBiasModel <- gcBiasModels[[sample_name]]
+            if(!isTruthy(gcBiasModel)) return(NULL)
+            fit <- gcBiasModel$fit
+            I  <- bd$bins$genome[, excluded == 0]
+            binCounts <- rowSums(bd$binCounts$genome[I, , sample_name], na.rm = TRUE)
+            y <- predict(fit, fit$model$fractionGC, type = 'mu') * 2 / sum(binCounts, na.rm = TRUE)
+            maxY <<- max(maxY, max(y, na.rm = TRUE))
+            data.table(
+                x = fit$model$fractionGC,
+                y = y
+            )
+        }, simplify = FALSE, USE.NAMES = TRUE)
+        colors <- getSampleColorsByStage(samples)
+        gcBiasFitCompositePlot$initializeFrame(
+            xlim = gcLimits,
+            ylim = c(0, maxY),
+            xlab = "Fraction GC",
+            ylab = "Normalized Reads Per Bin"
+        )
+        for(sample_name in samples$sample_name){
+            gcBiasFitCompositePlot$addLines(
+                x = d[[sample_name]]$x,
+                y = d[[sample_name]]$y,
+                col = colors[sample_name]
+            )
+        }
+        gcBiasFitCompositePlot$addLegend(
+            legend = samples$sample_name,
+            col = colors,
+            cex = 0.8
+        )
+        stopSpinner(session)
+    }
+)
 
 #----------------------------------------------------------------------
 # fit negative binomial distribution to GC bias

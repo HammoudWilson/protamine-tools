@@ -19,6 +19,8 @@ uploadTypes:
                 required: true
             insertSizes:
                 required: true
+            scores:
+                required: true
             segmentation:
                 required: false
 
@@ -39,10 +41,12 @@ appSteps:
         module: sourceFileUpload
     normalizeGC:
         module: protAtac_normalizeGC
-    # insertSizes:
-    #     module: protAtac_insertSizes
-    browser:
-        module: genomex-mdi-tools//trackBrowser
+    insertSizes:
+        module: protAtac_insertSizes
+    scoreSummary:
+        module: protAtac_scoreSummary
+    # browser:
+    #     module: genomex-mdi-tools//trackBrowser
         # options:
         #     tracks:
         #         - svWGS # svWGS tracks are shared in global/classes/browserTracks

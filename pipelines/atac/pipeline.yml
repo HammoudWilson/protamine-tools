@@ -20,6 +20,7 @@ actions:
             - spike-in
             - insert
             - bin
+            - score
         resources:
             required:
                 total-ram: 8G
@@ -29,7 +30,7 @@ actions:
         job-manager:
             recommended:
                 time-limit: 2:00:00
-        description: "collate read data across all samples into high resolution bins and insert size distributions"
+        description: "collate read data across all samples into high resolution bins with various scores"
     segment:
         order: 2
         optionFamilies:
@@ -38,6 +39,7 @@ actions:
             - spike-in
             - insert
             - bin
+            - score
             - segment
         resources:
             required:
@@ -59,6 +61,9 @@ package:
             insertSizes:
                 type: rds
                 file: $DATA_FILE_PREFIX.insertSizes.rds
+            scores:
+                type: rds
+                file: $DATA_FILE_PREFIX.scores.rds
     segment: # the pipeline action after which a data package should assembled
         uploadType: protamine-atac # a signal to the Stage 2 framework regarding the package contents
         extends:    collate

@@ -12,26 +12,14 @@ protAtac_normalizeGCUI <- function(id, options) {
     options <- setDefaultOptions(options, stepModuleInfo$protAtac_normalizeGC)
 
     # UI functions
-    plotBox_ <- function(title, column1UI, column2UI = NULL, column3UI = NULL){
+    plotBox_ <- function(title, ui){
         box(
             title = title,
             width = 6,
             solidHeader = TRUE,
             status = "primary",
             collapsible = TRUE,
-            column1UI
-            # column(
-            #     width = 3,
-            #     column1UI
-            # ),
-            # column(
-            #     width = 9,
-            #     column2UI
-            # ),
-            # column(
-            #     width = 12,
-            #     column3UI
-            # )
+            ui
         )
     }
 
@@ -76,30 +64,21 @@ protAtac_normalizeGCUI <- function(id, options) {
                 interactiveScatterplotUI(ns("gcBiasPlot"), height = '400px')
             ),
             plotBox_(
-                title = "GC Bias Residuals",
+                "GC Bias Residuals",
                 interactiveScatterplotUI(ns("gcResidualBiasPlot"), height = '400px')
             )
         ),
-        # fluidRow(
-        #     staticPlotBoxUI(
-        #         ns("gcBiasFitComposite"), 
-        #         "Composite of GC Bias Fits",
-        #         width = 6,
-        #         status = "primary",
-        #         collapsible = TRUE,
-        #         solidHeader = TRUE,
-        #         collapsed = FALSE
-        #     ),
-        #     staticPlotBoxUI(
-        #         ns("gcDeltaZPlot"), 
-        #         "Distribution of GC Z-Score Deltas",
-        #         width = 6,
-        #         status = "primary",
-        #         collapsible = TRUE,
-        #         solidHeader = TRUE,
-        #         collapsed = FALSE
-        #     )
-        # ),
+        fluidRow(
+            staticPlotBoxUI(
+                ns("gcBiasFitComposite"), 
+                "Composite of GC Bias Fits",
+                width = 6,
+                status = "primary",
+                collapsible = TRUE,
+                solidHeader = TRUE,
+                collapsed = FALSE
+            )
+        ),
         NULL
     )
 }
