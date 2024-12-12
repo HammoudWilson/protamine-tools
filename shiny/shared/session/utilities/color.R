@@ -11,6 +11,12 @@ z_score_color <- function(zScore, maxZScore){
     I <- floor(nTrackMapColorsPerSide * abs(z) / maxZScore) + 1L
     ifelse(z < 0, trackMapColors$low[I], trackMapColors$high[I])
 }
+quantile_score_color <- function(quantile, maxQuantile){
+    minQuantile <- 1 - maxQuantile
+    quantile <- pmax(minQuantile, pmin(maxQuantile, quantile))
+    I <- floor(nTrackMapColorsPerSide * abs(quantile - 0.5) / maxQuantile) + 1L
+    ifelse(quantile < 0.5, trackMapColors$low[I], trackMapColors$high[I])
+}
 
 # functions to get distribution trace colors
 getSampleColorsByStage <- function(allSamples, samples){

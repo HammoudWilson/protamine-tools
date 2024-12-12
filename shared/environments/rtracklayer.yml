@@ -1,0 +1,7 @@
+---
+# version current as of December 2024
+
+dependencies:
+    - bioconductor-rtracklayer
+    - r-essentials
+    - r-r.utils

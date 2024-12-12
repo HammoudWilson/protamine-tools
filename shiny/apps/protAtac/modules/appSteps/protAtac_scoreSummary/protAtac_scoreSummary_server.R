@@ -62,7 +62,7 @@ plotDistributions <- function(plot, scoreType, scores, colors, message,
             x = scores[[seriesName]]$dist,
             col = colors[seriesName]
         )
-        abline(v = scores[[seriesName]]$mean, col = colors[seriesName])
+        abline(v = scores[[seriesName]]$median, col = colors[seriesName])
     }
     if(legend) plot$addLegend(
         legend = names(scores),

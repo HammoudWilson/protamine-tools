@@ -163,12 +163,10 @@ gcResidualBiasPlotData <- function(){
     binCN <- bd$bins$genome[I, nAlleles]
     rpb_fit <- predict(gcBiasModel$fit, fractionGC, type = "mu") * binCN
     binCounts <- rowSums(bd$binCounts$genome[I, , sample$sample_name], na.rm = TRUE)
-    # gcrz <- gcResidualZScores(sourceId, gcBiasModels())
     data.table(
         x = fractionGC,
-        y = zScore(gcBiasModel$fit, binCounts, fractionGC, binCN),
+        y = zScore(gcBiasModel$fit, binCounts, fractionGC, binCN, type = "peak"),
         color = ifelse(binCN == 2, CONSTANTS$plotlyColors$blue, CONSTANTS$plotlyColors$orange)
-        # color = z_score_color(gcrz$stageType_delta$z[I], 2)
     )[sample.int(.N, min(.N, settings$get("GC_Bias","N_Plotted_Bins")))]
 }
 gcResidualBiasPlot <- interactiveScatterplotServer(
@@ -272,11 +270,11 @@ getGcBiasModels_externalCall <- function(sourceId){
     if(isTruthy(gcSourceId) && gcSourceId == sourceId) gcBiasModels()
     else getGcBiasModels(sourceId = sourceId)
 }
-getBinZScore <- function(sourceId, sampleName, binCounts, fractionGC, binCN){
+getBinZScore <- function(sourceId, sampleName, binCounts, fractionGC, binCN, type = "peak"){
     gcBiasModels <- getGcBiasModels_externalCall(sourceId)
     gcBiasModel <- gcBiasModels[[sampleName]]
     if(!isTruthy(gcBiasModel)) return(NULL)
-    zScore(gcBiasModel$fit, binCounts, fractionGC, binCN)
+    zScore(gcBiasModel$fit, binCounts, fractionGC, binCN, type = type)
 }
 
 #----------------------------------------------------------------------

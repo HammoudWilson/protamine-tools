@@ -92,8 +92,8 @@ viterbi.nbinomCountsGC <- function(nb, # a nbinomCountsGC model
 }
 
 # calculate the z-score of a set of bin counts given a nbinomCountsGC model
-zScore <- function(nb, binCounts, fractionGC, binCN = 2){
-    mu <- predict(nb, suppressGcOutliers(nb, fractionGC), type = 'mu') * binCN # expectedReadCount = rpa * nAlleles
+zScore <- function(nb, binCounts, fractionGC, binCN = 2, type=c('mu', 'peak', 'adjustedPeak')){
+    mu <- predict(nb, suppressGcOutliers(nb, fractionGC), type = type[1]) * binCN # expectedReadCount = rpa * nAlleles
     variance <- mu + mu**2 / nb$theta
     (binCounts - mu) / sqrt(variance)
 }

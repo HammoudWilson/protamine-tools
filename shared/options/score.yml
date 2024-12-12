@@ -26,8 +26,8 @@ options:
         short: B
         type: character
         required: false
-        default: NA
-        description: "path to a BED6 file containing transcription RPKM/FPKM values for genome regions or genes"
+        default: NA # defaults in pipeline code to the output of the nascent/bin action
+        description: "path to a BED4 file containing transcription CPM values for --bin-size bins"
     gc-limits:
         order: 5
         short: c

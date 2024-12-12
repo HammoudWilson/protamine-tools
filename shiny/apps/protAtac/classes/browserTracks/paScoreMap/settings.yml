@@ -1,0 +1,62 @@
+# template for settings relevant to the paSampleComposite browserTrack type
+
+# uncomment this section to include standard settings from widgets/browserTrack/settings.yml
+# see: https://github.com/wilsontelab/genomex-mdi-tools
+# include:
+#     - height, etc.
+
+# uncomment this section to specify settings that are common to multiple tracks in an app or suite
+# shared:
+#     - ../shared_settings.yml # interpreted relative to the track's own settings.yml file
+
+# uncomment this section to specify track-specific settings, using the same format as for settingsServer
+# see: https://midataint.github.io/mdi-apps-framework/docs/settings/yaml-declarations.html
+settings:
+    Score_Map:
+        Score_Type:
+            type:   selectInput
+            choices:
+                - genome_gc
+                - genome_txn
+                - sample_cpm
+                - sample_gcrz
+                - sample_snif
+                - sample_nrll
+            value:  genome_gc
+        Heatmap_Type:
+            type:   selectInput
+            choices:
+                - z_score
+                - quantile
+            value:  quantile
+        Aggregate_By:
+            type:   selectInput
+            choices:
+                - sample
+                - stage
+                - stage_type
+                - stage_type_delta
+            value: stage_type_delta
+        Max_Z_Score:
+            type:   numericInput
+            value:  2
+            min:    0
+            max:    10
+            step:   0.5
+        Sample_Height_Pixels:
+            type:   numericInput
+            value:  10
+            min:    6
+            max:    25
+            step:   1
+        Max_Quantile:
+            type:   numericInput
+            value:  0.95
+            min:    0.5
+            max:    1
+            step:   0.05
+# uncomment this section to specify track-specific settings
+# presets:
+#     Preset_Name:
+#         Family:
+#             Option: value

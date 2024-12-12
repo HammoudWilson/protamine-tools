@@ -2,7 +2,7 @@
 #     calculate and analyze the distributions of the following score metrics per bin:
 #         genome-level (not specific to samples at different spermiogenic stages):
 #               gc   = bin GC content
-#               rpkm = (nascent) transcription Reads Per Kilobase per Million reads
+#               txn  = (nascent) Transcription count per million reads
 #         sample-level (specific to each sample at different spermiogenic stages):
 #               cpm  = read Counts Per Million reads
 #               gcrz = GC Residual Z-Score (excess or deficit of reads relative to GC peers)
@@ -65,6 +65,7 @@ checkEnvVars(list(
         'N_CPU'
     )
 ))
+if(env$TRANSCRIPTION_BED == "NA") env$TRANSCRIPTION_BED <- paste(env$DATA_FILE_PREFIX, "nascent_transcriptome_unstranded.bed.gz", sep = '.')
 #-------------------------------------------------------------------------------------
 # source R scripts
 rUtilDir <- file.path(env$MODULES_DIR, 'bin')
@@ -95,25 +96,31 @@ emissProbsFile <- extractInsertSizeEps(isd, env)
 
 message("analyzing genome-level scores")
 scores <- list(genome = list())
-message("  GC")
-scores$genome$gc <- analyzeScoreDist(bd$bins$genome, gcLimits, bd$bins$genome$pct_gc, scoreTypes$genome$gc$distUnit)
-scores$genome$rpkm <- if(env$TRANSCRIPTION_BED != "NA") {
-    message("  RPKM")
-    stop("rpkm analysis not implemented yet")
-    analyzeScoreDist(bd$bins$genome, gcLimits, xxxx, scoreTypes$genome$rpkm$distUnit)
+message("  gc")
+scores$genome$gc <- analyzeScoreDist(bd$bins$genome, gcLimits, bd$bins$genome$pct_gc, scoreTypes$genome$gc)
+scores$genome$txn <- if(file.exists(env$TRANSCRIPTION_BED)) {
+    message("  txn")
+    txn_cpm <- fread(env$TRANSCRIPTION_BED)[[4]] # requires BED4 with normalized bin transcription value in column 4
+    analyzeScoreDist(bd$bins$genome, gcLimits, txn_cpm, scoreTypes$genome$txn)
 } else {
-    message("  RPKM: no transcription data")
+    message("  no txn data")
     NULL
 }
 
 message("analyzing sample-level scores")
 scores$sample <- sapply(names(scoreTypes$sample), function(scoreTypeName) {
     scoreType <- scoreTypes$sample[[scoreTypeName]]
-    if(scoreType$gbBiasDependent) return(NULL)
+    if(scoreType$gcBiasDependent) return(NULL)
     message(paste(" ", scoreTypeName))
     scoreFnName <- paste("get", scoreTypeName, sep = "_")
-    sampleScores  <- analyzeSampleScores(bd, gcLimits, get(scoreFnName), env, scoreType$distUnit, emissProbsFile)
-    aggregateScores <- aggregateSampleScores(bd, gcLimits, stageTypes, sampleScores, env, scoreType$distUnit)
+    sampleScores  <- analyzeSampleScores(bd, gcLimits, get(scoreFnName), env, scoreType, emissProbsFile)
+    aggregateScores <- aggregateSampleScores(bd, gcLimits, stageTypes, sampleScores, env, scoreType)
+    if(!("score" %in% scoreType$include)){
+        for(key in names(sampleScores)) sampleScores[[key]]$score <- NULL
+        for(key in names(aggregateScores$by_stage)) aggregateScores$by_stage[[key]]$score <- NULL
+        for(key in names(aggregateScores$by_stageType)) aggregateScores$by_stageType[[key]]$score <- NULL
+        aggregateScores$stageType_delta$score <- NULL 
+    }
     list(
         sampleScores    = sampleScores,
         aggregateScores = aggregateScores
@@ -126,7 +133,6 @@ obj <- list(
     env         = env[c("BIN_SIZE","MAX_INSERT_SIZE","GENOME","NUCLEOSOMAL_STAGE","SUBNUCLEOSOMAL_STAGE")],
     samples     = isd$samples,
     references  = isd$references,
-    scoreTypes  = scoreTypes,
     stageTypes  = stageTypes,
     gcLimits    = gcLimits,
     scores      = scores

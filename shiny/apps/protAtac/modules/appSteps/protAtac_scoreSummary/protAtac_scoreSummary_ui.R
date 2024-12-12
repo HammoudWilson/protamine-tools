@@ -52,7 +52,7 @@ protAtac_scoreSummaryUI <- function(id, options) {
                     "Score Type",
                     choiceNames  = c(
                         "Fraction GC", 
-                        "Transcription RPKM", 
+                        "Transcription CPM", 
                         "Counts Per Million", 
                         "GC-Residual Z-Score", 
                         "Subnucleosomal Insert Fraction", 
@@ -60,7 +60,7 @@ protAtac_scoreSummaryUI <- function(id, options) {
                     ),
                     choiceValues = c(
                         "gc", 
-                        "rpkm", 
+                        "txn", 
                         "cpm", 
                         "gcrz", 
                         "snif", 

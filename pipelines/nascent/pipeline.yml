@@ -1,0 +1,29 @@
+---
+pipeline:
+    name: nascent
+    description: "prepare round spermatid nascent RNA-seq data for pipeline analysis"
+    # version: v0.0.1
+# suiteVersions:
+#     suiteName: v0.0.0
+actions: 
+    _global:
+        environment: protamine-nascent
+        condaFamilies:
+            - base
+            - rtracklayer
+    bin:
+        order: 1
+        optionFamilies:
+            - nascent
+            - genome
+            - bin
+        resources:
+            required:
+                total-ram: 16G
+            recommended: 
+                n-cpu: 2
+                ram-per-cpu: 8G
+        job-manager:
+            recommended:
+                time-limit: 2:00:00
+        description: "liftover nascent RNA-seq data and calculate binned transcription levels"

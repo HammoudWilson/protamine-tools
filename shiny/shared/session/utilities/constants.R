@@ -10,35 +10,30 @@ scoreTypes <- list(
     genome = list(
         gc = list(
             name = "Bin Fraction GC",
-            gbBiasDependent = FALSE,
-            distUnit = 0.005,
             class = "baseComposition",
             valueLim = gcLimits,
             normValue = "z"
         ),
-        rpkm = list(
-            name = "Transcription RPKM",
-            gbBiasDependent = FALSE,
-            distUnit = 0.1,
+        txn = list(
+            name = "Transcription log10(CPM)",
             class = "transcription",
-            valueLim = c(0, 10),
+            valueLim = log10(c(1e-3, 1e3)),
             normValue = "quantile"
         )
     ),
     sample = list(
         cpm = list(
             name = "Counts Per Million",
-            gbBiasDependent = FALSE,
-            distUnit = 0.1,
             class = "coverage",
             valueLim = c(0, 1.5),
             deltaLim = c(-0.5, 0.5),
             normValue = "quantile"
         ),
         gcrz = list(
-            name = "GC-Residual Z-Score",
-            gbBiasDependent = TRUE, # thus, cannot be assessed until GC bias is established in app
             distUnit = 0.1,
+            include = c("z","quantile"),
+            log10 = FALSE,
+            name = "GC-Residual Z-Score",
             class = "coverage",
             valueLim = c(-3, 3),
             deltaLim = c(-3, 3),
@@ -46,8 +41,6 @@ scoreTypes <- list(
         ),
         snif = list(
             name = "Subnucleosomal Insert Fraction",
-            gbBiasDependent = FALSE,
-            distUnit = 0.01,
             class = "insertSize",
             valueLim = c(0, 1),
             deltaLim = c(-1, 0.5),
@@ -55,8 +48,6 @@ scoreTypes <- list(
         ),
         nrll = list(
             name = "Subnucleosomal vs. Nucleosomal NRLL",
-            gbBiasDependent = FALSE,
-            distUnit = 0.1,
             class = "insertSize",
             valueLim = c(-1.5, 1.5),
             deltaLim = c(-1.5, 0),
@@ -64,7 +55,6 @@ scoreTypes <- list(
         )
     )
 )
-
 
 # standardized color palettes
 paColors <- list(

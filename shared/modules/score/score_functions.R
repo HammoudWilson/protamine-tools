@@ -25,46 +25,47 @@ get_nrll <- function(bd, sample_name_, emissProbsFile){
     }))
 }
 
-# score types metadata
+# score types metadata; minimal information only as required to calculate score distributions
 scoreTypes <- list(
     genome = list(
         gc = list(
-            name = "Bin Fraction GC",
-            gbBiasDependent = FALSE,
-            distUnit = 0.01,
-            class = "baseComposition"
+            gcBiasDependent = FALSE,
+            distUnit = 0.005,
+            include = c("score","z"),
+            log10 = FALSE
         ),
-        rpkm = list(
-            name = "Transcription RPKM",
-            gbBiasDependent = FALSE,
+        txn = list(
+            gcBiasDependent = FALSE,
             distUnit = 0.1,
-            class = "transcription"
+            include = c("score","z","quantile"),
+            log10 = TRUE,
+            minValue = 1e-3
         )
     ),
     sample = list(
         cpm = list(
-            name = "Counts Per Million",
-            gbBiasDependent = FALSE,
+            gcBiasDependent = FALSE,
             distUnit = 0.1,
-            class = "coverage"
+            include = c("quantile"),
+            log10 = FALSE
         ),
         gcrz = list(
-            name = "GC-Residual Z-Score",
-            gbBiasDependent = TRUE, # thus, cannot be assessed until GC bias is established in app
+            gcBiasDependent = TRUE, # thus, cannot be assessed until GC bias is established in app
             distUnit = 0.1,
-            class = "coverage"
+            include = c("z","quantile"),
+            log10 = FALSE
         ),
         snif = list(
-            name = "Subnucleosomal Insert Fraction",
-            gbBiasDependent = FALSE,
+            gcBiasDependent = FALSE,
             distUnit = 0.01,
-            class = "insertSize"
+            include = c("z","quantile"),
+            log10 = FALSE
         ),
         nrll = list(
-            name = "Subnucleosomal vs. Nucleosomal NRLL",
-            gbBiasDependent = FALSE,
+            gcBiasDependent = FALSE,
             distUnit = 0.1,
-            class = "insertSize"
+            include = c("z","quantile"),
+            log10 = FALSE
         )
     )
 )
@@ -106,45 +107,48 @@ extractInsertSizeEps <- function(isd, env){
 
 # analyze and aggregate distributions of different bin scores
 # all scores are expected to be one a comparable scale between samples, including
-analyzeScoreDist <- function(bins, gcLimits, scores, distUnit = 0.1){
+analyzeScoreDist <- function(bins, gcLimits, scores, scoreType){
+    if(scoreType$log10) scores <- log10(pmax(scoreType$minValue, scores)) # prevent log(0) and impossible values
     scores_wrk <- scores[getIncudedAutosomeBins(bins, gcLimits)] # only use good autosomal bins to analyze score distributions
-    dist <- data.table(x = as.integer(round(scores_wrk / distUnit)) * distUnit)[, .(y = .N), keyby = .(x)]
+    dist <- data.table(x = as.integer(round(scores_wrk / scoreType$distUnit)) * scoreType$distUnit)[, .(y = .N), keyby = .(x)]
     dist[, y := y / replaceNaN(sum(y, na.rm = TRUE))]
     mu <- replaceNaN(mean(scores_wrk, na.rm = TRUE))
     sd <- replaceNaN(sd(  scores_wrk, na.rm = TRUE))
+    median <- replaceNaN(median(scores_wrk, na.rm = TRUE))
     list(
-        score    = scores,
+        score    = scores, # score are dropped downstream when not included in scoreType
         dist     = dist,
+        median   = median,
         mean     = mu,
         sd       = sd,
-        z        = (scores - mu) / sd,      # for normal/parametric scores
-        quantile = ecdf(scores_wrk)(scores) # for non-parametric scores
+        z        = if("z" %in% scoreType$include) (scores - median) / sd else NULL,         # for normal/parametric scores
+        quantile = if("quantile" %in% scoreType$include) ecdf(scores_wrk)(scores) else NULL # for non-parametric scores
     )
 }
-analyzeSampleScores <- function(bd, gcLimits, scoreFn, env, distUnit = 0.1, ...){
+analyzeSampleScores <- function(bd, gcLimits, scoreFn, env, scoreType, ...){
     x <- mclapply(bd$samples$sample_name, function(sample_name){
     # x <- lapply(bd$samples[filename_prefix %in% c("24290X11", "24290X9"), sample_name], function(sample_name){
         message(paste("   ", "analyzeSampleScores", sample_name))
-        analyzeScoreDist(bd$bins$genome, gcLimits, scoreFn(bd, sample_name, ...), distUnit)
+        analyzeScoreDist(bd$bins$genome, gcLimits, scoreFn(bd, sample_name, ...), scoreType)
     }, mc.cores = env$N_CPU)
     # })
     names(x) <- bd$samples$sample_name
     x
 }
-aggregateAndAnalyzeScores <- function(bins, gcLimits, sampleScores, sample_names, distUnit = 0.1){
+aggregateAndAnalyzeScores <- function(bins, gcLimits, sampleScores, sample_names, scoreType){
     x <- as.data.table(sapply(sample_names, function(sample_name){
         sampleScores[[sample_name]]$score
     }, simplify = FALSE, USE.NAMES = TRUE))
-    analyzeScoreDist(bins, gcLimits, x[, replaceNaN(rowMeans(.SD, na.rm = TRUE))], distUnit)
+    analyzeScoreDist(bins, gcLimits, x[, replaceNaN(rowMeans(.SD, na.rm = TRUE))], scoreType)
 }
-aggregateSampleScores <- function(bd, gcLimits, stageTypes, sampleScores, env, distUnit = 0.1){
+aggregateSampleScores <- function(bd, gcLimits, stageTypes, sampleScores, env, scoreType){
 
     # aggregate scores by spermatid stage
     allStages <- unique(bd$samples$stage)
     by_stage <- mclapply(allStages, function(stage_){
         message(paste("   ", "aggregateSampleScores by_stage", stage_))
         sample_names <- bd$samples[stage == stage_, sample_name]
-        aggregateAndAnalyzeScores(bd$bins$genome, gcLimits, sampleScores, sample_names, distUnit)
+        aggregateAndAnalyzeScores(bd$bins$genome, gcLimits, sampleScores, sample_names, scoreType)
     }, mc.cores = env$N_CPU)
     names(by_stage) <- allStages
 
@@ -152,7 +156,7 @@ aggregateSampleScores <- function(bd, gcLimits, stageTypes, sampleScores, env, d
     by_stageType <- mclapply(names(stageTypes), function(stageType){
         message(paste("   ", "aggregateSampleScores by_stageType", stageType))
         sample_names <- bd$samples[stage %in% stageTypes[[stageType]], sample_name]
-        aggregateAndAnalyzeScores(bd$bins$genome, gcLimits, sampleScores, sample_names, distUnit)
+        aggregateAndAnalyzeScores(bd$bins$genome, gcLimits, sampleScores, sample_names, scoreType)
     }, mc.cores = env$N_CPU)
     names(by_stageType) <- names(stageTypes)
 
@@ -163,7 +167,7 @@ aggregateSampleScores <- function(bd, gcLimits, stageTypes, sampleScores, env, d
         bd$bins$genome, 
         gcLimits, 
         by_stageType[[stageType1]]$score - by_stageType[[stageType2]]$score, # typically round - elong to give positive values in early stages
-        distUnit
+        scoreType
     )
     list(
         by_stage        = by_stage,
@@ -171,58 +175,3 @@ aggregateSampleScores <- function(bd, gcLimits, stageTypes, sampleScores, env, d
         stageType_delta = stageType_delta
     )
 }
-
-# # analyze and aggregate distributions of different bin scores
-# # all scores are expected to be one a comparable scale between samples, including
-# analyzeScoreDist <- function(bins, gcLimits, scores, distUnit = 0.1){
-#     scores_wrk <- scores[getIncudedAutosomeBins(bins, gcLimits)] # only use good autosomal bins to analyze score distributions
-#     dist <- data.table(x = as.integer(round(scores_wrk / distUnit)) * distUnit)[, .(y = .N), keyby = .(x)]
-#     dist[, y := y / sum(y, na.rm = TRUE)]
-#     mu <- mean(scores_wrk, na.rm = TRUE)
-#     sd <- sd(  scores_wrk, na.rm = TRUE)
-#     list(
-#         score    = scores,
-#         dist     = dist,
-#         mean     = mu,
-#         sd       = sd,
-#         z        = (scores - mu) / sd,      # for normal/parametric scores
-#         quantile = ecdf(scores_wrk)(scores) # for non-parametric scores
-#     )
-# }
-# analyzeSampleScores <- function(bd, gcLimits, scoreFn, distUnit = 0.1){
-#     # mclapply
-#     sapply(bd$samples$sample_name, function(sample_name){
-#         message(paste("   ", "analyzeSampleScores", sample_name))
-#         analyzeScoreDist(bd$bins$genome, gcLimits, scoreFn(bd, sample_name), distUnit)
-#     }, simplify = FALSE, USE.NAMES = TRUE)  
-# }
-# aggregateAndAnalyzeScores <- function(bins, gcLimits, sampleScores, sample_names, distUnit = 0.1){
-#     # mclapply
-#     x <- as.data.table(sapply(sample_names, function(sample_name){
-#         sampleScores[[sample_name]]$score
-#     }, simplify = FALSE, USE.NAMES = TRUE))
-#     analyzeScoreDist(bins, gcLimits, x[, rowMeans(.SD, na.rm = TRUE)], distUnit) # TODO: this is the slowest step, can we speed it up?
-# }
-# aggregateSampleScores <- function(bd, gcLimits, stageTypes, sampleScores, distUnit = 0.1){
-#     by_stage <- sapply(unique(bd$samples$stage), function(stage_){
-#         sample_names <- bd$samples[stage == stage_, sample_name]
-#         aggregateAndAnalyzeScores(bd$bins$genome, gcLimits, sampleScores, sample_names, distUnit)
-#     }, simplify = FALSE, USE.NAMES = TRUE)
-#     by_stageType <- sapply(names(stageTypes), function(stageType){
-#         sample_names <- bd$samples[stage %in% stageTypes[[stageType]], sample_name]
-#         aggregateAndAnalyzeScores(bd$bins$genome, gcLimits, sampleScores, sample_names, distUnit)
-#     }, simplify = FALSE, USE.NAMES = TRUE)
-#     stageType1 <- names(stageTypes)[1]
-#     stageType2 <- names(stageTypes)[2]
-#     stageType_delta <- analyzeScoreDist(
-#         bd$bins$genome, 
-#         gcLimits, 
-#         by_stageType[[stageType1]]$score - by_stageType[[stageType2]]$score, # typically round - elong to give positive values in early stages
-#         distUnit
-#     )
-#     list(
-#         by_stage        = by_stage,
-#         by_stageType    = by_stageType,
-#         stageType_delta = stageType_delta
-#     )
-# }

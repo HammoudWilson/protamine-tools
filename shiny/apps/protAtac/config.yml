@@ -45,8 +45,8 @@ appSteps:
         module: protAtac_insertSizes
     scoreSummary:
         module: protAtac_scoreSummary
-    # browser:
-    #     module: genomex-mdi-tools//trackBrowser
+    browser:
+        module: genomex-mdi-tools//trackBrowser
         # options:
         #     tracks:
         #         - svWGS # svWGS tracks are shared in global/classes/browserTracks
