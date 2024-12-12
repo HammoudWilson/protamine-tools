@@ -216,7 +216,7 @@ gcBiasFitCompositePlot <- staticPlotBoxServer(
                 y = y
             )
         }, simplify = FALSE, USE.NAMES = TRUE)
-        colors <- getSampleColorsByStage(samples)
+        colors <- getSampleColorsByStage(samples, samples)
         gcBiasFitCompositePlot$initializeFrame(
             xlim = gcLimits,
             ylim = c(0, maxY),

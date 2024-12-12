@@ -112,17 +112,6 @@ protAtac_scoreSummaryUI <- function(id, options) {
                 collapsed = FALSE
             )
         ),
-        fluidRow(
-            staticPlotBoxUI(
-                ns("deltaZDistributionPlot"), 
-                "Delta Z-Score Distribution",
-                width = 6,
-                status = "primary",
-                collapsible = TRUE,
-                solidHeader = TRUE,
-                collapsed = FALSE
-            )
-        ),
         NULL
     )
 }

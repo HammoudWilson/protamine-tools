@@ -43,68 +43,17 @@ allSamples <- reactive({ # vector of the names of all co-analyzed samples
     paBinData(sourceId)$samples
 })
 
-# #----------------------------------------------------------------------
-# # plot outputs
-# #----------------------------------------------------------------------
-# insertSizesPlot <- function(refType){
-#     plot <- staticPlotBoxServer(
-#         paste("insertSizesPlot", refType, sep = "_"),
-#         maxHeight = "400px",
-#         lines   = TRUE,
-#         legend  = TRUE,
-#         margins = TRUE,
-#         title   = TRUE,
-#         create = function() {
-#             sourceId <- sourceId()
-#             samples <- spermatidStages$selectedSamples()
-#             req(sourceId, samples)
-#             isd <- paInsertSizes(sourceId)
-#             aggregate <- settings$get("Insert_Sizes","Aggregate_Samples_By_Stage")
-#             normalize <- settings$get("Insert_Sizes","Normalize_To_Spike_In")
-#             if(refType == "spike_in" && normalize) req(FALSE)
-#             binSize <- isd$bin_size
-#             isd <- getInsertSizeData(isd$insertSizes, refType, samples, aggregate, normalize)
-#             seriesNames <- colnames(isd)
-#             colors <- stageColors[if(aggregate) seriesNames else samples$stage]
-#             # colors <- 1:length(seriesNames)
-#             names(colors) <- seriesNames
-#             plot$initializeFrame(
-#                 xlim = c(0, 700),
-#                 ylim = c(0, max(isd)),
-#                 xlab = "Insert Size (bp)",
-#                 ylab = "Frequency"
-#             )
-#             for(series in seriesNames){
-#                 plot$addLines( # addLines follows the same pattern, etc.
-#                     x = 1:binSize,
-#                     y = isd[[series]],
-#                     col = colors[series]
-#                 )
-#             }
-#             abline(v = 146, col = CONSTANTS$plotlyColors$grey) # nucleosome size
-#             plot$addLegend(
-#                 legend = seriesNames,
-#                 col = colors,
-#                 cex = 0.85
-#             )
-#             stopSpinner(session)
-#         }
-#     )
-#     plot
-# }
-# genomePlot  <- insertSizesPlot("genome")
-# spikeInPlot <- insertSizesPlot("spike_in")
-
 #----------------------------------------------------------------------
 # plot outputs
 #----------------------------------------------------------------------
-plotDistributions <- function(plot, scoreType, scores, colors, message){
+plotDistributions <- function(plot, scoreType, scores, colors, message, 
+                              legend = TRUE, isDelta = FALSE){
     startSpinner(session, message = message)
     maxY <- max(unlist(sapply(names(scores), function(seriesName) scores[[seriesName]]$dist$y)), na.rm = TRUE)
     plot$initializeFrame(
-        xlim = scoreType$lim,
+        xlim = scoreType[[if(isDelta) "deltaLim" else "valueLim"]],
         ylim = c(0, maxY * 1.05),
-        xlab = scoreType$name,
+        xlab = if(isDelta) paste(scoreType$name, "Delta") else scoreType$name,
         ylab = "Frequency"
     )
     abline(v = 0, col = CONSTANTS$plotlyColors$grey)
@@ -115,7 +64,7 @@ plotDistributions <- function(plot, scoreType, scores, colors, message){
         )
         abline(v = scores[[seriesName]]$mean, col = colors[seriesName])
     }
-    plot$addLegend(
+    if(legend) plot$addLegend(
         legend = names(scores),
         col = colors,
         cex = 0.8
@@ -182,11 +131,6 @@ stageTypeDistributionPlot <- staticPlotBoxServer(
         req(sourceId)
         samples <- spermatidStages$selectedSamples()
         allSamples <- allSamples()
-
-        dstr(getStageTypeScores(sourceId, input$scoreType, samples))
-        dstr(getStageTypeColors(sourceId, allSamples, samples))
-        # req(FALSE)
-
         plotDistributions(
             plot        = stageTypeDistributionPlot, 
             scoreType   = getScoreType(sourceId, input$scoreType), 
@@ -204,48 +148,20 @@ deltaDistributionPlot <- staticPlotBoxServer(
     margins = TRUE,
     title   = TRUE,
     create = function() {
-        # scoreLevel <- getScoreLevel(input$scoreType)
+        scoreLevel <- getScoreLevel(input$scoreType)
         sourceId <- sourceId()
         req(sourceId)
-
-        dstr(getStageTypeDeltaScores(sourceId, input$scoreType))
-        dstr(list(stageType_delta = CONSTANTS$plotlyColors$black))
-        # req(FALSE)
-
         plotDistributions(
             plot        = deltaDistributionPlot, 
             scoreType   = getScoreType(sourceId, input$scoreType), 
             scores      = getStageTypeDeltaScores(sourceId, input$scoreType),
             colors      = c(stageType_delta = CONSTANTS$plotlyColors$black),
-            message     = "plotting delta"
+            message     = "plotting delta",
+            legend      = FALSE,
+            isDelta     = scoreLevel == "sample"
         )
     }
 )
-# deltaZDistributionPlot <- staticPlotBoxServer(
-#     "deltaZDistributionPlot",
-#     maxHeight = "400px",
-#     lines   = TRUE,
-#     legend  = TRUE,
-#     margins = TRUE,
-#     title   = TRUE,
-#     create = function() {
-#         # scoreLevel <- getScoreLevel(input$scoreType)
-#         sourceId <- sourceId()
-#         req(sourceId)
-
-#         dstr(getStageTypeDeltaScores(sourceId, input$scoreType))
-#         dstr(list(stageType_delta = CONSTANTS$plotlyColors$black))
-#         # req(FALSE)
-
-#         plotDistributions(
-#             plot        = deltaZDistributionPlot, 
-#             scoreType   = getScoreType(sourceId, input$scoreType), 
-#             scores      = getStageTypeDeltaScores(sourceId, input$scoreType),
-#             colors      = c(stageType_delta = CONSTANTS$plotlyColors$black),
-#             message     = "plotting deltaZ"
-#         )
-#     }
-# )
 
 #----------------------------------------------------------------------
 # define bookmarking actions

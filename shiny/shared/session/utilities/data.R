@@ -96,8 +96,9 @@ paScores <- function(sourceId){
             sd <- readRDS(getSourceFilePath(sourceId, "scores"))
             stopSpinner(session)
 
-            # TODO: remove this and constants.R object once pipeline is re-run
+            # TODO: remove this and constants.R object once pipeline is re-run?
             sd$scoreTypes <- scoreTypes
+
             sd$reverseStageTypes <- {
                 reversed <- list()
                 for (name in names(sd$stageTypes)) {
@@ -135,10 +136,82 @@ paSegmentation <- function(sourceId){
 }
 
 # GC Residual Z-Score analysis, depends on pipeline bin data and user-selected GC bias models
-gcResidualZScores <- function(sourceId, gcBiasModels = NULL){
+
+# analyze and aggregate distributions of different bin scores
+# all scores are expected to be one a comparable scale between samples, including
+replaceNaN <- function(x){
+    x[is.nan(x)] <- NA
+    x
+}
+analyzeScoreDist <- function(bins, gcLimits, scores, distUnit = 0.1){
+    scores_wrk <- scores[getIncudedAutosomeBins(bins)] # only use good autosomal bins to analyze score distributions
+    dist <- data.table(x = as.integer(round(scores_wrk / distUnit)) * distUnit)[, .(y = .N), keyby = .(x)]
+    dist[, y := y / replaceNaN(sum(y, na.rm = TRUE))]
+    mu <- replaceNaN(mean(scores_wrk, na.rm = TRUE))
+    sd <- replaceNaN(sd(  scores_wrk, na.rm = TRUE))
+    list(
+        score    = scores,
+        dist     = dist,
+        mean     = mu,
+        sd       = sd,
+        z        = (scores - mu) / sd
+        # ,      # for normal/parametric scores
+        # quantile = ecdf(scores_wrk)(scores) # for non-parametric scores
+    )
+}
+analyzeSampleScores <- function(bd, gcLimits, scoreFn, distUnit = 0.1, ...){
+    x <- lapply(bd$samples$sample_name, function(sample_name){
+        startSpinner(session, message = paste("loading gcrz", sample_name))
+        analyzeScoreDist(bd$bins$genome, gcLimits, scoreFn(bd, sample_name, ...), distUnit)
+    })
+    names(x) <- bd$samples$sample_name
+    x
+}
+aggregateAndAnalyzeScores <- function(bins, gcLimits, sampleScores, sample_names, distUnit = 0.1){
+    x <- as.data.table(sapply(sample_names, function(sample_name){
+        sampleScores[[sample_name]]$score
+    }, simplify = FALSE, USE.NAMES = TRUE))
+    analyzeScoreDist(bins, gcLimits, x[, replaceNaN(rowMeans(.SD, na.rm = TRUE))], distUnit)
+}
+aggregateSampleScores <- function(bd, gcLimits, stageTypes, sampleScores, distUnit = 0.1){
+
+    # aggregate scores by spermatid stage
+    allStages <- unique(bd$samples$stage)
+    by_stage <- lapply(allStages, function(stage_){
+        startSpinner(session, message = paste("loading gcrz", stage_))
+        sample_names <- bd$samples[stage == stage_, sample_name]
+        aggregateAndAnalyzeScores(bd$bins$genome, gcLimits, sampleScores, sample_names, distUnit)
+    })
+    names(by_stage) <- allStages
+
+    # aggregate scores by spermatid stage type (round vs. elong)
+    by_stageType <- lapply(names(stageTypes), function(stageType){
+        startSpinner(session, message = paste("loading gcrz", stageType))
+        sample_names <- bd$samples[stage %in% stageTypes[[stageType]], sample_name]
+        aggregateAndAnalyzeScores(bd$bins$genome, gcLimits, sampleScores, sample_names, distUnit)
+    })
+    names(by_stageType) <- names(stageTypes)
+
+    # calculate the difference in scores between round and elongated spermatids to assess spermiogenesis trajectory
+    startSpinner(session, message = paste("loading gcrz", "stageType_delta"))
+    stageType1 <- names(stageTypes)[1]
+    stageType2 <- names(stageTypes)[2]
+    stageType_delta <- analyzeScoreDist(
+        bd$bins$genome, 
+        gcLimits, 
+        by_stageType[[stageType1]]$score - by_stageType[[stageType2]]$score, # typically round - elong to give positive values in early stages
+        distUnit
+    )
+    list(
+        by_stage        = by_stage,
+        by_stageType    = by_stageType,
+        stageType_delta = stageType_delta
+    )
+}
+gcResidualsZ <- function(sourceId, gcBiasModels = NULL){
     if(is.null(gcBiasModels)) app$normalizeGC$getGcBiasModels_externalCall(sourceId)
     gcrzCache$get(
-        "gcZScoreDelta",
+        "gcResidualsZ",
         keyObject = list(
             sourceId = sourceId,
             gcBiasModels = gcBiasModels
@@ -149,32 +222,49 @@ gcResidualZScores <- function(sourceId, gcBiasModels = NULL){
         createFn = function(...){
             startSpinner(session, message = "loading gcrz")
             bd <- paBinData(sourceId)
-            analyzedScores <- analyzeSampleScores(bd, function(sample_name){
-                startSpinner(session, message = paste("loading gcrz", sample_name))
+            sd <- paScores(sourceId)
+            scoreTypeName <- "gcrz"
+            scoreType <- sd$scoreTypes$sample[[scoreTypeName]]
+            sampleScores <- analyzeSampleScores(bd, gcLimits, function(bd, sample_name){
                 binCounts <- rowSums(bd$binCounts$genome[, , sample_name], na.rm = TRUE)
-                x <- app$normalizeGC$getBinZScore(sourceId, sample_name, binCounts, bd$bins$genome$pct_gc, bd$bins$genome$nAlleles)
-            })
-            startSpinner(session, message = "aggregating gcrz")
-            x <- aggregateSampleScores(bd, analyzedScores)
-
-            dstr(x)
-
+                app$normalizeGC$getBinZScore(sourceId, sample_name, binCounts, bd$bins$genome$pct_gc, bd$bins$genome$nAlleles)
+            }, scoreType$distUnit)
+            aggregateScores <- aggregateSampleScores(bd, sd$gcLimits, sd$stageTypes, sampleScores, scoreType$distUnit)
+            x <- list(
+                sampleScores    = sampleScores,
+                aggregateScores = aggregateScores
+            )
+            stopSpinner(session)
             x
         }
     )$value
 }
 
+# functions to load, parse, and filter bin data
+getScoreLevel <- function(scoreType){
+         if(scoreType %in% names(scoreTypes$genome)) 'genome'
+    else if(scoreType %in% names(scoreTypes$sample)) 'sample'
+    else "NA"
+}
+getScoreType <- function(sourceId, scoreType){
+    scoreLevel <- getScoreLevel(scoreType)
+    paScores(sourceId)$scoreTypes[[scoreLevel]][[scoreType]]
+}
+getTypedStages <- function(sourceId) unlist(paScores(sourceId)$stageTypes)
+getStageTypesByStage <- function(sourceId, stages) unlist(paScores(sourceId)$reverseStageTypes[stages])
+
+
 #----------------------------------------------------------------------
 # sample-level score structure summary and associated score object retrieval
 #----------------------------------------------------------------------
 # scores <- paScores(sourceId)$scores[[scoreLevel]]
-# dprint(names(scores))
-# dprint(names(scores[[input$scoreType]]))
-# dprint(names(scores[[input$scoreType]]$sampleScores)) # names are sample names
-# dprint(names(scores[[input$scoreType]]$aggregateScores))
-# dprint(names(scores[[input$scoreType]]$aggregateScores$by_stage)) # names are stage names
-# dprint(names(scores[[input$scoreType]]$aggregateScores$by_stageType)) # names are stage type names
-# dprint(names(scores[[input$scoreType]]$aggregateScores$stageType_delta)) # this is a scores object
+# d print(names(scores))
+# d print(names(scores[[input$scoreType]]))
+# d print(names(scores[[input$scoreType]]$sampleScores)) # names are sample names
+# d print(names(scores[[input$scoreType]]$aggregateScores))
+# d print(names(scores[[input$scoreType]]$aggregateScores$by_stage)) # names are stage names
+# d print(names(scores[[input$scoreType]]$aggregateScores$by_stageType)) # names are stage type names
+# d print(names(scores[[input$scoreType]]$aggregateScores$stageType_delta)) # this is a scores object
 # [1] "cpm"  "gcrz" "snif" "nrll"
 # [1] "sampleScores"    "aggregateScores"
 #  [1] "day35-wt-rs-rep1" "day35-wt-rs-rep2" "day38-wt-rs-rep1" "day38-wt-rs-rep2"
@@ -187,20 +277,27 @@ gcResidualZScores <- function(sourceId, gcBiasModels = NULL){
 getGenomeScores <- function(sourceId, scoreType){ # returns a single genome-level score object
     paScores(sourceId)$scores$genome[[scoreType]]
 }
+getSampleScoresList <- function(sourceId, scoreType){ # returns a list of sample-level score objects based on GC normalization
+    if(scoreType == "gcrz"){
+        gcResidualsZ(sourceId)
+    } else {
+        paScores(sourceId)$scores$sample[[scoreType]]
+    }
+}
 getSampleScores <- function(sourceId, scoreType, samples){ # returns a list of sample-level score objects
-    paScores(sourceId)$scores$sample[[scoreType]]$sampleScores[samples$sample_name]
+    getSampleScoresList(sourceId, scoreType)$sampleScores[samples$sample_name]
 }
 getStageScores <- function(sourceId, scoreType, samples){ # returns a list of stage-level score objects matching a list of samples
-    paScores(sourceId)$scores$sample[[scoreType]]$aggregateScores$by_stage[unique(samples$stage)]
+    getSampleScoresList(sourceId, scoreType)$aggregateScores$by_stage[unique(samples$stage)]
 }
 getStageTypeScores <- function(sourceId, scoreType, samples){ # returns a list of stageType-level score objects matching a list of samples
     stageTypes <- getStageTypesByStage(sourceId, samples$stage)
-    paScores(sourceId)$scores$sample[[scoreType]]$aggregateScores$by_stageType[unique(stageTypes)]
+    getSampleScoresList(sourceId, scoreType)$aggregateScores$by_stageType[unique(stageTypes)]
 }
-getStageTypeDeltaScores <- function(sourceId, scoreType){ # returns a single score object for the delta between stage types
+getStageTypeDeltaScores <- function(sourceId, scoreType){ # returns a single score object for the delta between stage types (or a genome-level score object)
     list(
         stageType_delta = if(getScoreLevel(scoreType) == "sample") {
-            paScores(sourceId)$scores$sample[[scoreType]]$aggregateScores$stageType_delta
+            getSampleScoresList(sourceId, scoreType)$aggregateScores$stageType_delta
         } else {
             paScores(sourceId)$scores$genome[[scoreType]]
         }

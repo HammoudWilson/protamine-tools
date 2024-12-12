@@ -93,7 +93,7 @@ insertSizesPlot <- function(refType){
             binSize <- isd$bin_size
             isd <- getInsertSizeData(isd$insertSizes, refType, samples, aggregate, normalize)
             seriesNames <- colnames(isd)
-            colors <- if(aggregate) getStageColors(allSamples) else getSampleColorsByStage(allSamples)
+            colors <- if(aggregate) getStageColors(allSamples, samples) else getSampleColorsByStage(allSamples, samples)
             plot$initializeFrame(
                 xlim = c(0, 700),
                 ylim = c(0, max(isd)),
