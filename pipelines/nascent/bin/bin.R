@@ -5,7 +5,7 @@
 #         _unstranded_, i.e., values reflect transcription on both strands
 #         binned to BIN_SIZE bp bins, for direct comparison to ATAC-seq data
 # input:
-#     two ascent RNA bigwig files
+#     two nascent RNA bigwig files
 #     genome bins BED files
 #     optional liftover chain file
 # where, we generally assumme Pro-seq data are:
@@ -54,9 +54,10 @@ options(warn = 2)
 #-------------------------------------------------------------------------------------
 message("importing (and lifting over) bigwig files")
 nascent <- do.call(rbind, mclapply(c(env$BIGWIG_FILE_FORWARD, env$BIGWIG_FILE_REVERSE), function(bw_file) {
+# nascent <- do.call(rbind, lapply(c(env$BIGWIG_FILE_FORWARD, env$BIGWIG_FILE_REVERSE), function(bw_file) {
 
     message(paste(" ", "importing", bw_file))
-    bw_data <- import(bw_file) # a GRanges object
+    bw_data <- import(bw_file, format = "bigWig") # a GRanges object
     if(env$LIFTOVER_CHAIN != "NA") {
         message(paste(" ", "lifting with ", env$LIFTOVER_CHAIN))
         chain <- import.chain(env$LIFTOVER_CHAIN)
@@ -66,22 +67,26 @@ nascent <- do.call(rbind, mclapply(c(env$BIGWIG_FILE_FORWARD, env$BIGWIG_FILE_RE
     # convert to data.table
     # width is always 1, strand is always "*", since F and R files are provided
     dt <- as.data.table(bw_data) 
-    dt[, .(chrom = as.character(seqnames), start0 = start - 1L, end1 = end, count = score)]
+    rm(bw_data)
+    dt[, .(chrom = as.character(seqnames), start0 = start - 1L, count = score)]
 }, mc.cores = env$N_CPU))
+# }))
 
 message("creating unstranded transcription map by counting read 3' endpoints per bin")
-nascent[, start0 := start0 %/% env$BIN_SIZE * env$BIN_SIZE] # the start0 of the bin containing the read 3' end
-nascent[, end1   := start0 + env$BIN_SIZE]
-nascent <- nascent[, .(count = sum(count, na.rm = TRUE)), keyby = .(chrom, start0, end1)] # sum the counts per bin
+nascent[, start0 := floor(start0 / env$BIN_SIZE) * env$BIN_SIZE] # the start0 of the bin containing the read 3' end
+nascent <- nascent[, .(count = sum(count, na.rm = TRUE)), keyby = .(chrom, start0)] # sum the counts per bin
 
 message("merging into genome bins, including empty bins")
 bins <- fread(env$GENOME_BINS_BED)
+
 nascent <- merge(
     bins[, .(chrom, start0, end1)], 
     nascent, 
-    by = c('chrom', 'start0', 'end1'), 
-    all.x = TRUE
+    by = c('chrom', 'start0'), 
+    all.x = TRUE,
+    sort = FALSE
 )
+nascent[is.na(count), count := 0L]
 
 message("coverting counts to CPM")
 nascent[, cpm := count / sum(count, na.rm = TRUE) * 1e6]

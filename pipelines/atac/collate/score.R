@@ -99,7 +99,7 @@ message("  gc")
 scores$genome$gc <- analyzeScoreDist(bd$bins$genome, gcLimits, bd$bins$genome$pct_gc, scoreTypes$genome$gc)
 scores$genome$gc$score <- NULL 
 scores$genome$txn <- if(file.exists(env$TRANSCRIPTION_BED)) {
-    message("  txn")
+    message(paste("  txn:", env$TRANSCRIPTION_BED))
     txn_cpm <- fread(env$TRANSCRIPTION_BED)[[4]] # requires BED4 with normalized bin transcription value in column 4
     analyzeScoreDist(bd$bins$genome, gcLimits, txn_cpm, scoreTypes$genome$txn)
 } else {
