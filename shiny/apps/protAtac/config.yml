@@ -49,6 +49,8 @@ appSteps:
         module: protAtac_txnCorrelation
     browser:
         module: genomex-mdi-tools//trackBrowser
+    segmentation:
+        module: protAtac_segmentation
         # options:
         #     tracks:
         #         - svWGS # svWGS tracks are shared in global/classes/browserTracks

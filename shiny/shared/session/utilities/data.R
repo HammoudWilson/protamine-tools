@@ -236,7 +236,7 @@ gcResidualsZ <- function(sourceId, gcBiasModels = NULL){
             # for(key in names(sampleScores)) sampleScores[[key]]$score <- NULL
             # for(key in names(aggregateScores$by_stage)) aggregateScores$by_stage[[key]]$score <- NULL
             # for(key in names(aggregateScores$by_stageType)) aggregateScores$by_stageType[[key]]$score <- NULL
-            aggregateScores$stageType_delta$score <- NULL 
+            # aggregateScores$stageType_delta$score <- NULL 
             x <- list(
                 sampleScores    = sampleScores,
                 aggregateScores = aggregateScores

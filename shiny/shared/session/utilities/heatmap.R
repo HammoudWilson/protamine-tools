@@ -87,6 +87,7 @@ scoreMapRowImage <- function(scoreTypeName, binI, b, scoreValues, colorFn, confi
 # coordinate the assembly of a one complete score map group image for a single score type
 # called by the paScoreMap track builder function
 scoreMapGroupImage <- function(scoreTypeName, sourceId, bd, binI, b, config){
+    startSpinner(session, message = paste("rendering", scoreTypeName))
     scoreLevel <- getScoreLevel(scoreTypeName)
     scoreType <- getScoreType(sourceId, scoreTypeName)
     sepImage <- scoreMapSeparatorImage(config)
@@ -108,7 +109,7 @@ scoreMapGroupImage <- function(scoreTypeName, sourceId, bd, binI, b, config){
             ),
             sepImage
         ),
-        if(scoreLevel == "sample") c(
+        if(scoreLevel == "sample" && config$Aggregate_By != "none") c(
 
             # one or more rows representing sample-level primary scores
             # depending on the user setting for Aggregate_By, there may be one row per sample, stage, or stage type

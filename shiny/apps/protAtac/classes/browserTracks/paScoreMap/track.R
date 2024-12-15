@@ -10,7 +10,7 @@ new_paScoreMapTrack <- function(trackId) {
     list(
         click = TRUE, # whether the track type has `click`, `hover`, and/or `items` methods
         hover = FALSE,
-        brush = FALSE,
+        brush = TRUE,
         items = TRUE,
         navigation = FALSE, # whether the track offers a custom, additional row of within-track navigation inputs
         expand = TRUE,
@@ -48,7 +48,9 @@ build.paScoreMapTrack <- function(track, reference, coord, layout){
 
     startSpinner(session, message = "getting bins")
     sourceId <- track$settings$items()[[1]]$Source_ID
+    req(sourceId)
     bd <- paBinData(sourceId)
+    req(bd)
     binI <- bd$bins$genome[chrom == coord$chromosome & start0 < coord$end & end1 >= coord$start, binI]
     req(any(binI))
 
@@ -117,6 +119,7 @@ build.paScoreMapTrack <- function(track, reference, coord, layout){
     )
 }
 
+# track interaction methods
 click.paScoreMapTrack <- function(track, click, regionI){
     req(click$coord$y > 0)
     d <- paScoreBuffers[[track$id]]
@@ -126,6 +129,35 @@ click.paScoreMapTrack <- function(track, click, regionI){
     if(row$rowType == "header") return(NULL)
     paExpandReactive(row)
     app$browser$expandingTrack(regionI, list(trackId = track$id, row = row) )
+}
+brush.paScoreMapTrack <- function(track, brush, regionI){
+    d <- paScoreBuffers[[track$id]]
+    if(brush$keys$shift){
+        showUserDialog(
+            "Set as Training Region?", 
+            tags$p("Would you like to set the selected region as a training region?"), 
+            callback = function(...) {
+                start0 <- brush$coord$x1 - 1
+                end1   <- brush$coord$x2
+                app$segmentation$addTrainingRegion(
+                    d$sourceId, 
+                    d$coord$chromosome,
+                    start0, 
+                    end1,
+                    round((end1 - start0) / 1000, 1)
+                )
+            },
+            fade = FALSE
+        )
+    } else {
+        app$browser$jumpToCoordinates(
+            regionI,
+            d$coord$chromosome, 
+            getX(brush$coord$x1), 
+            getX(brush$coord$x2), 
+            strict = TRUE
+        )  
+    }
 }
 
 # method for the S3 class to show a relevant trackItemsDialog or trackSamplesDialog
@@ -138,7 +170,9 @@ items.paScoreMapTrack <- showTrackSourcesDialog
 expand.paScoreMapTrack <- function(track, reference, coord, layout, regionI){
     row <- paExpandReactive()
     d <- paScoreBuffers[[track$id]]
-    req(row, d)
+    if(is.null(row)) return(NULL)
+    if(is.null(d)) return(NULL)
+    # req(row, d)
 
     startSpinner(session, message = "loading expansion data")
     scoreType <- getScoreType(d$sourceId, row$scoreTypeName)

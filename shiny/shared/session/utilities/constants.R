@@ -52,7 +52,8 @@ scoreTypes <- list(
             summaryType = "quantile"
         ),
         iisf = list(
-            name = "Intermediate Insert Size",
+            distUnit = 0.01,
+            label = "Intermediate Insert Size",
             unit = "Fraction",
             trackHeaderLabel = "Intermediate Insert Size",
             trackScoreLabel = "fraction",
@@ -63,6 +64,7 @@ scoreTypes <- list(
             summaryType = "quantile"
         ),
         nrll = list(
+            distUnit = 0.1,
             label = "Protamine Transition Enrichment",
             unit = "NRLL",
             trackHeaderLabel = "Protamine Transition Enrichment",

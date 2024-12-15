@@ -16,6 +16,7 @@ settings:
         Aggregate_By:
             type:   selectInput
             choices:
+                - none
                 - sample
                 - stage
                 - stage_type
