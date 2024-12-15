@@ -4,10 +4,9 @@
 #               gc   = bin GC content
 #               txn  = (nascent) Transcription count per million reads
 #         sample-level (specific to each sample at different spermiogenic stages):
-#               cpm  = read Counts Per Million reads
 #               gcrz = GC Residual Z-Score (excess or deficit of reads relative to GC peers)
-#               snif = Subnucleosomal Insert Fraction (fraction of bin insert sizes < 146bp)
-#               nrll = subnucleosomal vs. nucleosomal Normalized Relative Log Likelihood
+#               iisf = Intermediate Insert Size Fraction (fraction of bin inserts with sizes >= 65 and <= 125bp)
+#               nrll = protamine- vs. histone-associated Normalized Relative Log Likelihood
 # input:
 #     sample metadata file
 #     genome and spike-in bins BED files
@@ -51,8 +50,8 @@ checkEnvVars(list(
         'SPIKE_IN_BINS_BED',
         'ACTION_DIR',
         'DATA_FILE_PREFIX',
-        'NUCLEOSOMAL_STAGE',
-        'SUBNUCLEOSOMAL_STAGE',
+        'HISTONE_STAGE',
+        'PROTAMINE_STAGE',
         'STAGE_TYPES',
         'TRANSCRIPTION_BED',
         'SHM_FILE_PREFIX'
@@ -91,13 +90,14 @@ message("parsing spermiogenic stage types and GC limits")
 stageTypes <- unpackStageTypes(env)
 gcLimits <- unpackGcLimits(env)
 
-message("extracting nucleosomal and subnucleosomal insert size distributions")
+message("extracting histone- and protamine-associated insert size distributions")
 emissProbsFile <- extractInsertSizeEps(isd, env)
 
 message("analyzing genome-level scores")
 scores <- list(genome = list())
 message("  gc")
 scores$genome$gc <- analyzeScoreDist(bd$bins$genome, gcLimits, bd$bins$genome$pct_gc, scoreTypes$genome$gc)
+scores$genome$gc$score <- NULL 
 scores$genome$txn <- if(file.exists(env$TRANSCRIPTION_BED)) {
     message("  txn")
     txn_cpm <- fread(env$TRANSCRIPTION_BED)[[4]] # requires BED4 with normalized bin transcription value in column 4
@@ -130,7 +130,7 @@ scores$sample <- sapply(names(scoreTypes$sample), function(scoreTypeName) {
 message()
 message("saving output for app")
 obj <- list(
-    env         = env[c("BIN_SIZE","MAX_INSERT_SIZE","GENOME","NUCLEOSOMAL_STAGE","SUBNUCLEOSOMAL_STAGE")],
+    env         = env[c("BIN_SIZE","MAX_INSERT_SIZE","GENOME","HISTONE_STAGE","PROTAMINE_STAGE")],
     samples     = isd$samples,
     references  = isd$references,
     stageTypes  = stageTypes,

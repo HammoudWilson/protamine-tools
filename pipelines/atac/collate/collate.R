@@ -9,7 +9,7 @@
 # outputs:
 #     samples     = data.table of sample metadata
 #     bins        = data.table of genome bins, same bin order as binCounts
-#     binCounts   = array of read counts in each bin for each sample, stratified by subnucleosomal and nucleosomal insert sizes
+#     binCounts   = array of read counts in each bin for each sample, stratified by all_inserts and intermediate insert sizes
 #     insertSizes = data.table of insert size distributions for each sample
 #     where bins, binCounts, and insertSizes are named lists with separate entries for genome and spike-in reference types
 
@@ -91,7 +91,7 @@ bins <- sapply(refTypes, function(refType) {
 
 message("calculating sample (spike-in) bin counts")
 countChromBins <- paste('bash', file.path(env$ACTION_DIR, 'count_chrom_bins.sh'))
-insertTypes <- c('subnucleosomal', 'nucleosomal')
+insertTypes <- c('all_inserts','intermediate')
 nInsertTypes <- length(insertTypes)
 binCounts <- sapply(refTypes, function(refType) { # so, one list entry for genome, one for spike-in, same as bins
     message(paste(' ', refType))

@@ -1,8 +1,8 @@
 # action:
 #     unpack the distinct insert end1s for every insert start1
-#     count the number of insert endpoints in each bin, stratified by either
-#         subnucleosomal inserts < 146 bp
-#         nucleosomal inserts >= 146 bp (includes mono-, di-, tri-, etc. nucleosomes)
+#     count the number of insert endpoints in each bin, establishing counts for:
+#         all inserts of any size
+#         intermediate-size inserts >= 65 bp and <= 125 bp, typical of bins during spermatid elongation and protamine replacement
 # input:
 #     stream of distinct insert endpoints in format "start1\tend1_1[,end1_2,...]"
 # outputs:
@@ -17,9 +17,9 @@ use warnings;
 
 # constants
 use constant { 
-    SUBNUCLEOSOMAL => "subnucleosomal",
-    NUCLEOSOMAL => "nucleosomal",
-    NUCLEOSOME_SIZE_BP => 146,
+    ALL_INSERTS => "all_inserts",
+    MIN_INTERMEDIATE_SIZE_BP => 65,
+    MAX_INTERMEDIATE_SIZE_BP => 125,
     START1 => 0,
     END1S  => 1
 };
@@ -35,16 +35,15 @@ while(<STDIN>){
     my @f = split("\t"); 
     foreach my $end1(split(",", $f[END1S])){ 
         my $insertSize = $end1 - $f[START1] + 1;
-        if($INSERT_TYPE eq SUBNUCLEOSOMAL){
-            if($insertSize < NUCLEOSOME_SIZE_BP){
+        if(
+            $INSERT_TYPE eq ALL_INSERTS or 
+           (
+                $insertSize >= MIN_INTERMEDIATE_SIZE_BP and 
+                $insertSize <= MAX_INTERMEDIATE_SIZE_BP
+            )
+        ){
                 $counts[int(($f[START1] - 1) / $BIN_SIZE)] += 0.5; # 0.5 for each end, thus, 1.0 for each read pair
-                $counts[int(($end1 - 1)      / $BIN_SIZE)] += 0.5;
-            }
-        } else {
-            if($insertSize >= NUCLEOSOME_SIZE_BP){
-                $counts[int(($f[START1] - 1) / $BIN_SIZE)] += 0.5; # 0.5 for each end, thus, 1.0 for each read pair
-                $counts[int(($end1 - 1)      / $BIN_SIZE)] += 0.5;
-            }
+                $counts[int(($end1      - 1) / $BIN_SIZE)] += 0.5;
         }
     }
 }

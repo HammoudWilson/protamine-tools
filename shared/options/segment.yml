@@ -6,4 +6,4 @@ options:
         type: character
         required: false
         default: 1e-7
-        description: "HMM transition probability, i.e., of transitioning between nucleosomal and subnucleosomal states"
+        description: "HMM transition probability, i.e., of transitioning between chromatin and protamine inferred states"

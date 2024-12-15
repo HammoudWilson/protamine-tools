@@ -3,55 +3,75 @@ gcLimits <- c(0.25, 0.65) # optimal for mm39 genome, only used by normalizeGC st
 
 # data types
 refTypes <- c('genome', 'spike_in')
-insertTypes <- c('subnucleosomal', 'nucleosomal')
+insertTypes <- c('all_inserts', 'intermediate')
 
 # score types metadata
 scoreTypes <- list(
     genome = list(
         gc = list(
-            name = "Bin Fraction GC",
+            label = "GC",
+            unit = "Percent",
+            trackHeaderLabel = "GC Percent",
+            trackSummaryLabel = "Z Score",
             class = "baseComposition",
             valueLim = gcLimits,
-            normValue = "z"
+            normValue = "z",
+            summaryType = "z"
         ),
         txn = list(
-            name = "Transcription log10(CPM)",
+            label = "Round Spermatid PRO-seq",
+            unit = "log10 CPM",
+            trackHeaderLabel = "Round Spermatid PRO-seq",
+            trackSummaryLabel = "log10 CPM",
             class = "transcription",
             valueLim = log10(c(1e-3, 1e3)),
-            normValue = "quantile"
+            normValue = "quantile",
+            summaryType = "score"
         )
     ),
     sample = list(
-        cpm = list(
-            name = "Counts Per Million",
-            class = "coverage",
-            valueLim = c(0, 1.5),
-            deltaLim = c(-0.5, 0.5),
-            normValue = "quantile"
-        ),
+        # cpm = list(
+        #     name = "Counts Per Million",
+        #     class = "coverage",
+        #     valueLim = c(0, 1.5),
+        #     deltaLim = c(-0.5, 0.5),
+        #     normValue = "quantile"
+        # ),
         gcrz = list(
             distUnit = 0.1,
-            include = c("z","quantile"),
+            include = c("quantile"),
             log10 = FALSE,
-            name = "GC-Residual Z-Score",
+            label = "GC Residual",
+            unit = "Z Score",
+            trackHeaderLabel = "GC Residual Read Count",
+            trackScoreLabel = "Z Score",
             class = "coverage",
             valueLim = c(-3, 3),
             deltaLim = c(-3, 3),
-            normValue = "z"
+            normValue = "z",
+            summaryType = "quantile"
         ),
-        snif = list(
-            name = "Subnucleosomal Insert Fraction",
+        iisf = list(
+            name = "Intermediate Insert Size",
+            unit = "Fraction",
+            trackHeaderLabel = "Intermediate Insert Size",
+            trackScoreLabel = "fraction",
             class = "insertSize",
             valueLim = c(0, 1),
-            deltaLim = c(-1, 0.5),
-            normValue = "z"
+            deltaLim = c(-0.5,0.5),
+            normValue = "z",
+            summaryType = "quantile"
         ),
         nrll = list(
-            name = "Subnucleosomal vs. Nucleosomal NRLL",
+            label = "Protamine Transition Enrichment",
+            unit = "NRLL",
+            trackHeaderLabel = "Protamine Transition Enrichment",
+            trackScoreLabel = "NRLL",
             class = "insertSize",
             valueLim = c(-1.5, 1.5),
             deltaLim = c(-1.5, 0),
-            normValue = "z"
+            normValue = "z",
+            summaryType = "quantile"
         )
     )
 )

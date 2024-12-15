@@ -13,48 +13,55 @@
 # see: https://midataint.github.io/mdi-apps-framework/docs/settings/yaml-declarations.html
 settings:
     Score_Map:
-        Score_Type:
-            type:   selectInput
-            choices:
-                - genome_gc
-                - genome_txn
-                - sample_cpm
-                - sample_gcrz
-                - sample_snif
-                - sample_nrll
-            value:  genome_gc
-        Heatmap_Type:
-            type:   selectInput
-            choices:
-                - z_score
-                - quantile
-            value:  quantile
         Aggregate_By:
             type:   selectInput
             choices:
                 - sample
                 - stage
                 - stage_type
-                - stage_type_delta
-            value: stage_type_delta
-        Max_Z_Score:
+            value: stage
+        Row_Height_Pixels:
             type:   numericInput
-            value:  2
-            min:    0
-            max:    10
-            step:   0.5
-        Sample_Height_Pixels:
-            type:   numericInput
-            value:  10
+            value:  13
             min:    6
             max:    25
             step:   1
+        Min_Txn_Log10_CPM:
+            type:   numericInput
+            value:  -1
+            min:    -2
+            max:    0
+            step:   0.25
+        Max_Txn_Log10_CPM:
+            type:   numericInput
+            value:  1
+            min:    0
+            max:    5
+            step:   0.25 
+        Max_Z_Score:
+            type:   numericInput
+            value:  2
+            min:    0.5
+            max:    10
+            step:   0.5
+        Max_NRLL:
+            type:   numericInput
+            value:  0.75
+            min:    0.25
+            max:    2
+            step:   0.25
         Max_Quantile:
             type:   numericInput
             value:  0.95
-            min:    0.5
+            min:    0.55
             max:    1
             step:   0.05
+        Max_Fraction_IIS:
+            type:   numericInput
+            value:  0.45
+            min:    0.1
+            max:    1
+            step:   0.025
 # uncomment this section to specify track-specific settings
 # presets:
 #     Preset_Name:

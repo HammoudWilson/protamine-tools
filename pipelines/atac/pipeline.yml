@@ -50,7 +50,7 @@ actions:
         job-manager:
             recommended:
                 time-limit: 2:00:00
-        description: "segment meiotic ATAC-seq bins into subnucleosomal and nucleosomal states"
+        description: "segment meiotic ATAC-seq bins into histone and protamine inferred states"
 package:
     collate: # the pipeline action after which a data package should assembled
         uploadType: protamine-atac # a signal to the Stage 2 framework regarding the package contents
@@ -64,13 +64,13 @@ package:
             scores:
                 type: rds
                 file: $DATA_FILE_PREFIX.scores.rds
-    segment: # the pipeline action after which a data package should assembled
-        uploadType: protamine-atac # a signal to the Stage 2 framework regarding the package contents
-        extends:    collate
-        files:
-            segmentation:
-                type: rds
-                file: $DATA_FILE_PREFIX.segmentation.rds
+    # segment: # the pipeline action after which a data package should assembled
+    #     uploadType: protamine-atac # a signal to the Stage 2 framework regarding the package contents
+    #     extends:    collate
+    #     files:
+    #         segmentation:
+    #             type: rds
+    #             file: $DATA_FILE_PREFIX.segmentation.rds
 container:
     supported: false
     registry:  ghcr.io  # domain name of your OCI-compatible, oras-accessible, container registry [ghcr.io]

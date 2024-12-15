@@ -1,15 +1,15 @@
 #----------------------------------------------------------------------
 # ui
 #----------------------------------------------------------------------
-shortLabel:       "Insert Sizes" # shown on dashboard menu 
-shortDescription: "Plot profiles of insert sizes for different samples and reference genomes." # shown on Overview page
-longLabel:        "Profile insert sizes" # shown at top of appStep page 
+shortLabel:       "Transcription" # shown on dashboard menu 
+shortDescription: "Correlate samples scores to round spermatid nascent transcription." # shown on Overview page
+longLabel:        "Correlate scores to transcription" # shown at top of appStep page 
 
 #----------------------------------------------------------------------
 # server
 #----------------------------------------------------------------------
 types: # names of the type(s) of this module ...
-    - insertSizes
+    - txnCorrelation
 sourceTypes: upload # ... and of the module(s) on which it depends
 
 #----------------------------------------------------------------------
@@ -29,14 +29,14 @@ packages: # required R packages
 #----------------------------------------------------------------------
 # module-level settings
 #----------------------------------------------------------------------
-settings:
-    Insert_Sizes:
-        # Aggregate_Samples_By_Stage:
-        #     type: checkboxInput
-        #     value: false 
-        # Normalize_To_Spike_In:
-        #     type: checkboxInput
-        #     value: false 
+# settings:
+#     Insert_Sizes:
+#         Aggregate_Samples_By_Stage:
+#             type: checkboxInput
+#             value: false 
+#         Normalize_To_Spike_In:
+#             type: checkboxInput
+#             value: false 
 #         <settingName>:
 #             type:   textInput
 #             value:  abc  

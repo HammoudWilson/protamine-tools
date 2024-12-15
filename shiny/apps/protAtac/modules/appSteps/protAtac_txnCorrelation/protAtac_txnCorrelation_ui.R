@@ -1,15 +1,15 @@
 #----------------------------------------------------------------------
-# UI components for the protAtac_scoreSummary appStep module
+# UI components for the protAtac_txnCorrelation appStep module
 #----------------------------------------------------------------------
 
 # module ui function
-protAtac_scoreSummaryUI <- function(id, options) {
+protAtac_txnCorrelationUI <- function(id, options) {
 
     # initialize namespace
     ns <- NS(id)
     
     # override missing options to module defaults
-    options <- setDefaultOptions(options, stepModuleInfo$protAtac_scoreSummary)
+    options <- setDefaultOptions(options, stepModuleInfo$protAtac_txnCorrelation)
 
     # return the UI contents
     standardSequentialTabItem(
@@ -35,9 +35,13 @@ protAtac_scoreSummaryUI <- function(id, options) {
                 collapsible = FALSE,
                 inFluidRow = FALSE
             ),
-            spermatidStageTableUI(
-                ns("spermatidStageTable"),
-                width = 6
+            bufferedTableUI(
+                ns("sample"),
+                "Sample",
+                width = 6,
+                solidHeader = TRUE,
+                status = "primary",
+                collapsible = FALSE
             )
         ),
         fluidRow(
@@ -51,20 +55,16 @@ protAtac_scoreSummaryUI <- function(id, options) {
                     ns("scoreType"),
                     "Score Type",
                     choiceNames  = c(
-                        "Fraction GC", 
-                        "Transcription log10 CPM", 
                         "GC Residual Z Score", 
                         "Intermediate Insert Size Fraction",
                         "Protamine Enrichment NRLL"
                     ),
                     choiceValues = c(
-                        "gc", 
-                        "txn", 
                         "gcrz", 
                         "iisf",
                         "nrll"
                     ),
-                    selected = "gc",
+                    selected = "gcrz",
                     inline = TRUE,
                     width = "100%"
                 )
@@ -72,37 +72,8 @@ protAtac_scoreSummaryUI <- function(id, options) {
         ),
         fluidRow(
             staticPlotBoxUI(
-                ns("sampleDistributionPlot"), 
-                "Sample Distributions",
-                width = 6,
-                status = "primary",
-                collapsible = TRUE,
-                solidHeader = TRUE,
-                collapsed = FALSE
-            ),
-            staticPlotBoxUI(
-                ns("stageDistributionPlot"), 
-                "Stage Distributions",
-                width = 6,
-                status = "primary",
-                collapsible = TRUE,
-                solidHeader = TRUE,
-                collapsed = FALSE
-            )
-        ),
-        fluidRow(
-            staticPlotBoxUI(
-                ns("stageTypeDistributionPlot"), 
-                "Stage Type Distributions",
-                width = 6,
-                status = "primary",
-                collapsible = TRUE,
-                solidHeader = TRUE,
-                collapsed = FALSE
-            ),
-            staticPlotBoxUI(
-                ns("deltaDistributionPlot"), 
-                "Stage Type Delta Distribution",
+                ns("txnCorrelationPlot"), 
+                "Transcription Correlation",
                 width = 6,
                 status = "primary",
                 collapsible = TRUE,

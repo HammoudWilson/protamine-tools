@@ -50,10 +50,11 @@ plotDistributions <- function(plot, scoreType, scores, colors, message,
                               legend = TRUE, isDelta = FALSE){
     startSpinner(session, message = message)
     maxY <- max(unlist(sapply(names(scores), function(seriesName) scores[[seriesName]]$dist$y)), na.rm = TRUE)
+    label <- paste(scoreType$label, scoreType$unit)
     plot$initializeFrame(
         xlim = scoreType[[if(isDelta) "deltaLim" else "valueLim"]],
         ylim = c(0, maxY * 1.05),
-        xlab = if(isDelta) paste(scoreType$name, "Delta") else scoreType$name,
+        xlab = if(isDelta) paste(label, "Delta") else label,
         ylab = "Frequency"
     )
     abline(v = 0, col = CONSTANTS$plotlyColors$grey)
@@ -154,7 +155,7 @@ deltaDistributionPlot <- staticPlotBoxServer(
         plotDistributions(
             plot        = deltaDistributionPlot, 
             scoreType   = getScoreType(sourceId, input$scoreType), 
-            scores      = getStageTypeDeltaScores(sourceId, input$scoreType),
+            scores      = getStageTypeDeltaScores(sourceId, input$scoreType, clean = TRUE),
             colors      = c(stageType_delta = CONSTANTS$plotlyColors$black),
             message     = "plotting delta",
             legend      = FALSE,

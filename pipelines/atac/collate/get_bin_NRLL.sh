@@ -26,8 +26,8 @@ export MAX_BIN_I0=$((($CHROM_SIZE - 1) / $BIN_SIZE))
 # pull all distinct insert endpoints from the bam file
 bash $ACTION_DIR/../parse_unique_inserts.sh | 
 
-# calculate log likelihoods for each bin for the nucleosomal and subnucleosomal states
-# output is tab-delimited: LL_nuc, LL_subnuc, nInserts
+# calculate log likelihoods for each bin for the histone- and protamine-associated states
+# output is tab-delimited: LL_histone, LL_protamine, nInserts
 perl $ACTION_DIR/../get_bin_likelihoods.pl | 
 
 # calculate NRLL value for each bin

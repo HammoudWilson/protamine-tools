@@ -45,6 +45,8 @@ appSteps:
         module: protAtac_insertSizes
     scoreSummary:
         module: protAtac_scoreSummary
+    txnCorrelation:
+        module: protAtac_txnCorrelation
     browser:
         module: genomex-mdi-tools//trackBrowser
         # options:

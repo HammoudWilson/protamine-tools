@@ -24,7 +24,7 @@ protAtac_insertSizesUI <- function(id, options) {
         # terminal = TRUE,
         console = serverEnv$IS_DEVELOPER,
         code = serverEnv$IS_DEVELOPER,
-        settings = TRUE,
+        settings = FALSE,
 
         # appStep UI elements, populate as needed
         fluidRow(
@@ -38,6 +38,31 @@ protAtac_insertSizesUI <- function(id, options) {
             spermatidStageTableUI(
                 ns("spermatidStageTable"),
                 width = 6
+            )
+        ),
+        fluidRow(
+            box(
+                title = "Plot Options",
+                status = "primary",
+                solidHeader = TRUE,
+                collapsible = FALSE,
+                width = 12,
+                column(
+                    width = 2,
+                    checkboxInput(
+                        ns("aggregateSamplesByStage"),
+                        "Aggregate Samples By Stage",
+                        value = TRUE
+                    )
+                ),
+                column(
+                    width = 10,
+                    checkboxInput(
+                        ns("normalizeToSpikeIn"),
+                        "Normalize To Spike In Samples By Stage",
+                        value = FALSE
+                    )
+                )
             )
         ),
         fluidRow(

@@ -1,19 +1,19 @@
 ---
 options:
-    nucleosomal-stage: 
+    histone-stage: 
         order: 1
         short: l
         type: character
         required: false
         default: early_round
-        description: "name of a single spermatid stage that best represents nucleosomal fragments"
-    subnucleosomal-stage: 
+        description: "name of a single spermatid stage that best represents histone-bound chromatin"
+    protamine-stage: 
         order: 2
         short: L
         type: character
         required: false
         default: int_elong
-        description: "name of a single spermatid stage that best represents subnucleosomal fragments"
+        description: "name of a single spermatid stage that best represents the protamine transition state"
     stage-types:
         order: 3
         short: y

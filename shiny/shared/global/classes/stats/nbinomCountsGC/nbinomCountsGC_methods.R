@@ -92,8 +92,20 @@ viterbi.nbinomCountsGC <- function(nb, # a nbinomCountsGC model
 }
 
 # calculate the z-score of a set of bin counts given a nbinomCountsGC model
-zScore <- function(nb, binCounts, fractionGC, binCN = 2, type=c('mu', 'peak', 'adjustedPeak')){
-    mu <- predict(nb, suppressGcOutliers(nb, fractionGC), type = type[1]) * binCN # expectedReadCount = rpa * nAlleles
-    variance <- mu + mu**2 / nb$theta
-    (binCounts - mu) / sqrt(variance)
+# use mid-p approach similar to edgeR nbinomZScore
+zScore <- function(nb, binCounts, fractionGC, binCN = 2){
+
+    # get the expected bin count based on bin fraction GC and CN
+    # expectedReadCount = rpa(reads per allele) * nAlleles
+    mu <- predict(nb, suppressGcOutliers(nb, fractionGC), type = 'mu') * binCN 
+
+    # get the probability on th higher and lower side of the observed bin counts
+    binCounts <- as.integer(ceiling(binCounts + 0.001))
+    x <- data.table(
+        a = pnbinom(binCounts,      size = nb$theta, mu = mu),
+        b = pnbinom(binCounts - 1L, size = nb$theta, mu = mu)
+    )
+
+    # project the probability to normal distribution-equivalent z-scores
+    qnorm(x[, rowMeans(.SD)])
 }

@@ -93,7 +93,7 @@ gcBiasPlotData <- function(){
     nAlleles <- bd$bins$genome[I, nAlleles]
     data.table(
         x = bd$bins$genome[I, pct_gc], # same as fractionGC
-        y = rowSums(bd$binCounts$genome[I, , sample$sample_name], na.rm = TRUE), # rpb = reads per bin
+        y = bd$binCounts$genome[I, "all_inserts", sample$sample_name], # rpb = reads per bin
         nAlleles = nAlleles, # same as binCN
         color = CONSTANTS$plotlyColors$blue
     )[sample.int(.N, min(.N, settings$get("GC_Bias","N_Plotted_Bins")))]
@@ -127,7 +127,7 @@ gcBiasPlot <- interactiveScatterplotServer(
     overplotColor = CONSTANTS$plotlyColors$red,
     xtitle = "Fraction GC",
     xrange = gcLimits,
-    ytitle = "Reads Per Bin (RPB)",
+    ytitle = "Reads Per Bin",
     yrange = function(...) range_pos(..., foldIQR = 5),
     selectable = "lasso"
 )
@@ -162,10 +162,10 @@ gcResidualBiasPlotData <- function(){
     fractionGC <- bd$bins$genome[I, pct_gc]
     binCN <- bd$bins$genome[I, nAlleles]
     rpb_fit <- predict(gcBiasModel$fit, fractionGC, type = "mu") * binCN
-    binCounts <- rowSums(bd$binCounts$genome[I, , sample$sample_name], na.rm = TRUE)
+    binCounts <- bd$binCounts$genome[I, "all_inserts", sample$sample_name]
     data.table(
         x = fractionGC,
-        y = zScore(gcBiasModel$fit, binCounts, fractionGC, binCN, type = "peak"),
+        y = zScore(gcBiasModel$fit, binCounts, fractionGC, binCN),
         color = ifelse(binCN == 2, CONSTANTS$plotlyColors$blue, CONSTANTS$plotlyColors$orange)
     )[sample.int(.N, min(.N, settings$get("GC_Bias","N_Plotted_Bins")))]
 }
@@ -180,7 +180,7 @@ gcResidualBiasPlot <- interactiveScatterplotServer(
     color = CONSTANTS$plotlyColors$blue,
     xtitle = "Fraction GC",
     xrange = gcLimits,
-    ytitle = "Residual RPB Z-Score",
+    ytitle = "Residual Reads Per Bin Z Score",
     yrange = function(...) range_both(..., foldIQR = 5),
     selectable = "lasso"
 )
@@ -206,7 +206,7 @@ gcBiasFitCompositePlot <- staticPlotBoxServer(
             if(!isTruthy(gcBiasModel)) return(NULL)
             fit <- gcBiasModel$fit
             I  <- bd$bins$genome[, excluded == 0]
-            binCounts <- rowSums(bd$binCounts$genome[I, , sample_name], na.rm = TRUE)
+            binCounts <- bd$binCounts$genome[I, "all_inserts", sample_name]
             y <- predict(fit, fit$model$fractionGC, type = 'mu') * 2 / sum(binCounts, na.rm = TRUE)
             maxY <<- max(maxY, max(y, na.rm = TRUE))
             data.table(
@@ -219,7 +219,7 @@ gcBiasFitCompositePlot <- staticPlotBoxServer(
             xlim = gcLimits,
             ylim = c(0, maxY),
             xlab = "Fraction GC",
-            ylab = "Normalized Reads Per Bin"
+            ylab = "Reads Per Bin Fit"
         )
         for(sample_name in samples$sample_name){
             gcBiasFitCompositePlot$addLines(
@@ -270,11 +270,11 @@ getGcBiasModels_externalCall <- function(sourceId){
     if(isTruthy(gcSourceId) && gcSourceId == sourceId) gcBiasModels()
     else getGcBiasModels(sourceId = sourceId)
 }
-getBinZScore <- function(sourceId, sampleName, binCounts, fractionGC, binCN, type = "peak"){
+getBinZScore <- function(sourceId, sampleName, binCounts, fractionGC, binCN){
     gcBiasModels <- getGcBiasModels_externalCall(sourceId)
     gcBiasModel <- gcBiasModels[[sampleName]]
     if(!isTruthy(gcBiasModel)) return(NULL)
-    zScore(gcBiasModel$fit, binCounts, fractionGC, binCN, type = type)
+    zScore(gcBiasModel$fit, binCounts, fractionGC, binCN)
 }
 
 #----------------------------------------------------------------------

@@ -21,7 +21,7 @@ settings <- activateMdiHeaderLinks( # uncomment as needed
     # dir = appStepDir, # for terminal emulator
     envir = environment(), # for R console
     baseDirs = appStepDir, # for code viewer/editor
-    settings = id, # for step-level settings
+    # settings = id, # for step-level settings
     # immediate = TRUE # plus any other arguments passed to settingsServer()
 )
 
@@ -87,8 +87,8 @@ insertSizesPlot <- function(refType){
             allSamples <- allSamples()
             req(sourceId, samples)
             isd <- paInsertSizes(sourceId)
-            aggregate <- settings$get("Insert_Sizes","Aggregate_Samples_By_Stage")
-            normalize <- settings$get("Insert_Sizes","Normalize_To_Spike_In")
+            aggregate <- input$aggregateSamplesByStage
+            normalize <- input$normalizeToSpikeIn
             if(refType == "spike_in" && normalize) req(FALSE)
             binSize <- isd$bin_size
             isd <- getInsertSizeData(isd$insertSizes, refType, samples, aggregate, normalize)
@@ -107,7 +107,7 @@ insertSizesPlot <- function(refType){
                     col = colors[series]
                 )
             }
-            abline(v = 146, col = CONSTANTS$plotlyColors$grey) # nucleosome size
+            abline(v = c(65, 125, 146), col = CONSTANTS$plotlyColors$grey) # intermediate and nucleosome size boundaries
             plot$addLegend(
                 legend = seriesNames,
                 col = colors,
@@ -175,7 +175,7 @@ spikeInPlot <- insertSizesPlot("spike_in")
 bookmarkObserver <- observe({
     bm <- getModuleBookmark(id, module, bookmark, locks)
     req(bm)
-    settings$replace(bm$settings)
+    # settings$replace(bm$settings)
     if(!is.null(bm$outcomes)){
         genomePlot$settings$replace(bm$outcomes$genomePlotSettings)
         spikeInPlot$settings$replace(bm$outcomes$spikeInPlotSettings)
@@ -190,7 +190,7 @@ bookmarkObserver <- observe({
 #----------------------------------------------------------------------
 list(
     input = input,
-    settings = settings$all_,
+    # settings = settings$all_,
     outcomes = list(
         genomePlotSettings  = genomePlot$settings$all_,
         spikeInPlotSettings = spikeInPlot$settings$all_

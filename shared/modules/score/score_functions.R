@@ -5,14 +5,14 @@ replaceNaN <- function(x){
     x[is.nan(x)] <- NA
     x
 }
-get_cpm <- function(bd, sample_name, ...){
-    binCounts <- rowSums(bd$binCounts$genome[,, sample_name], na.rm = TRUE)
-    replaceNaN(binCounts / sum(binCounts, na.rm = TRUE) * 1e6)
-}
-get_snif <- function(bd, sample_name, ...){
+# get_cpm <- function(bd, sample_name, ...){
+#     binCounts <- bd$binCounts$genome[,"all_inserts",  sample_name]
+#     replaceNaN(binCounts / sum(binCounts, na.rm = TRUE) * 1e6)
+# }
+get_iisf <- function(bd, sample_name, ...){
     replaceNaN(
-        bd$binCounts$genome[,"subnucleosomal", sample_name] / 
-        rowSums(bd$binCounts$genome[,, sample_name], na.rm = TRUE)
+        bd$binCounts$genome[,"intermediate", sample_name] / 
+        bd$binCounts$genome[,"all_inserts",  sample_name]
     )
 }
 get_nrll <- function(bd, sample_name_, emissProbsFile){
@@ -31,40 +31,40 @@ scoreTypes <- list(
         gc = list(
             gcBiasDependent = FALSE,
             distUnit = 0.005,
-            include = c("score","z"),
+            include = c("z"), # percent GC itself already available in bins object
             log10 = FALSE
         ),
         txn = list(
             gcBiasDependent = FALSE,
             distUnit = 0.1,
-            include = c("score","z","quantile"),
+            include = c("score"), # nascent transcription rate always handled on an absolute scale
             log10 = TRUE,
             minValue = 1e-3
         )
     ),
     sample = list(
-        cpm = list(
-            gcBiasDependent = FALSE,
-            distUnit = 0.1,
-            include = c("quantile"),
-            log10 = FALSE
-        ),
+        # cpm = list( # not used due to large GC bias in many samples
+        #     gcBiasDependent = FALSE,
+        #     distUnit = 0.1,
+        #     include = c("quantile"),
+        #     log10 = FALSE
+        # ),
         gcrz = list(
             gcBiasDependent = TRUE, # thus, cannot be assessed until GC bias is established in app
             distUnit = 0.1,
-            include = c("z","quantile"),
+            include = c("score","z","quantile"), # z/quantile only relevant for delta (others already a Z); not calculated here in any case
             log10 = FALSE
         ),
-        snif = list(
+        iisf = list(
             gcBiasDependent = FALSE,
             distUnit = 0.01,
-            include = c("z","quantile"),
+            include = c("score","quantile"),
             log10 = FALSE
         ),
         nrll = list(
             gcBiasDependent = FALSE,
             distUnit = 0.1,
-            include = c("z","quantile"),
+            include = c("score","quantile"), # retain the ability to plot NRLL as values or relative quantiles
             log10 = FALSE
         )
     )
@@ -80,7 +80,7 @@ unpackStageTypes <- function(env){
     stageTypes
 }
 
-# extract the nucleosomal and subnucleosomal insert size distributions
+# extract the histone- and protamine-associated insert size distributions
 getStateEmissProbs <- function(isd, stage_){ # where a single specific stage is taken as being a sufficiently pure representation of a state
     stage_samples <- isd$samples[stage == stage_, sample_name]
     x <- rowSums(isd$insertSizes$genome[, .SD, .SDcols = stage_samples])
@@ -90,8 +90,8 @@ getStateEmissProbs <- function(isd, stage_){ # where a single specific stage is 
 }
 extractInsertSizeEps <- function(isd, env){
     eps <- data.table(
-        nucleosomal    = getStateEmissProbs(isd, env$NUCLEOSOMAL_STAGE),
-        subnucleosomal = getStateEmissProbs(isd, env$SUBNUCLEOSOMAL_STAGE)
+        histone   = getStateEmissProbs(isd, env$HISTONE_STAGE),
+        protamine = getStateEmissProbs(isd, env$PROTAMINE_STAGE)
     )
     emissProbsFile <- paste(env$SHM_FILE_PREFIX, "emissionProbs_insertSize.tsv", sep = '.')
     write.table(
@@ -121,6 +121,7 @@ analyzeScoreDist <- function(bins, gcLimits, scores, scoreType){
         median   = median,
         mean     = mu,
         sd       = sd,
+        peak     = dist$x[which.max(dist$y)],
         z        = if("z" %in% scoreType$include) (scores - median) / sd else NULL,         # for normal/parametric scores
         quantile = if("quantile" %in% scoreType$include) ecdf(scores_wrk)(scores) else NULL # for non-parametric scores
     )
@@ -146,18 +147,22 @@ aggregateSampleScores <- function(bd, gcLimits, stageTypes, sampleScores, env, s
     # aggregate scores by spermatid stage
     allStages <- unique(bd$samples$stage)
     by_stage <- mclapply(allStages, function(stage_){
+    # by_stage <- lapply(allStages, function(stage_){
         message(paste("   ", "aggregateSampleScores by_stage", stage_))
         sample_names <- bd$samples[stage == stage_, sample_name]
         aggregateAndAnalyzeScores(bd$bins$genome, gcLimits, sampleScores, sample_names, scoreType)
     }, mc.cores = env$N_CPU)
+    # })
     names(by_stage) <- allStages
 
     # aggregate scores by spermatid stage type (round vs. elong)
     by_stageType <- mclapply(names(stageTypes), function(stageType){
+    # by_stageType <- lapply(names(stageTypes), function(stageType){
         message(paste("   ", "aggregateSampleScores by_stageType", stageType))
         sample_names <- bd$samples[stage %in% stageTypes[[stageType]], sample_name]
         aggregateAndAnalyzeScores(bd$bins$genome, gcLimits, sampleScores, sample_names, scoreType)
     }, mc.cores = env$N_CPU)
+    # })
     names(by_stageType) <- names(stageTypes)
 
     # calculate the difference in scores between round and elongated spermatids to assess spermiogenesis trajectory
