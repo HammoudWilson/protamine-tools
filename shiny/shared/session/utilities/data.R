@@ -1,5 +1,4 @@
 # functions to load, parse, and filter bin data
-protAtacLoadCreate <- "asNeeded" # for convenience when debugging load functions
 
 # handle bin exclusions, including at gc extremes
 isExcludedBin <- function(excluded, pct_gc){
@@ -14,87 +13,42 @@ getIncudedAutosomeBins <- function(bins){
 
 # load and format genome bins and read counts (from atat/collate action)
 paBinData <- function(sourceId){
-
-    # for memory management, ensure that only one sourceId is loaded at a time
-    workingSourceId <- isolate(binsWorkingSourceId())
-    if(!is.null(workingSourceId) && workingSourceId != sourceId){
-        binsCache$clear()
-        binsWorkingSourceId(sourceId)
-    } else if(is.null(workingSourceId)){
-        binsWorkingSourceId(sourceId)
-    }
-
-    # load the analysis data into cache as needed
-    binsCache$get(
-        "paBinData",
-        keyObject = list(
-            sourceId = sourceId
-        ),
-        permanent = FALSE, # don't resave to disk, is large, complex object, slow to load that way
-        from = "ram",
-        create = protAtacLoadCreate,
-        createFn = function(...){
-
-            # load the bin data from the pipeline data package
-            startSpinner(session, message = "loading bin counts.")
-            bd <- readRDS(getSourceFilePath(sourceId, "binCounts"))
-
-            # create a shared bin identifier for visualization merge operations
-            startSpinner(session, message = "loading bin counts..")
+    startSpinner(session, message = "loading bin counts")
+    filePath <- loadPersistentFile(
+        sourceId = sourceId, 
+        contentFileType = "binCounts", 
+        ttl = CONSTANTS$ttl$month, 
+        postProcess = function(bd){
             for(refType in refTypes) bd$bins[[refType]]$binI <- 1:nrow(bd$bins[[refType]])
-            stopSpinner(session)
             bd
         }
-    )$value
+    )
+    stopSpinner(session)
+    persistentCache[[filePath]]$data
 }
 
 # load and format insert size data (from atac/collate action)
 paInsertSizes <- function(sourceId){
-
-    # load the analysis data into cache as needed
-    insertSizesCache$get(
-        "paInsertSizes",
-        keyObject = list(
-            sourceId = sourceId
-        ),
-        permanent = FALSE, # don't resave to disk, is large, complex object, slow to load that way
-        from = "ram",
-        create = protAtacLoadCreate,
-        createFn = function(...){
-            startSpinner(session, message = "loading inserts")
-            isd <- readRDS(getSourceFilePath(sourceId, "insertSizes"))
-            stopSpinner(session)
-            # TODO: additional post-processing?
-            isd
-        }
-    )$value
+    startSpinner(session, message = "loading insert sizes")
+    filePath <- loadPersistentFile(
+        sourceId = sourceId, 
+        contentFileType = "insertSizes", 
+        ttl = CONSTANTS$ttl$month, 
+        postProcess = NULL
+    )
+    stopSpinner(session)
+    persistentCache[[filePath]]$data
 }
 
 # load and format genome bins and read counts (from atat/collate action)
 paScores <- function(sourceId){
-
-    # for memory management, ensure that only one sourceId is loaded at a time
-    workingSourceId <- isolate(scoresWorkingSourceId())
-    if(!is.null(workingSourceId) && workingSourceId != sourceId){
-        binsCache$clear()
-        scoresWorkingSourceId(sourceId)
-    } else if(is.null(workingSourceId)){
-        scoresWorkingSourceId(sourceId)
-    }
-
-    # load the analysis data into cache as needed
-    scoresCache$get(
-        "paScores",
-        keyObject = list(
-            sourceId = sourceId
-        ),
-        permanent = FALSE, # don't resave to disk, is large, complex object, slow to load that way
-        from = "ram",
-        create = protAtacLoadCreate,
-        createFn = function(...){
-            startSpinner(session, message = "loading scores")
-            sd <- readRDS(getSourceFilePath(sourceId, "scores"))
-            stopSpinner(session)
+    startSpinner(session, message = "loading scores")
+    filePath <- loadPersistentFile(
+        sourceId = sourceId, 
+        contentFileType = "scores", 
+        ttl = CONSTANTS$ttl$month, 
+        postProcess = function(sd){
+            startSpinner(session, message = "scores post-processing")
             sd$reverseStageTypes <- {
                 reversed <- list()
                 for (name in names(sd$stageTypes)) {
@@ -104,31 +58,11 @@ paScores <- function(sourceId){
                 }
                 reversed
             }
-            # TODO: additional post-processing?
             sd
         }
-    )$value
-}
-
-# load and format segmentation data (from atac/segment action)
-paSegmentation <- function(sourceId){
-
-    # load the analysis data into cache as needed
-    segmentationCache$get(
-        "paSegmentation",
-        keyObject = list(
-            sourceId = sourceId
-        ),
-        permanent = FALSE, # don't resave to disk, is large, complex object, slow to load that way
-        from = "ram",
-        create = protAtacLoadCreate,
-        createFn = function(...){
-            startSpinner(session, message = "loading segmentation")
-            seg <- readRDS(getSourceFilePath(sourceId, "segmentation"))
-            # TODO: additional post-processing?
-            seg
-        }
-    )$value
+    )
+    stopSpinner(session)
+    persistentCache[[filePath]]$data
 }
 
 # GC Residual Z-Score analysis, depends on pipeline bin data and user-selected GC bias models
@@ -216,7 +150,6 @@ gcResidualsZ <- function(sourceId, gcBiasModels = NULL){
         ),
         permanent = TRUE,
         from = "ram",
-        # create = protAtacLoadCreate,
         create = "asNeeded",
         createFn = function(...){
             startSpinner(session, message = "clearing gcrz")
@@ -233,10 +166,6 @@ gcResidualsZ <- function(sourceId, gcBiasModels = NULL){
                 x
             }, scoreType)
             aggregateScores <- aggregateSampleScores(bd, sd$gcLimits, sd$stageTypes, sampleScores, scoreType)
-            # for(key in names(sampleScores)) sampleScores[[key]]$score <- NULL
-            # for(key in names(aggregateScores$by_stage)) aggregateScores$by_stage[[key]]$score <- NULL
-            # for(key in names(aggregateScores$by_stageType)) aggregateScores$by_stageType[[key]]$score <- NULL
-            # aggregateScores$stageType_delta$score <- NULL 
             x <- list(
                 sampleScores    = sampleScores,
                 aggregateScores = aggregateScores
