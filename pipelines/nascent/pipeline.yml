@@ -27,3 +27,19 @@ actions:
             recommended:
                 time-limit: 2:00:00
         description: "liftover nascent RNA-seq data and calculate binned transcription levels"
+    tss:
+        order: 2
+        optionFamilies:
+            - nascent
+            - genome
+            - annotation
+        resources:
+            required:
+                total-ram: 24G
+            recommended: 
+                n-cpu: 12
+                ram-per-cpu: 2G
+        job-manager:
+            recommended:
+                time-limit: 4:00:00
+        description: "liftover nascent RNA-seq data and rank gene TSSs by transcription level"

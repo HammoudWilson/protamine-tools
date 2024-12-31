@@ -1,0 +1,9 @@
+---
+options:
+    gencode-release: 
+        order: 1
+        short: a
+        type: string
+        required: false
+        default: M36
+        description: "GENCODE annotation release to use"

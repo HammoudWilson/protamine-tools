@@ -117,6 +117,32 @@ download_excluderegions () { # for newer genomes lacking Boyle lab exclusions
         echo
     fi
 }
+download_gtf () {
+    SPECIES=$1
+    RELEASE=$2
+    VERSION=v${RELEASE}
+    GTF_PATH=Gencode_${SPECIES}/release_${RELEASE}/gencode.${VERSION}.basic.annotation.gtf.gz
+    GENCODE_URL=https://ftp.ebi.ac.uk/pub/databases/gencode/${GTF_PATH}
+    if [ ! -f ${GENOME_GTF} ]; then
+        echo "  downloading GTF file"
+        echo "    from: ${GENCODE_URL}"
+        echo "    to:   ${GENOME_GTF}"
+        wget -O ${GENOME_GTF} ${GENCODE_URL}
+    else 
+        echo "  already exists: genome GTF"
+    fi
+    if [ ! -f ${GENES_BED} ]; then
+        echo "  writing genes BED file"
+        echo "    from: ${GENOME_GTF}"
+        echo "    to:   ${GENES_BED}"
+        zcat ${GENOME_GTF} | 
+        perl -n ${ACTION_DIR}/gtf_to_genes_bed.pl | 
+        sort -k1,1 -k2,2n -k3,3n |
+        pigz -c > ${GENES_BED}
+    else 
+        echo "  already exists: genes BED"
+    fi
+}
 
 # execute download actions customized for each specific supported genome
 echo
@@ -135,14 +161,14 @@ elif [ "$GENOME" == "hg38" ]; then
     download_genome_gaps
     download_gc5Base
     download_ENCODE_exclusions
-
+    download_gtf human ${GENCODE_RELEASE} # e.g., 47
 elif [ "$GENOME" == "mm39" ]; then
     APPEND_EBV=""
     download_and_index_genome ""
     download_genome_gaps
     construct_gc5Base
     download_excluderegions mm39.excluderanges.bed
-
+    download_gtf mouse ${GENCODE_RELEASE} # e.g., M36
 elif [ "$GENOME" == "dm6" ]; then
     APPEND_EBV=""
     download_and_index_genome ""

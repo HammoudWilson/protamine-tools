@@ -50,6 +50,9 @@ export GENOME_BINS_DIR=${GENOME_DIR}/bins
 
 # annotations
 export GENOME_ANNOTATIONS_DIR=${GENOME_DIR}/annotations
+export GENOME_GENCODE_PREFIX=${GENOME_ANNOTATIONS_DIR}/${GENOME}.gencode.${GENCODE_RELEASE}
+export GENOME_GTF=${GENOME_GENCODE_PREFIX}.basic.annotation.gtf.gz
+export GENES_BED=${GENOME_GENCODE_PREFIX}.genes.bed.gz
 
 # get genome size from canonical chromosomes only
 # get the list of all placed chromosome sequences, including chrX, chrY, chrM, and chrEBV if present

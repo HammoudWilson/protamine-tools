@@ -16,6 +16,7 @@ actions:
         order: 1
         optionFamilies:
             - download-genome
+            - annotation
         resources:
             required:
                 total-ram: 8G

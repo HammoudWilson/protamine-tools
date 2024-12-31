@@ -1,0 +1,23 @@
+---
+options:
+    histone-stage: 
+        order: 1
+        short: l
+        type: character
+        required: false
+        default: early_round
+        description: "name of a single spermatid stage that best represents histone-bound chromatin"
+    protamine-stage: 
+        order: 2
+        short: L
+        type: character
+        required: false
+        default: int_elong
+        description: "name of a single spermatid stage that best represents the protamine transition state"
+    stage-types:
+        order: 3
+        short: y
+        type: character
+        required: false
+        default: round:early_round,late_round;elong:early_elong,int_elong # deliberately omit late_elong which has low signal
+        description: "assignment of spermatid stages into two stage types as stageType1:stage1[,stage2...];stageType2:stage3[,stage4...]"

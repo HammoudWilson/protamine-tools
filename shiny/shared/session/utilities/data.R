@@ -65,6 +65,22 @@ paScores <- function(sourceId){
     persistentCache[[filePath]]$data
 }
 
+# load and format TSS data
+paTssFragsData <- function(sourceId){
+    startSpinner(session, message = "loading TSS inserts")
+    filePath <- loadPersistentFile(
+        sourceId = sourceId, 
+        contentFileType = "tssFrags", 
+        ttl = CONSTANTS$ttl$month, 
+        postProcess = function(tssF){
+            tssF$tss[, tss_I1 := 1:.N]
+            tssF
+        }
+    )
+    stopSpinner(session)
+    persistentCache[[filePath]]$data
+}
+
 # GC Residual Z-Score analysis, depends on pipeline bin data and user-selected GC bias models
 #----------------------------------------------------------------------
 # analyze and aggregate distributions of different bin scores
