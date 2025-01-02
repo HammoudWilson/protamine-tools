@@ -71,11 +71,7 @@ paTssFragsData <- function(sourceId){
     filePath <- loadPersistentFile(
         sourceId = sourceId, 
         contentFileType = "tssFrags", 
-        ttl = CONSTANTS$ttl$month, 
-        postProcess = function(tssF){
-            for(x in names(tssF$tss)) tssF$tss[[x]][, tss_I1 := 1:.N]
-            tssF
-        }
+        ttl = CONSTANTS$ttl$month
     )
     stopSpinner(session)
     persistentCache[[filePath]]$data

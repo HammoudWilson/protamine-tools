@@ -9,3 +9,6 @@ source ${MODULES_DIR}/utilities/shell/create_shm_dir.sh
 
 # map ATAC fragments around active TSSs at base-level resolution
 runWorkflowStep 1 tss tss.sh
+
+# further attempt to find positioned nucleosomes distal to active TSSs
+runWorkflowStep 2 find_nuc find_nuc.sh

@@ -39,22 +39,10 @@ settings:
             step:   1
         Max_Plotted_Inserts:
             type:   numericInput
-            value:  1000000
+            value:  2000000
             min:    1000000
             max:    100000000
             step:   1000000
-        Max_X_Distance:
-            type:   numericInput
-            value:  600
-            min:    300
-            max:    1000
-            step:   100
-        Max_Y_Size:
-            type:   numericInput
-            value:  600
-            min:    300
-            max:    1000
-            step:   100
         Min_RPKM_Active:
             type:   numericInput
             value:  1
@@ -79,6 +67,15 @@ settings:
                 - active
                 - inactive
             value: active
+        Plot_Center:
+            type: selectInput
+            choices:
+                - TSS
+                - nucleosome
+            value: TSS
+        Nucleosome_Only:
+            type: checkboxInput
+            value: false
 #         <settingName>:
 #             type: selectInput
 #             choices:
