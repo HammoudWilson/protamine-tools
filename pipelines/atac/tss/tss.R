@@ -10,8 +10,9 @@
 #     samples     = data.table of sample metadata
 #     stageTypes  = list of spermiogenic stage types for each sample, used for aggregation in app
 #     reference   = list of reference genome data
-#     tss         = data.table of active TSSs
-#     tssFrags    = list of data.tables of ATAC inserts around active TSSs
+#     tss         = two-membered list data.tables of TSSs
+#     tssFrags    = two-membered list of lists of data.tables of ATAC inserts around TSSs
+#        where tss and tssFrags are stratified by inactive vs. active TSSs
 
 #=====================================================================================
 # script initialization
@@ -35,7 +36,7 @@ checkEnvVars(list(
         'ACTION_DIR',
         'DATA_FILE_PREFIX',
         'TSS_BED',
-        'ACTIVE_TSS_BED',
+        'PA_TSS_BED',
         'HISTONE_STAGE',
         'PROTAMINE_STAGE',
         'STAGE_TYPES'
@@ -55,6 +56,11 @@ sourceScripts(rUtilDir, c('score_functions'))
 # set some options
 options(scipen = 999) # prevent 1+e6 in printed, which leads to read.table error when integer expected
 options(warn = 2) 
+#-------------------------------------------------------------------------------------
+MIN_ACTIVE_TSS_RPKM       <- 0.5
+MIN_ACTIVE_TSS_FOLD_INC   <- 10
+MAX_INACTIVE_TSS_RPKM     <- 0.05
+MAX_INACTIVE_TSS_INCREASE <- 0.01
 #=====================================================================================
 
 #=====================================================================================
@@ -74,30 +80,61 @@ reference <- list(
     input_dir   = env$GENOME_INPUT_DIR,
     genome      = env$GENOME,
     fai_file    = paste0(env$GENOME_FASTA, '.fai'),
-    tss_file    = if(env$TSS_BED == 'NA') env$ACTIVE_TSS_BED else env$TSS_BED
+    tss_file    = if(env$TSS_BED == 'NA') env$PA_TSS_BED else env$TSS_BED
 )
 
-message("loading active TSSs")
+message("loading TSSs")
+tssTypes <- c('active', 'inactive')
 tss <- {
-    tss <- fread(reference$tss_file) # already restricted by nascent/tss to autosomes and chrX/Y
-    reference$chroms <- tss[, unique(chrom)]
-    reference$n_tss <- nrow(tss)
-    tss
+    tss_ <- fread(reference$tss_file) # already restricted by nascent/tss to autosomes and chrX/Y
+    reference$chroms <- tss_[, unique(chrom)]
+    reference$n_tss <- nrow(tss_)
+    sapply(tssTypes, function(tssType) {
+        if(tssType == 'active') {
+            I <- tss_[, # gene itself must be transcribed with a strong bump relative to promoter at the TSS
+                gene_start_rpkm   >= MIN_ACTIVE_TSS_RPKM & 
+                tss_fold_increase >= MIN_ACTIVE_TSS_FOLD_INC # if upstream/promoter is zero, tss_fold_increase is Inf, which is meaningful for non-zero gene_start_rpkm
+            ]
+            reference$n_tss_active   <<- sum(I)
+        } else {
+            I <- tss_[, # neither the gene nor the promoter can be transcribed, and what little transcription there is must not bump at the TSS
+                upstream_rpkm     <= MAX_INACTIVE_TSS_RPKM & 
+                gene_start_rpkm   <= MAX_INACTIVE_TSS_RPKM & 
+                gene_start_rpkm - upstream_rpkm <= MAX_INACTIVE_TSS_INCREASE # tss_fold_increase not as useful here due to potential divide by zero
+            ]
+            reference$n_tss_inactive <<- sum(I)
+        }
+        tss_[I]
+    }, simplify = FALSE, USE.NAMES = TRUE)
 }
 
-message("collecting sample inserts around active TSSs")
+message("collecting sample inserts around (in)active TSSs")
 getChromInserts <- paste('bash', file.path(env$ACTION_DIR, 'get_chrom_inserts.sh'))
-tssFrags <- mclapply(1:nSamples, function(sampleI) {
-# tssFrags <- lapply(1:nSamples, function(sampleI) {
-    sample <- samples[sampleI]
-    message(paste('   ', sample$filename_prefix, '=', sample$sample_name))
-    bamFile <- file.path(reference$input_dir, paste0(sample$filename_prefix, '.*.bam'))
-    do.call(rbind, lapply(reference$chroms, function(chrom) { # all bins values over all ordered chroms
-        fread(cmd = paste(getChromInserts, bamFile, chrom, reference$tss_file)) # one value per TSS-region base on chrom
-    }))
-}, mc.cores = env$N_CPU)
-# })
-names(tssFrags) <- samples$sample_name
+tssFileTmp <- paste(reference$tss_file, "tmp.gz", sep = '.')
+tssFrags <- sapply(tssTypes, function(tssType) {
+    message(paste(' ', tssType))
+    fwrite(
+        tss[[tssType]],
+        file = tssFileTmp,
+        quote = FALSE,
+        row.names = FALSE,
+        col.names = TRUE,
+        sep = '\t'
+    )
+    tf <- mclapply(1:nSamples, function(sampleI) {
+    # tf <- lapply(1:nSamples, function(sampleI) {
+        sample <- samples[sampleI]
+        message(paste('   ', sample$filename_prefix, '=', sample$sample_name))
+        bamFile <- file.path(reference$input_dir, paste0(sample$filename_prefix, '.*.bam'))
+        do.call(rbind, lapply(reference$chroms, function(chrom) { # all bins values over all ordered chroms
+            fread(cmd = paste(getChromInserts, bamFile, chrom, tssFileTmp)) # one value per TSS-region base on chrom
+        }))
+    }, mc.cores = env$N_CPU)
+    # })
+    names(tf) <- samples$sample_name
+    unlink(tssFileTmp)
+    tf
+}, simplify = FALSE, USE.NAMES = TRUE)
 
 message()
 message("saving TSS inserts for app")

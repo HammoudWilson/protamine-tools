@@ -73,7 +73,7 @@ paTssFragsData <- function(sourceId){
         contentFileType = "tssFrags", 
         ttl = CONSTANTS$ttl$month, 
         postProcess = function(tssF){
-            tssF$tss[, tss_I1 := 1:.N]
+            for(x in names(tssF$tss)) tssF$tss[[x]][, tss_I1 := 1:.N]
             tssF
         }
     )

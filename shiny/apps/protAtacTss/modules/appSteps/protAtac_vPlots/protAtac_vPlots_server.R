@@ -22,6 +22,7 @@ settings <- activateMdiHeaderLinks( # uncomment as needed
     envir = environment(), # for R console
     baseDirs = appStepDir, # for code viewer/editor
     settings = id, # for step-level settings
+    size = "m"
     # immediate = TRUE # plus any other arguments passed to settingsServer()
 )
 
@@ -37,16 +38,36 @@ samples <- reactive({ # vector of the names of all co-analyzed samples
 tss <- reactive({
     sourceId <- sourceId()
     req(sourceId)
-    paTssFragsData(sourceId)$tss
+    txnState <- settings$get("V_Plot","Transcription_State")
+    tss <- paTssFragsData(sourceId)$tss[[txnState]]
+    tss[, tss_I1 := 1:.N]
+    tss
 })
 filteredTssI1 <- reactive({
     tss <- tss()
     req(tss)
-    tss[
-        gene_start_rpkm   >= settings$get("V_Plot","Min_TSS_RPKM") & 
-        tss_fold_increase >= settings$get("V_Plot","Min_Fold_Increase"), 
-        tss_I1
-    ]
+    txnState <- settings$get("V_Plot","Transcription_State")
+
+    dstr(tss)
+    dstr(txnState)
+    dstr(settings$get("V_Plot","Min_RPKM_Active"))
+    dstr(settings$get("V_Plot","Min_Fold_Increase"))
+
+    if(txnState == "active"){
+        tss[
+            gene_start_rpkm   >= settings$get("V_Plot","Min_RPKM_Active") & 
+            tss_fold_increase >= settings$get("V_Plot","Min_Fold_Increase"), 
+            tss_I1
+        ]
+    } else {
+        maxRpkm <- settings$get("V_Plot","Max_RPKM_Inactive")
+        tss[
+            upstream_rpkm     <= maxRpkm & 
+            gene_start_rpkm   <= maxRpkm & 
+            gene_start_rpkm - upstream_rpkm <= maxRpkm / 5, 
+            tss_I1
+        ]
+    }
 })
 
 #----------------------------------------------------------------------
@@ -83,7 +104,8 @@ binTssFrags <- function(selectedSamplesReactive){
     req(selectedSamples)
     startSpinner(session, message = "binning frags")
     inc <- settings$get("V_Plot","BP_Per_Bin")
-    lapply(paTssFragsData(sourceId)$tssFrags[selectedSamples$sample_name], function(tf) {
+    txnState <- settings$get("V_Plot","Transcription_State")
+    lapply(paTssFragsData(sourceId)$tssFrags[[txnState]][selectedSamples$sample_name], function(tf) {
         tf[, ":="(
             x = round((start_to_tss + (end_to_tss - start_to_tss) / 2) / inc, 0) * inc, 
             y = round((end1 - start0) / inc, 0) * inc

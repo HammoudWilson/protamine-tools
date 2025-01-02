@@ -26,8 +26,9 @@ build.tssFragsTrack <- function(track, reference, coord, layout){
     req(sourceId)
     tfd <- paTssFragsData(sourceId)
     req(tfd)
-    tssFrags <- do.call(rbind, lapply(names(tfd$tssFrags), function(sample_name_){
-        tf <- tfd$tssFrags[[sample_name_]][chrom == coord$chromosome & start0 < coord$end & end1 >= coord$start]
+    txnState <- track$settings$get("TSS_Frags","Transcription_State")
+    tssFrags <- do.call(rbind, lapply(names(tfd$tssFrags[[txnState]]), function(sample_name_){
+        tf <- tfd$tssFrags[[txnState]][[sample_name_]][chrom == coord$chromosome & start0 < coord$end & end1 >= coord$start]
         tf[, .(
             stage = tfd$samples[sample_name == sample_name_, stage],
             start1 = start0 + 1,
@@ -95,7 +96,8 @@ navigation.tssFragsTrack <- function(track, session, id, browser){
     trackNavData <- reactive({
         sourceId <- track$settings$items()[[1]]$Source_ID
         req(sourceId)
-        paTssFragsData(sourceId)$tss
+        txnState <- track$settings$get("TSS_Frags","Transcription_State")
+        paTssFragsData(sourceId)$tss[[txnState]]
     })
     tagList(
         trackNavTable(

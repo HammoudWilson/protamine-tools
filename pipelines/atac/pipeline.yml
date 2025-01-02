@@ -50,7 +50,7 @@ actions:
         job-manager:
             recommended:
                 time-limit: 2:00:00
-        description: "map ATAC fragments around active TSSs at base-level resolution"
+        description: "map ATAC fragments around (in)active TSSs at base-level resolution"
     # segment:
     #     order: 3
     #     optionFamilies:

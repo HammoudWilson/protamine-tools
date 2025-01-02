@@ -6,5 +6,5 @@
 # usage:
 #     source $MODULES_DIR/tss/set_tss_vars.sh
 
-# active TSS file
-export ACTIVE_TSS_BED=${DATA_FILE_PREFIX}.${GENOME}.gencode.${GENCODE_RELEASE}.active.tss.bed.gz
+# pipeline-provided TSS file
+export PA_TSS_BED=${DATA_FILE_PREFIX}.${GENOME}.gencode.${GENCODE_RELEASE}.tss.bed.gz

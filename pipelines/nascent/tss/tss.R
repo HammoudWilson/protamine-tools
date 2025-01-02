@@ -46,7 +46,7 @@ checkEnvVars(list(
         'LIFTOVER_CHAIN',
         'GENES_BED',
         'PLOT_PREFIX',
-        'ACTIVE_TSS_BED'
+        'PA_TSS_BED'
     ),
     integer = c(
         'N_CPU'
@@ -155,6 +155,7 @@ tss <- do.call(rbind, mclapply(unique(tss$chrom), function(chrom_) {
             {
                 if(.N == 1) count <- if(side == -1) c(count, 0) else c(0, count)
                 .(
+                    upstream_rpkm     = count[1] / TSS_FLANK_LEN_KB / millionCounts,
                     gene_start_rpkm   = count[2] / TSS_FLANK_LEN_KB / millionCounts,
                     tss_fold_increase = count[2] / count[1],
                     tss_increase      = (count[2] - count[1]) / TSS_FLANK_LEN_KB / millionCounts
@@ -203,17 +204,15 @@ tss <- tss[, .(
     name, 
     gene_size, 
     strand, 
+    upstream_rpkm,
     gene_start_rpkm, 
     tss_fold_increase
 )][
-    gene_start_rpkm   >= MIN_TSS_RPKM &
-    tss_fold_increase >= MIN_TSS_FOLD_INC
-][
     order(chrom, start, end)
 ]
 fwrite(
     tss,
-    file = env$ACTIVE_TSS_BED,
+    file = env$PA_TSS_BED,
     quote = FALSE,
     row.names = FALSE,
     col.names = TRUE,
