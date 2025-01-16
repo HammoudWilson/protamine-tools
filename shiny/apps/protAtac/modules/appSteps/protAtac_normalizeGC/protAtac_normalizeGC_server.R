@@ -278,6 +278,24 @@ getBinZScore <- function(sourceId, sampleName, binCounts, fractionGC, binCN){
 }
 
 #----------------------------------------------------------------------
+# download GC residuals
+#----------------------------------------------------------------------
+output$downloadGcResiduals <- downloadHandler(
+    filename = function(){
+        paste(module, "gcrz.rds", sep = ".")
+    },
+    content  = function(tmpFile){
+        sourceId <- sourceId()
+        req(sourceId)
+        startSpinner(session, message = "downloading GC residuals")
+        x <- getSampleScoresList(sourceId, "gcrz")
+        dstr(x)
+        saveRDS(x, tmpFile)
+        stopSpinner(session)
+    }
+)
+
+#----------------------------------------------------------------------
 # define bookmarking actions
 #----------------------------------------------------------------------
 bookmarkObserver <- observe({

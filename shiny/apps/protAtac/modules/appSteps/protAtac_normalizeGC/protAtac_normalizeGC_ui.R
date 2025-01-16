@@ -77,6 +77,10 @@ protAtac_normalizeGCUI <- function(id, options) {
                 collapsible = TRUE,
                 solidHeader = TRUE,
                 collapsed = FALSE
+            ),
+            column(
+                width = 6,
+                downloadLink(ns("downloadGcResiduals"), label = "download GC residual Z-scores")
             )
         ),
         NULL
