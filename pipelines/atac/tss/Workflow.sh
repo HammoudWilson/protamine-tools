@@ -12,3 +12,6 @@ runWorkflowStep 1 tss tss.sh
 
 # further attempt to find positioned nucleosomes distal to active TSSs
 runWorkflowStep 2 find_nuc find_nuc.sh
+
+# # find positioned nucleosomes independently of TSSs (but score them based on proximity to TSSs)
+# runWorkflowStep 3 ab_initio ab_initio.sh

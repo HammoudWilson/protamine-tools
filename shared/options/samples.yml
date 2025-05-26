@@ -7,10 +7,10 @@ options:
         required: true
         default: null
         description: "path to a metadata file with sample information"
-    genome-input-dir: 
+    input-dir: 
         order: 2
         short: i
         type: string
         required: true
         default: null
-        description: "path to a directory with all aligned and sorted bam files for the sample genome"
+        description: "path to a directory containing all relevant fastq or bam files"

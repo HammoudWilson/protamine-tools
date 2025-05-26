@@ -1,5 +1,5 @@
 ---
 # enable snakemake for coordinating a pipeline action's workflow
-# versions current as of January 2022
+# versions current as of May 2025
 dependencies:
-    - snakemake=6.10.0
+    - snakemake=9.4

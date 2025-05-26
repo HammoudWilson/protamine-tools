@@ -5,8 +5,8 @@ options:
         short: g
         type: string
         required: false
-        default: mm39
-        description: "name of the reference genome to use"
+        default: mm39_dm6
+        description: "name of the reference genome to create or use, e.g., mm39, dm6, or mm39_dm6"
     genome-dir:
         order: 2
         short: G

@@ -17,8 +17,8 @@ get_iisf <- function(bd, sample_name, ...){
 }
 get_nrll <- function(bd, sample_name_, emissProbsFile){
     ref <- bd$references$genome
-    filename_prefix <- bd$samples[sample_name == sample_name_, filename_prefix]
-    bamFile <- file.path(ref$input_dir, paste0(filename_prefix, '.*.bam'))
+    sample <- bd$samples[sample_name == sample_name_]
+    bamFile <- file.path(env$INPUT_DIR, sample$base_folder, sample$genome_folder, paste0(sample$filename_prefix, '.*.bam'))
     script <- paste('bash', file.path(env$ACTION_DIR, 'get_bin_NRLL.sh'))
     unlist(lapply(ref$chroms, function(chrom) { # all bins values over all ordered chroms
         fread(cmd = paste(script, bamFile, chrom, ref$fai_file, emissProbsFile)) # one value per bin on chrom

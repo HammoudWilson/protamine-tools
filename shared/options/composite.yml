@@ -1,0 +1,30 @@
+---
+options:
+    primary-genome: 
+        order: 1
+        short: y
+        type: string
+        required: false
+        default: mm39
+        description: "name of the primary reference genome to use"
+    primary-genome-dir:
+        order: 2
+        short: Y
+        type: string
+        required: false
+        default: null
+        description: "directory with indexed <--primary-genome>.fa or genome.fa file [.../mdi/resources/genomes/<--primary-genome>]"
+    spike-in-genome: 
+        order: 3
+        short: s
+        type: string
+        required: false
+        default: dm6
+        description: "name of the spike-in reference genome to use"
+    spike-in-genome-dir:
+        order: 4
+        short: S
+        type: string
+        required: false
+        default: null
+        description: "directory with indexed <--spike-in-genome>.fa or genome.fa file [.../mdi/resources/genomes/<--spike-in-genome>]"

@@ -20,12 +20,12 @@ selectedRows <- rowSelectionObserver('table', input)
 samples <- reactive({
     sourceId <- sourceId()
     req(sourceId)
-    paInsertSizes(sourceId)$samples
+    paInsertSizes(sourceId)$samples[order(staging_order)]
 })
 stages <- reactive({
     samples <- samples()
     req(samples)
-    samples[order(order)][, .( # order,filename_prefix,sample_name,stage,stage_long,replicate_N,R color Value 
+    samples[, .( 
         stage_long = stage_long[1],
         nReplicates = .N
     ), by = .(stage)]

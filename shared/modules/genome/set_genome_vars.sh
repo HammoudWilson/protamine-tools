@@ -16,7 +16,7 @@ export DATA_GENOME_PREFIX=${DATA_FILE_PREFIX}.${GENOME}
 if [[ "$GENOME_DIR" == "" || "$GENOME_DIR" == "null" || "$GENOME_DIR" == "NA" ]]; then
     export GENOME_DIR=${MDI_DIR}/resources/genomes/${GENOME}
 fi
-if [ ! -d $GENOME_DIR ]; then
+if [[ ! -d $GENOME_DIR && "$CREATING_COMPOSITE" == "" ]]; then
     echo
     echo "--genome-dir not found:"
     echo $GENOME_DIR
@@ -30,12 +30,12 @@ export GENOME_FASTA=${GENOME_PREFIX}.fa
 if [ ! -f $GENOME_FASTA ]; then
     export GENOME_FASTA=${GENOME_DIR}/genome.fa
 fi
-if [ ! -f $GENOME_FASTA ]; then
+if [[ ! -f $GENOME_FASTA && "$CREATING_COMPOSITE" == "" ]]; then
     echo "missing genome fasta file in ${GENOME_DIR}"
     echo "expected either file ${GENOME}.fa or genome.fa"
     exit 1
 fi
-if [ ! -f $GENOME_FASTA.fai ]; then
+if [[ ! -f $GENOME_FASTA.fai && "$CREATING_COMPOSITE" == "" ]]; then
     echo "indexing genome fasta file"
     samtools index ${GENOME_FASTA}
 fi
@@ -45,14 +45,22 @@ export GENOME_METADATA_DIR=${GENOME_DIR}/metadata
 export GENOME_METADATA_PREFIX=${GENOME_METADATA_DIR}/${GENOME}
 export GENOME_GAPS_FILE=${GENOME_METADATA_PREFIX}.gaps.txt
 export GENOME_EXCLUSIONS_BED=${GENOME_METADATA_PREFIX}.exclusions.bed
+export GENOME_INCLUSIONS_BED=${GENOME_METADATA_PREFIX}.inclusions.bed
 export GENOME_GC5BASE_WIG=${GENOME_METADATA_PREFIX}.gc5Base.wigVarStep.gz
+# export GENOME_TN5_BIAS_H5=${GENOME_METADATA_PREFIX}.tn5_bias_v2.h5
 export GENOME_BINS_DIR=${GENOME_DIR}/bins
+export GENOME_GENMAP_DIR=${GENOME_DIR}/genmap 
 
 # annotations
 export GENOME_ANNOTATIONS_DIR=${GENOME_DIR}/annotations
 export GENOME_GENCODE_PREFIX=${GENOME_ANNOTATIONS_DIR}/${GENOME}.gencode.${GENCODE_RELEASE}
 export GENOME_GTF=${GENOME_GENCODE_PREFIX}.basic.annotation.gtf.gz
 export GENES_BED=${GENOME_GENCODE_PREFIX}.genes.bed.gz
+
+# aligner files
+export GENOME_BOWTIE2_DIR=${GENOME_DIR}/aligner-indices/bowtie2
+export GENOME_BOWTIE2_PREFIX=${GENOME_BOWTIE2_DIR}/${GENOME}
+mkdir -p $GENOME_BOWTIE2_DIR
 
 # get genome size from canonical chromosomes only
 # get the list of all placed chromosome sequences, including chrX, chrY, chrM, and chrEBV if present

@@ -143,6 +143,9 @@ download_gtf () {
         echo "  already exists: genes BED"
     fi
 }
+# download_tn5_bias () {
+#     wget -O ${GENOME_TN5_BIAS_H5} https://zenodo.org/records/15399859/files/${GENOME}_bias_v2.h5
+# }
 
 # execute download actions customized for each specific supported genome
 echo
@@ -169,12 +172,15 @@ elif [ "$GENOME" == "mm39" ]; then
     construct_gc5Base
     download_excluderegions mm39.excluderanges.bed
     download_gtf mouse ${GENCODE_RELEASE} # e.g., M36
+    # download_tn5_bias
+
 elif [ "$GENOME" == "dm6" ]; then
     APPEND_EBV=""
     download_and_index_genome ""
     download_genome_gaps
     construct_gc5Base
     download_ENCODE_exclusions
+    # download_tn5_bias
 else
     echo "unsupported genome: ${GENOME}"
     exit 1

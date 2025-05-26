@@ -14,10 +14,10 @@
 export BAM_FILE=$1
 export CHROM=$2
 export TSS_FILE=$3
-export BIN_SIZE=$MAX_INSERT_SIZE # as required by parse_unique_inserts.sh
+export BIN_SIZE=$MAX_INSERT_SIZE # as required by pull_insert_endpoints.sh
 
 # pull all distinct insert endpoints from the bam file
-bash $ACTION_DIR/../parse_unique_inserts.sh | 
+bash $ACTION_DIR/../pull_insert_endpoints.sh | 
 
 # unpack to sorted BED3
 perl $ACTION_DIR/unpack_chrom_inserts.pl | 

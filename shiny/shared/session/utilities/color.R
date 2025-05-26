@@ -33,20 +33,29 @@ fraction_score_color <- function(fraction, minFraction = 0, maxFraction = 1){
 
 # functions to get distribution trace colors
 getSampleColorsByStage <- function(allSamples, samples){
-    stages <- allSamples[, unique(stage)]
-    colors <- sapply(allSamples$stage, function(x) stageColors[which(stages == x)])
-    names(colors) <- allSamples$sample_name
+    orderedSamples <- allSamples[order(staging_order)]
+    stages <- orderedSamples[, unique(stage)]
+    colors <- sapply(orderedSamples$stage, function(x) stageColors[which(stages == x)])
+    names(colors) <- orderedSamples$sample_name
     colors[samples$sample_name]
 }
+getSampleColorsBySample <- function(samples){
+    orderedSamples <- samples[order(staging_order)]
+    colors <- stageColors[1:nrow(orderedSamples)]
+    names(colors) <- orderedSamples$sample_name
+    colors
+}
 getStageColors <- function(allSamples, samples){
-    stages <- allSamples[, unique(stage)]
+    orderedSamples <- allSamples[order(staging_order)]
+    stages <- orderedSamples[, unique(stage)]
     colors <- stageColors[1:length(stages)]
     names(colors) <- stages
     colors[samples[, unique(stage)]]
 }
 getStageTypeColors <- function(sourceId, allSamples, samples){
-    allStageTypes <- unique(getStageTypesByStage(sourceId, allSamples[, unique(stage)]))
-    stageTypes    <- unique(getStageTypesByStage(sourceId,    samples[, unique(stage)]))
+    orderedSamples <- allSamples[order(staging_order)]
+    allStageTypes <- unique(getStageTypesByStage(sourceId, orderedSamples[, unique(stage)]))
+    stageTypes    <- unique(getStageTypesByStage(sourceId,        samples[, unique(stage)]))
     colors <- stageTypeColors[1:length(allStageTypes)]
     names(colors) <- allStageTypes
     colors[stageTypes]

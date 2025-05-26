@@ -1,0 +1,9 @@
+---
+options:
+    min-mapq: 
+        order: 1
+        short: Q
+        type: integer
+        required: false
+        default: 30 # lower than 50 for minimap2; bowtie2 max MAPQ is 42
+        description: "minimum allowed Bowtie2-scaled mapping quality (MAPQ) score"

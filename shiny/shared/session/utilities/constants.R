@@ -1,5 +1,15 @@
 # limit values
 gcLimits <- c(0.25, 0.65) # optimal for mm39 genome, only used by normalizeGC step (other inherit from collate/scores)
+MIN_INSERT_SIZE <- 35
+MAX_INSERT_SIZE <- 650
+insertSizeMatrixLimits <- list(
+    insertSize = c(MIN_INSERT_SIZE, MAX_INSERT_SIZE),
+    percentGC =  c(0, 100)
+)
+MAPPABILITY_KMER_LENGTHS <- c(
+    35, 40, 45, 50, 55, 60,
+    70, 80, 90, 100, 120, 140, 160, 180, 200, 220, 240, 260, 280, 300
+)
 
 # data types
 refTypes <- c('genome', 'spike_in')
@@ -97,11 +107,15 @@ stageColors <- c(
     CONSTANTS$plotlyColors$blue,
     CONSTANTS$plotlyColors$orange,
     CONSTANTS$plotlyColors$green,
-    CONSTANTS$plotlyColors$purple
+    CONSTANTS$plotlyColors$purple,
+    CONSTANTS$plotlyColors$red,
+    CONSTANTS$plotlyColors$yellow,
+    CONSTANTS$plotlyColors$teal
 )
 stageTypeColors <- c(
     CONSTANTS$plotlyColors$red,
-    CONSTANTS$plotlyColors$blue
+    CONSTANTS$plotlyColors$blue,
+    CONSTANTS$plotlyColors$purple
 )
 nTrackMapColorsPerSide <- 30
 trackMapColors <- list(

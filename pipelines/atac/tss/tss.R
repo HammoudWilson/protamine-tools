@@ -30,7 +30,7 @@ source(file.path(rUtilDir, 'workflow.R'))
 checkEnvVars(list(
     string = c(
         'METADATA_FILE',
-        'GENOME_INPUT_DIR',
+        'INPUT_DIR',
         'GENOME',
         'GENOME_FASTA',
         'ACTION_DIR',
@@ -77,7 +77,6 @@ stageTypes <- unpackStageTypes(env)
 
 message("parsing reference")
 reference <- list(
-    input_dir   = env$GENOME_INPUT_DIR,
     genome      = env$GENOME,
     fai_file    = paste0(env$GENOME_FASTA, '.fai'),
     tss_file    = if(env$TSS_BED == 'NA') env$PA_TSS_BED else env$TSS_BED
@@ -124,8 +123,8 @@ tssFrags <- sapply(tssTypes, function(tssType) {
     tf <- mclapply(1:nSamples, function(sampleI) {
     # tf <- lapply(1:nSamples, function(sampleI) {
         sample <- samples[sampleI]
-        message(paste('   ', sample$filename_prefix, '=', sample$sample_name))
-        bamFile <- file.path(reference$input_dir, paste0(sample$filename_prefix, '.*.bam'))
+        message(paste0('   ', sample$filename_prefix, ' = ', sample$sample_name, " (", sample$staging, ")"))
+        bamFile <- file.path(env$INPUT_DIR, sample$base_folder, sample$genome_folder, paste0(sample$filename_prefix, '.*.bam'))
         do.call(rbind, lapply(reference$chroms, function(chrom) { # all bins values over all ordered chroms
             fread(cmd = paste(getChromInserts, bamFile, chrom, tssFileTmp)) # one value per TSS-region base on chrom
         }))

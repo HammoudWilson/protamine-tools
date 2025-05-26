@@ -5,14 +5,14 @@ options:
         short: Q
         type: integer
         required: false
-        default: 50
+        default: 50 # v4 setting for NovoAlign etc.
         description: "minimum allowed mapping quality (MAPQ) score"
     min-insert-size: 
         order: 2
         short: z
         type: integer
         required: false
-        default: 25
+        default: 20
         description: "minimum allowed insert size in base pairs"
     max-insert-size: 
         order: 3

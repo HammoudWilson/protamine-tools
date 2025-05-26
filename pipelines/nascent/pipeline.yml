@@ -15,6 +15,7 @@ actions:
         order: 1
         optionFamilies:
             - nascent
+            - composite
             - genome
             - bin
         resources:
@@ -26,11 +27,12 @@ actions:
         job-manager:
             recommended:
                 time-limit: 2:00:00
-        description: "liftover nascent RNA-seq data and calculate binned transcription levels"
+        description: "liftover nascent RNA-seq data and set binned transcription levels for the primary genome"
     tss:
         order: 2
         optionFamilies:
             - nascent
+            - composite
             - genome
             - annotation
         resources:
@@ -42,4 +44,4 @@ actions:
         job-manager:
             recommended:
                 time-limit: 4:00:00
-        description: "liftover nascent RNA-seq data and rank gene TSSs by transcription level"
+        description: "liftover nascent RNA-seq data and rank gene TSSs by transcription level for the primary genome"

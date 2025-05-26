@@ -1,0 +1,29 @@
+---
+pipeline:
+    name: chip
+    description: "prepare external ChIP data for pipeline analysis and score track building"
+    # version: v0.0.1
+# suiteVersions:
+#     suiteName: v0.0.0
+actions: 
+    _global:
+        environment: protamine-nascent # uses the same approach as Pro-seq
+        condaFamilies:
+            - base
+            - rtracklayer
+    bin:
+        order: 1
+        optionFamilies:
+            - chip
+            - genome
+            - bin
+        resources:
+            required:
+                total-ram: 16G
+            recommended: 
+                n-cpu: 2
+                ram-per-cpu: 8G
+        job-manager:
+            recommended:
+                time-limit: 2:00:00
+        description: "liftover ChIP BigWig files and calculate binned signal levels"

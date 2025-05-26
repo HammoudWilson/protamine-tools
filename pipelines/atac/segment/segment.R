@@ -28,8 +28,7 @@ source(file.path(rUtilDir, 'workflow.R'))
 checkEnvVars(list(
     string = c(
         'METADATA_FILE',
-        'GENOME_INPUT_DIR',
-        'SPIKE_IN_INPUT_DIR',
+        'INPUT_DIR',
         'GENOME',
         'SPIKE_IN_GENOME',
         'GENOME_FASTA',

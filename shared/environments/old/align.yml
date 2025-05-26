@@ -1,0 +1,4 @@
+---
+# version current as of May 2025
+dependencies:
+    - bowtie2=2.5

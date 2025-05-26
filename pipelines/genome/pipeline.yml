@@ -10,7 +10,7 @@ actions:
         environment: protamine-tools
         condaFamilies:
             - base
-            - genomics
+            - protaminer
             - r-4.4
     download:
         order: 1
@@ -27,8 +27,38 @@ actions:
             recommended:
                 time-limit: 1:00:00
         description: "download genomes and required support files"
-    bin:
+    composite:
         order: 2
+        optionFamilies:
+            - composite
+            - genome
+        resources:
+            required:
+                total-ram: 8G
+            recommended: 
+                n-cpu: 1
+                ram-per-cpu: 8G
+        job-manager:
+            recommended:
+                time-limit: 1:00:00
+        description: "combine a primary and spike-in genome into composite genome and metadata files"
+    mappability:
+        order: 3
+        optionFamilies:
+            - genome
+            - bin
+        resources:
+            required:
+                total-ram: 64G
+            recommended: 
+                n-cpu: 16
+                ram-per-cpu: 4G
+        job-manager:
+            recommended:
+                time-limit: 24:00:00
+        description: "create mappability files for the composite genome at various insert sizes"
+    bin:
+        order: 4
         optionFamilies:
             - genome
             - bin
@@ -40,8 +70,8 @@ actions:
                 ram-per-cpu: 2G
         job-manager:
             recommended:
-                time-limit: 1:00:00
-        description: "create genome-level bin files on nuclear chroms with exclusion flag and percent GC"
+                time-limit: 2:00:00
+        description: "create bins on composite genome nuclear chroms with inclusion flag, GC, and mappability"
 container:
     supported: false
     registry:  ghcr.io  # domain name of your OCI-compatible, oras-accessible, container registry [ghcr.io]

@@ -26,7 +26,7 @@ CHROM_SIZE=`awk '$1=="'$CHROM'"' $FAI_FILE | cut -f2`
 export MAX_BIN_I0=$((($CHROM_SIZE - 1) / $BIN_SIZE))
 
 # pull all distinct insert endpoints from the bam file
-bash $ACTION_DIR/../parse_unique_inserts.sh | 
+bash $ACTION_DIR/../pull_insert_endpoints.sh | 
 
 # concatenate unique insert endpoints per bin
 perl $ACTION_DIR/get_bin_likelihoods.pl | 

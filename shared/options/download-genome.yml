@@ -4,8 +4,8 @@ options:
         order: 1
         short: g
         type: string
-        required: false
-        default: hs1
+        required: true
+        default: null
         description: "the reference genome to download (hs1|CHM13|hg38|GRCh38|mm39|GRCm39|dm6)"
     genomes-dir:
         order: 2
