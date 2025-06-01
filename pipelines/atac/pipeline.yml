@@ -29,8 +29,26 @@ actions:
             recommended:
                 time-limit: 24:00:00
         description: "parse and align ATAC-seq reads to the composite genome using Bowtie2"
-    collate:
+    sites:
         order: 2
+        optionFamilies:
+            - samples
+            - composite
+            - genome
+            - quality
+            - bin
+        resources:
+            required:
+                total-ram: 8G
+            recommended: 
+                n-cpu: 14
+                ram-per-cpu: 2G
+        job-manager:
+            recommended:
+                time-limit: 12:00:00
+        description: "count discontiguous nonamers at the cleavage site of observed ATAC-seq inserts"
+    collate:
+        order: 3
         optionFamilies:
             - samples
             - composite
@@ -50,12 +68,11 @@ actions:
                 time-limit: 12:00:00
         description: "collate read data across all samples into high resolution bins with various scores"
     tss:
-        order: 3
+        order: 4
         optionFamilies:
-            - samples
+            - composite
             - genome
             - annotation
-            - insert
             - stage
             - tss
         resources:
@@ -69,12 +86,24 @@ actions:
                 time-limit: 2:00:00
         description: "map ATAC fragments around (in)active TSSs at base-level resolution"
 package:
-    collate: # the pipeline action after which a data package should assembled
-        uploadType: protaminer # a signal to the Stage 2 framework regarding the package contents
+    sites: # the pipeline action after which a data package should assembled
+        uploadType: protamine-atac-sites # a signal to the Stage 2 framework regarding the package contents
         files:
-            # binCounts:
-            #     type: rds
-            #     file: $DATA_FILE_PREFIX.binCounts.rds
+            primary-sites-observed:
+                type: rds
+                file: $DATA_FILE_PREFIX.primary.tn5_site_counts_obs.rds
+            spike-in-sites-observed:
+                type: rds
+                file: $DATA_FILE_PREFIX.spike_in.tn5_site_counts_obs.rds
+            primary-sites-expected:
+                type: rds
+                file: $GENOME_METADATA_PREFIX.primary.tn5_site_counts_exp.rds
+            spike-in-sites-expected:
+                type: rds
+                file: $GENOME_METADATA_PREFIX.spike_in.tn5_site_counts_exp.rds
+    collate: # the pipeline action after which a data package should assembled
+        uploadType: protamine-atac-collate # a signal to the Stage 2 framework regarding the package contents
+        files:
             collate:
                 type: rds
                 file: $DATA_FILE_PREFIX.collate.rds
@@ -87,9 +116,6 @@ package:
             tssFrags:
                 type: rds
                 file: $DATA_FILE_PREFIX.tssFrags.rds
-            # abInitio:
-            #     type: rds
-            #     file: $DATA_FILE_PREFIX.abInitio.rds
 container:
     supported: false
     registry:  ghcr.io  # domain name of your OCI-compatible, oras-accessible, container registry [ghcr.io]

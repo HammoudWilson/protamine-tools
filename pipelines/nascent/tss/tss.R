@@ -20,7 +20,7 @@
 #         start     = TSS1 - 1000bp
 #         end       = TSS1 + 1000bp
 #         name      = gene name from genome tss table
-#         score     = gene_size = gene size in bp
+#         score     = gene size in bp
 #         strand    = strand of the gene
 #         gene_start_rpkm = RPKM over the 1st 1kb of the gene
 #         tss_fold_increase = fold increase in transcription level of the 1st 1kb of the gene relative to the 1kb upstream (i.e., the promoter)

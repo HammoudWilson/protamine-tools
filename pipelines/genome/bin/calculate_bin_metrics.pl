@@ -1,25 +1,25 @@
 # action:
-#     calculate bin metrics from mappability intersection
-#       fraction of mappable kmers in each bin
-#       weighted average of the GC content of those mappable kmers
-#     thus, bin mappability and GC content reflects just the mappable inserts and may differ by kmer
+#     calculate bin metrics from mappability intersection at a given insert size level
+#       fraction of mappable left-aligned insert positions in each bin
+#       weighted average of the GC content of those mappable inserts
+#     thus, values reflect just the mappable inserts in a bin and may differ by insert size level
 # input:
 #     bedtools intersect of BED3 bins to mappability runs previously split at bin boundaries
 # outputs:
-#     grouped and aggregated bin-level metrics as per above
+#     grouped and aggregated bin-level metrics as mpp_bin_N\tgc_bin_N
 
 use strict;
 use warnings;
 
 use constant { 
-    chrom_bin   => 0, # typically 1kb bins, might have multiple runs per bin
-    start0_bin  => 1,
-    end1_bin    => 2,
-    chrom_run   => 3, # one run per bin per line ...
-    start0_run  => 4,
-    end1_run    => 5,
-    run_frac_gc => 6, # ... with GC metrics per run
-    n_bases_overlap => 7, # ... and the number of bases overlap between bin and mappability run
+    CHROM_BIN   => 0, # typically 1kb bins, might have multiple mappability runs per bin
+    START0_BIN  => 1,
+    END1_BIN    => 2,
+    CHROM_RUN   => 3, # one mappability run per bin per line ...
+    START0_RUN  => 4,
+    END0_RUN    => 5,
+    RUN_FRAC_GC => 6, # ... with GC metrics per run
+    N_BASES_OVERLAP => 7, # ... and the number of bases overlap between bin and mappability run
 };
 
 # variables
@@ -30,7 +30,7 @@ my ($prevBinKey, @intersects);
 while (my $intersect = <STDIN>) {
     chomp $intersect;
     my @intersect = split("\t", $intersect); 
-    my $binKey = join("\t", @intersect[chrom_bin, start0_bin]);
+    my $binKey = join("\t", @intersect[CHROM_BIN, START0_BIN]);
     if($prevBinKey and $prevBinKey ne $binKey) {
         processBin();
         @intersects = ();
@@ -41,20 +41,23 @@ while (my $intersect = <STDIN>) {
 processBin();
 
 # calculate bin metrics
-# print just the fraction of mappable kmers in each bin and the weighted average of the GC content
+#   fraction of mappable start positions in each bin
+#   weighted average of the GC content
 sub processBin {
-    if($intersects[0][chrom_run] ne '.') { # bedtools intersect -wao identifies no b spans as chr == "."
+    if($intersects[0][CHROM_RUN] eq '.') { # bedtools intersect -wao identifies no b spans as chr == "."
+        print join("\t", 0, 0), "\n";
+    } else {
         my $nMappablePos  = 0;
         my $sumWeightedGC = 0;
         foreach my $intersect (@intersects) {
-            $nMappablePos += $$intersect[n_bases_overlap];
-            $sumWeightedGC += $$intersect[run_frac_gc] * $$intersect[n_bases_overlap];
+            $nMappablePos += $$intersect[N_BASES_OVERLAP];
+            $sumWeightedGC += $$intersect[RUN_FRAC_GC] * $$intersect[N_BASES_OVERLAP];
+            # remember, mappability runs are split at bin boundaries, so this weighting is correct
+            # see genome/mappability for details
         }
         print join("\t", 
             sprintf("%.4f", $nMappablePos  / $BIN_SIZE), 
-            sprintf("%.4f", $sumWeightedGC / $nMappablePos),
+            sprintf("%.4f", $sumWeightedGC / $nMappablePos)
         ), "\n";
-    } else {
-        print join("\t", 0, 0), "\n";
     }
 }

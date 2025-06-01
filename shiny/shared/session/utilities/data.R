@@ -77,6 +77,32 @@ paTssFragsData <- function(sourceId){
     persistentCache[[filePath]]$data
 }
 
+# load v5 data
+paCollateData_v5 <- function(sourceId){
+    # startSpinner(session, message = paste("loading collate v5"))
+
+    # dataFilePath <- getSourceFilePath(sourceId, fileType, parentDir = NULL)
+
+    filePath <- loadPersistentFile(
+        sourceId = sourceId, 
+        contentFileType = "collate", 
+        ttl = CONSTANTS$ttl$month,
+        # force = TRUE,
+        postProcess = function(x){
+            x$bins[, ":="(
+                primary = chrom %in% x$references$primary$chroms,
+                included = included == 1
+            )]
+            x
+        }
+    )
+    # stopSpinner(session)
+    persistentCache[[filePath]]$data
+}
+
+
+
+
 # GC Residual Z-Score analysis, depends on pipeline bin data and user-selected GC bias models
 #----------------------------------------------------------------------
 # analyze and aggregate distributions of different bin scores

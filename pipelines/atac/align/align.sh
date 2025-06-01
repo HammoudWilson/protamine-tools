@@ -4,9 +4,10 @@
 #       run fastp to execute quality filtering, adapter trimming, and read merging
 #       align merged reads in the fastp output stream (the majority of reads align here)
 #       saved unmerged reads to disk for subsequent alignment in 2nd bowtie2 pass
-#       FOR DEVELOPMENT: create a mappability profile of the merged reads for assessing insert size biases
 # expects:
-#     source $MODULES_DIR/genome/set_genome_vars.sh
+#     source ${MODULES_DIR}/utilities/shell/create_temp_dir.sh
+#     source ${MODULES_DIR}/genome/set_genome_vars.sh
+#     source $MODULES_DIR/insert/set_insert_vars.sh
 # input:
 #     ${INPUT_DIR}/${ALIGNMENT_BATCH} with FASTQ files (.fastq.gz) for all samples in the batch
 # output:
@@ -14,11 +15,6 @@
 #       one per sample
 #       containing all merged and unmerged reads
 #       as ${BAM_OUTPUT_DIR}/${FILENAME_PREFIX}.sorted.bam[.bai]
-#     FOR DEVELOPMENT: mappability profiles
-#       one per sample
-#       aggregating merged reads only
-#       $FILENAME_PREFIX,insert_size_level,total_inserts,mappable_inserts,frac_mappable,frac_GC_mappable,frac_GC_unmappable
-#       as ${BAM_OUTPUT_DIR}/${FILENAME_PREFIX}.mappability_profile.txt
 
 # prepare the output directory
 mkdir -p ${BAM_OUTPUT_DIR}
@@ -33,8 +29,6 @@ echo "aligning samples in batch $ALIGNMENT_BATCH"
 for FILENAME_PREFIX in ${FILENAME_PREFIXES}; do
     echo "  aligning sample $FILENAME_PREFIX"
     BAM_FILE=${BAM_OUTPUT_DIR}/${FILENAME_PREFIX}.sorted.bam
-    # export MAPPABILITY_PROFILE=${BAM_OUTPUT_DIR}/${FILENAME_PREFIX}.mappability_profile.txt
-    # export FILENAME_PREFIX=${FILENAME_PREFIX} # for use by profile_merged_inserts.pl
 
     ##########################
     # allow bypass if previous run completed a sample
@@ -63,7 +57,7 @@ for FILENAME_PREFIX in ${FILENAME_PREFIXES}; do
             perl ${ACTION_DIR}/prepare_fastq.pl 2
         ) \
         --dont_eval_duplication \
-        --length_required $MIN_INSERT_SIZE \
+        --length_required ${MIN_INSERT_SIZE} \
         --correction \
         --merge \
         --overlap_len_require 20 \
@@ -74,9 +68,9 @@ for FILENAME_PREFIX in ${FILENAME_PREFIXES}; do
         --adapter_sequence CTGTCTCTTATACACATCT \
         --out1 ${UNMERGED_R1_FASTQ} \
         --out2 ${UNMERGED_R2_FASTQ} \
-        --html $FASTP_LOG_PREFIX.html \
-        --json $FASTP_LOG_PREFIX.json \
-        --report_title \"$DATA_NAME\" 2>/dev/null | 
+        --html ${FASTP_LOG_PREFIX}.html \
+        --json ${FASTP_LOG_PREFIX}.json \
+        --report_title \"${DATA_NAME}\" 2>/dev/null | 
 
     # align merged reads to the genome using bowtie2
     #   use end-to-end alignment, consistent with ENCODE ATAC-seq practices
@@ -86,10 +80,6 @@ for FILENAME_PREFIX in ${FILENAME_PREFIXES}; do
         --end-to-end \
         --quiet \
         --threads ${N_CPU} |
-
-    # # extract an insert-size dependent mappability profile of merged reads
-    # #   used to assess mappability and GC content as a function of insert size
-    # perl ${ACTION_DIR}/profile_merged_inserts.pl |
 
     # store merged reads in temporary bam file
     samtools view -bS - > ${TMP_FILE_PREFIX}.merged.bam
@@ -102,7 +92,7 @@ for FILENAME_PREFIX in ${FILENAME_PREFIXES}; do
         -1 ${UNMERGED_R1_FASTQ} \
         -2 ${UNMERGED_R2_FASTQ} \
         --end-to-end \
-        --maxins $MAX_INSERT_SIZE \
+        --maxins ${MAX_INSERT_SIZE} \
         --no-mixed \
         --no-discordant \
         --quiet \

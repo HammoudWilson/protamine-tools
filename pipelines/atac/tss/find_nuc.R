@@ -67,7 +67,7 @@ tfd$tss$active$tss_i1   <- 1:nrow(tfd$tss$active)
 tfd$tss$inactive$tss_i1 <- 1:nrow(tfd$tss$inactive)
 
 message("locating positioned nucleosomes distal to early round active TSSs")
-earlyRoundSamples <- tfd$samples[stage == "early_round", sample_name]
+earlyRoundSamples <- tfd$samples[stage == "early_RS", sample_name]
 earlyRoundFrags <- do.call(rbind, tfd$tssFrags$active[earlyRoundSamples])
 tfd$tss$active$nucleosome_distance <- unlist(mclapply(tfd$tss$active$tss_i1, function(tss_i1_) {
     frags <- earlyRoundFrags[tss_i1 == tss_i1_]

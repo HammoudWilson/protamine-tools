@@ -20,7 +20,7 @@ selectedRows <- rowSelectionObserver('table', input)
 allSamples <- reactive({
     sourceId <- sourceId()
     req(sourceId)
-    paInsertSizes(sourceId)$samples[order(staging_order)]
+    paCollateData_v5(sourceId)$samples
 })
 filteredSamples <- reactive({
     filteredSamples <- allSamples()
@@ -50,12 +50,11 @@ selectedSpermatidSamples <- reactive({
 # render the selection table
 #----------------------------------------------------------------------
 getNInserts <- function(refType, sampleNames){
-    insertSizes <- paInsertSizes(sourceId())$insertSizes
-    sapply(sampleNames, function(x) {
-        sum(insertSizes[[x]][[refType]], na.rm = TRUE)
+    n_is_gc <- paCollateData_v5(sourceId())$n_is_gc_ref[[refType]]
+    sapply(sampleNames, function(sample_name) {
+        sum(n_is_gc[,,sample_name], na.rm = TRUE)
     })
 }
-
 output$table <- renderDT(
     {
         x <- filteredSamples()[,
@@ -65,11 +64,11 @@ output$table <- renderDT(
                 name    = sample_name, 
                 staging = staging, 
                 stage   = stage,
-                genome   = getNInserts("genome",   sample_name),
+                primary  = getNInserts("primary",  sample_name),
                 spike_in = getNInserts("spike_in", sample_name)
             )
         ]
-        x[, frac_spike := round(spike_in / (genome + spike_in), 3)]
+        x[, frac_spike := round(spike_in / (primary + spike_in), 3)]
         stopSpinner(session)
         x
     },

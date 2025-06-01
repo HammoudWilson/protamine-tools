@@ -2,40 +2,30 @@
 #     in parallel over multiple samples:
 #         establish insert size distributions for each genome stratified by insert percent GC
 #         count reads in composite genome bins, including primary and spike-in genomes
+#         account for Tn5 cleavage site preference by calculating counting weights
+#         calculate sample-specific bin mappability and GC content based on insert size distributions
 # input:
 #     sample metadata file
 #     composite genome bins BED file
-#     aligned, sorted, and indexed bam files
-#       one per sample
-#       aligned to composite genome
-#       not deduplicated, we will dedup
+#     insert_spans file created by atac/sites
 # outputs:
-#     samples     = data.table of sample metadata
-#     bins        = data.table of genome bins, same bin order as binCounts
-#     binCounts   = array of read counts in each bin for each sample, stratified by all_inserts and intermediate insert sizes
-#     insertSizes = data.table of insert size distributions for each sample
-#     where bins, binCounts, and insertSizes are named lists with separate entries for genome and spike-in reference types
-# variable abbreviations:
-#     ins = insert, i.e., a productively aligned read pair
-#     n   = number of inserts, i.e., a count of read pair observations
-#     raw = observed n, or another value, prior to any normalization or negative binomial regression
-#     exp = expected n, i.e., the predicted bin count after normalization or negative binomial regression
-#     bin = a 1kb genome bin
-#     chr = a chromosome, i.e., a reference genome sequence
-#     bs0 = bin start0, i.e., 0-based bin start position on a chromosome; paired chr and bs0 values uniquely identify a bin
-#     gc  = fraction GC of a span of bases
-#     mpp = mappability of a span of bases, e.g., a bin
-#     is  = insert size, i.e., the reference genome span of an aligned read pair
-#     isl = insert size level, i.e., the base insert size representing a range of insert sizes, e.g., isl = 35 for is in [30, 35)
-#     f   = a fraction of a total, i.e., a frequency
+#     see below
+# variable component abbreviations:
+#     ref = a reference genome, i.e., primary, spike-in, or composite genome
 #     smp = a sample, i.e., values representing an aggregated libary
-#     ref = a reference genome, i.e., primary, spike-in, or combined genome
-# thus:
-#     n_bin      = number of inserts in a bin
-#     n_bin_isl  = number of inserts in a bin at a given insert size level
-#     gc_bin_isl = fraction GC in a bin at a given insert size level
-#     f_smp_isl  = fraction of inserts in a sample at a given insert size level
-#     etc.
+#     ins = insert, i.e., a productively aligned read pair from a sample
+#     is  = insert size, i.e., the reference genome span of an aligned read pair
+#     isl = insert size level, i.e., the base insert size representing a range of insert sizes, e.g., isl = 35 for is[30, 35)
+#     n   = number of inserts, i.e., a count of read pair observations
+#     f   = a fraction of a total, i.e., a frequency
+#     obs = observed n, or another value, prior to any normalization or negative binomial regression
+#     exp = expected n, i.e., the predicted bin count after normalization and negative binomial regression
+#     wgt = a site weight, used to adjust for Tn5 cleavage site preferences
+#     chr = a chromosome, i.e., a reference genome sequence
+#     bin = a 1kb genome bin on a chromosome
+#     bs0 = bin start0, i.e., 0-based bin start position on a chromosome; paired chr and bs0 values uniquely identify a bin
+#     gc  = fraction GC of a span of bases, either an insert or a bin
+#     mpp = mappability of a span of bases, e.g., a bin
 #=====================================================================================
 # script initialization
 #-------------------------------------------------------------------------------------
@@ -52,21 +42,22 @@ source(file.path(rUtilDir, 'workflow.R'))
 checkEnvVars(list(
     string = c(
         'METADATA_FILE',
-        'INPUT_DIR',
         'PRIMARY_GENOME',
         'SPIKE_IN_GENOME',
         'GENOME',
         'GENOME_FASTA_SHM',
         'GENOME_BINS_BED',
-        'GENOME_INCLUSIONS_BED',
+        'INSERT_SPANS_DIR',
+        'MAPPABILITY_SIZE_LEVELS',
         'ACTION_DIR',
         'DATA_FILE_PREFIX',
-        'TMP_FILE_PREFIX'
+        'GENOME_METADATA_PREFIX',
+        'TMP_FILE_PREFIX',
+        'TN5_KMERS_FILE'
     ),
     integer = c(
         'MIN_INSERT_SIZE',
         'MAX_INSERT_SIZE',
-        'MIN_MAPQ',
         'BIN_SIZE',
         'N_CPU'
     )
@@ -96,6 +87,7 @@ refs <- list(
     )
 )
 refTypes <- names(refs)
+wgtTypes <- c("observed", "weighted")
 
 message("loading composite genome bins")
 bins <- fread(env$GENOME_BINS_BED) # already restricted by genome/bin to autosomes and chrX/Y
@@ -108,11 +100,11 @@ setnames(bins, binsNames)
 #  $ be1     : int  1000 2000 3000 4000 5000 6000 7000 8000 9000 10000 ...
 #  $ included: int  0 0 0 0 0 0 0 0 0 0 ...
 #  $ map_35  : num  0 0 0 0 0 0 0 0 0 0 ...
-#  $ gc_35   : num  0 0 0 0 0 0 0 0 0 0 ...
+#  $ gc_35   : num  0 0 0 0 0 0 0 0 0 0 ... etc.
 j <- seq(5, ncol(bins), 2)
-mpp_bin_isl <- t(as.matrix(bins[, ..j])) # isl in rows, bins in columns, to apply matrix multiplication * f_smp_isl
+mpp_isl_bin <- t(as.matrix(bins[, ..j])) # isl in rows, bins in columns, to apply matrix multiplication * f_smp_isl
 j <- seq(6, ncol(bins), 2)
-gc_bin_isl <- t(as.matrix(bins[, ..j]))
+gc_isl_bin <- t(as.matrix(bins[, ..j]))
 
 message("updating references based on bins")
 for(refType in refTypes) {
@@ -120,7 +112,8 @@ for(refType in refTypes) {
     I <- bins[, endsWith(chr, genome)]
     refs[[refType]]$chroms <- bins[I, unique(chr)]
     refs[[refType]]$n_bins <- sum(I)
-    bins[I, nAlleles := ifelse(chr %in% paste0(c('chrX', 'chrY'), "-", genome), 1L, 2L)]
+    refs[[refType]]$binI <- range(which(I)) 
+    # bins[I, nAlleles := ifelse(chr %in% paste0(c('chrX', 'chrY'), "-", genome), 1L, 2L)]
 }
 
 message("collating (merged) read pair data by sample")
@@ -130,215 +123,149 @@ sampleData <- mclapply(1:nrow(samples), function(sampleI) {
     smp <- samples[sampleI]
     label <- paste0('   ', smp$filename_prefix, ' = ', smp$sample_name, " (", smp$staging, ")")
     message(label)
-    bamFile <- file.path(env$INPUT_DIR, paste0(smp$filename_prefix, '.*.bam'))
-    tmpPrefix <- paste0(env$TMP_FILE_PREFIX, ".collate.", smp$filename_prefix)
 
-    # collate sample, recovering usable inserts with bin and insert size level metadata per insert
-    ins_bin_isl <- fread(cmd = paste(collateSampleInserts, bamFile, tmpPrefix, smp$sample_name), sep = "\t", header = FALSE)
-    setnames(ins_bin_isl, c('chr', 'bs0', 'isl'))
+    # collate sample, recovering usable individual inserts with bin, insert size level, and site weight per insert
+    # table has inserts for both primary and spike-in genomes, including sex chromosomes
+    # ins_bin_isl sort is not guaranteed, but not required
+    ins_bin_isl <- fread(cmd = paste(collateSampleInserts, smp$filename_prefix), sep = "\t", header = FALSE)
+    setnames(ins_bin_isl, c('chr', 'bs0', 'isl','wgt'))
 
-    # count inserts per bin to establish raw bin counts, the response variable for the negative binomial regression
+    # recover the insert size vs. gc distributions for the sample, stratified by genome and weighting
+    # used for plotting in app
+    n_is_gc <- fread(paste(env$TMP_FILE_PREFIX, smp$filename_prefix, "n_is_gc.txt", sep = "."), sep = "\t", header = FALSE)
+    refs_is_gc <- n_is_gc[[1]]
+    wgts_is_gc <- n_is_gc[[2]]
+    n_is_gc <- n_is_gc[, -1:-2] # four sets of insert size vs. GC counts, one set per genome+weighting
+    n_ref_wgt_is_gc <- sapply(refTypes, function(refType) {
+        sapply(wgtTypes, function(weighting) {
+            x <- as.matrix( n_is_gc[
+                refs_is_gc == refs[[refType]]$genome &
+                wgts_is_gc == weighting
+            ])
+            colnames(x) <- NULL
+            x
+        }, simplify = FALSE, USE.NAMES = TRUE)
+    }, simplify = FALSE, USE.NAMES = TRUE)
+
+    # count inserts per bin to establish observed bin counts
+    # sum insert weights per bin to establish weighted bin counts
+    # wgt values are properly calculated by collate_sample_inserts.pl using genome-specific tn5_site_freqs_exp
     bins_smp <- merge(
         bins[, .(chr, bs0)],
-        ins_bin_isl[, 
-            .(n_raw = .N), 
-            keyby = .(chr, bs0)
-        ],
+        ins_bin_isl[, .(n_obs = .N, n_wgt = sum(wgt)), keyby = .(chr, bs0)],
         all.x = TRUE,
         sort = FALSE,
         by = c('chr', 'bs0')
     )
-    bins_smp[is.na(n_raw), n_raw := 0L]
-    # message()
-    # message("bins_smp")
-    # str(bins_smp)
+    bins_smp[is.na(n_obs), ":="(n_obs = 0L, n_wgt = 0)]
 
     # count inserts by insert size level to establish weights for calculating sample-specific bin mappability and GC content
-    f_smp_isl <- ins_bin_isl[, 
-        .(n = .N), 
-        keyby = .(isl)
-    ][, 
-        n / sum(n)
-    ]
-    # message()
-    # message("f_smp_isl")
-    # print(f_smp_isl)
+    # this is done using observed, not weighted, insert counts, since amplification and alignment bias were applied to 
+    # the DNA fragments Tn5 actually gave us, not the theoretical reads that an unbiased transposase would have given us
+    # it is also done per genome, since primary and spike-in genomes may have different insert size distributions
+    f_obs_ref_isl <- sapply(refTypes, function(refType) {
+        genome <- refs[[refType]]$genome
+        x <- merge( # ensure that all insert size levels are present
+            data.table(isl = as.integer(strsplit(env$MAPPABILITY_SIZE_LEVELS, " ")[[1]])),
+            ins_bin_isl[endsWith(chr, genome), .(n_obs = .N), keyby = .(isl)],
+            by = 'isl',
+            all.x = TRUE,
+            sort = FALSE
+        )
+        x[is.na(n_obs), n_obs := 0L]
+        x[, n_obs / sum(n_obs)]
+    }, simplify = FALSE, USE.NAMES = TRUE)
 
     # use the sample insert size level weights to calculate sample-specific bin mappability and GC content
-    bins_smp[, ":="(
-        mpp = colSums(mpp_bin_isl * f_smp_isl),
-        gc  = colSums(gc_bin_isl  * f_smp_isl)
-    )]
-    # message()
-    # message("bins_smp")
-    # str(bins_smp)
-    # str(bins_smp[mpp > 0])
-
-    # recover the insert size vs. gc distribution for the sample, stratified by genome
-    # used for plotting in app
-    n_is_gc <- fread(paste0(tmpPrefix, ".n_is_gc.txt"), sep = "\t", header = FALSE)
-    refs_is_gc <- n_is_gc[[1]]
-    n_is_gc <- n_is_gc[, -1]
-    n_is_gc_ref <- sapply(refTypes, function(refType) {
-        n_is_gc <- as.matrix( n_is_gc[refs_is_gc == refs[[refType]]$genome] )
-        colnames(n_is_gc) <- NULL
-        n_is_gc
-    }, simplify = FALSE, USE.NAMES = TRUE)
-    # message()
-    # message("n_is_gc_ref")
-    # str(n_is_gc_ref)
-
-    # recover the Tn5 kmers used by the sample to establish Tn5 preferences
-    # TODO: this comes to us complete and pre-sorted, so we don't need to carry kmer in this object??
-    # TODO: this can be done in perl...
-    n_tn5_smp <- fread(paste0(tmpPrefix, ".n_tn5_smp.txt"), sep = "\t", header = FALSE)
-    setnames(n_tn5_smp, c('kmer', 'n'))
-    n_tn5_smp[, f := n / sum(n)]
-    # message()
-    # message("n_tn5_smp")
-    # str(n_tn5_smp)
-    # print(n_tn5_smp[order(f)])
-
-    # TODO: make a call to collect isl-dependent Tn5 kmers and use tn5_smp to collect a weight Tn5 preference
-
-    # TODO: use MASS::glm.nb to fit a negative binomial regression model to the bins_smp data
-
-    # stop("XXXXXXXXXXXXXXXXXXXXXX")
-
-
-    # collect collation counts by stage
-    n_ins_stage <- fread(paste0(tmpPrefix, ".n_ins_stage.txt"))
-    setnames(n_ins_stage, c('sample_name', 'stage', 'n'))
+    for(refType in refTypes) {
+        genome <- refs[[refType]]$genome
+        I <- bins[, endsWith(chr, genome)]
+        bins_smp[I, ":="(
+            mpp = colSums(mpp_isl_bin[, I] * f_obs_ref_isl[[refType]]),
+            gc  = colSums(gc_isl_bin[, I]  * f_obs_ref_isl[[refType]])
+        )]
+    }
 
     # return sample-level data
     list(
-        n_is_gc_ref = n_is_gc_ref,
-        bins_smp    = bins_smp,
-        f_smp_isl   = f_smp_isl,
-        n_ins_stage = n_ins_stage
+        bins = bins_smp[, .(n_obs, n_wgt, mpp, gc)],
+        f_obs_ref_isl   = f_obs_ref_isl,
+        n_ref_wgt_is_gc = n_ref_wgt_is_gc
     )
 }, mc.cores = env$N_CPU)
 # })
 names(sampleData) <- samples$sample_name
 
+message("refactoring sample data types into matrices (row=bin x col=sample)")
+n_obs_bin_smp <- sapply(samples$sample_name, function(sample_name) {
+    sampleData[[sample_name]]$bins[, n_obs]
+})
+colnames(n_obs_bin_smp) <- samples$sample_name
+n_wgt_bin_smp <- sapply(samples$sample_name, function(sample_name) {
+    sampleData[[sample_name]]$bins[, n_wgt]
+})
+colnames(n_wgt_bin_smp) <- samples$sample_name
+mpp_bin_smp <- sapply(samples$sample_name, function(sample_name) {
+    sampleData[[sample_name]]$bins[, mpp]
+})
+colnames(mpp_bin_smp) <- samples$sample_name
+gc_bin_smp <- sapply(samples$sample_name, function(sample_name) {
+    sampleData[[sample_name]]$bins[, gc]
+})
+colnames(gc_bin_smp) <- samples$sample_name
+f_obs_ref_isl_smp <- sapply(refTypes, function(refType) {
+    m <- sapply(samples$sample_name, function(sample_name) {
+        sampleData[[sample_name]]$f_obs_ref_isl[[refType]]
+    })
+    colnames(m) <- samples$sample_name
+    m
+}, simplify = FALSE, USE.NAMES = TRUE)
+n_ref_wgt_is_gc_smp <- sapply(refTypes, function(refType) {
+    sapply(wgtTypes, function(weighting) {
+        m1 <- sampleData[[1]]$n_ref_wgt_is_gc[[refType]][[weighting]]
+        array(
+            do.call(c, lapply(samples$sample_name, function(sample_name) {
+                as.vector(sampleData[[sample_name]]$n_ref_wgt_is_gc[[refType]][[weighting]])
+            })),
+            dim = c(nrow(m1), ncol(m1), nSamples),
+            dimnames = list(
+                insert_size = NULL,
+                gc_bin      = NULL,
+                sample      = samples$sample_name
+            )
+        )
+    }, simplify = FALSE, USE.NAMES = TRUE)
+}, simplify = FALSE, USE.NAMES = TRUE)
+rm(sampleData)
+
 message()
-message("saving collated sampleData for app")
+message("saving collated sample data for app")
+env$MAPPABILITY_SIZE_LEVELS <- as.integer(strsplit(env$MAPPABILITY_SIZE_LEVELS, " ")[[1]])
 obj <- list(
-    bin_size    = env$BIN_SIZE,
-    samples     = samples,
-    references  = refs,
-    bins        = bins[, .(chrom = chr, start0 = bs0, end1 = be1, included = included, nAlleles = nAlleles)],
-    sampleData  = sampleData
+    env = env[c(
+        'PRIMARY_GENOME',
+        'SPIKE_IN_GENOME',
+        'GENOME',
+        'MAPPABILITY_SIZE_LEVELS',
+        'MIN_INSERT_SIZE',
+        'MAX_INSERT_SIZE',
+        'BIN_SIZE'
+    )],
+    samples    = samples,
+    references = refs,
+    bins = bins[, .(
+        chrom = chr, start0 = bs0, # end1 = be1, 
+        included = included #, nAlleles = nAlleles
+    )],
+    n_obs_bin_smp = n_obs_bin_smp,
+    n_wgt_bin_smp = n_wgt_bin_smp,
+    mpp_bin_smp   = mpp_bin_smp,
+    gc_bin_smp    = gc_bin_smp,
+    f_obs_ref_isl_smp   = f_obs_ref_isl_smp,
+    n_ref_wgt_is_gc_smp = n_ref_wgt_is_gc_smp
 )
 saveRDS(
     obj, 
     file = paste(env$DATA_FILE_PREFIX, "collate.rds", sep = '.')
 )
 str(obj)
-
-message()
-message("collation summary")
-summary <- do.call(rbind, lapply(samples$sample_name, function(sample_name) {
-    sampleData[[sample_name]]$n_ins_stage
-}))
-print(dcast(summary, sample_name ~ stage, value.var = 'n', fun.aggregate = sum, fill = 0L))
-
-# message("processing insert size distributions, stratified by genome and GC content")
-# getInsertSizes <- paste('bash', file.path(env$ACTION_DIR, 'get_insert_sizes.sh'))
-# insertSizes <- mclapply(1:nrow(samples), function(sampleI) {
-# # insertSizes <- lapply(1:nrow(samples), function(sampleI) {
-#     sample <- samples[sampleI]
-#     message(paste0('   ', sample$filename_prefix, ' = ', sample$sample_name, " (", sample$staging, ")"))
-#     bamFile <- file.path(env$INPUT_DIR, paste0(sample$filename_prefix, '.*.bam'))
-#     dt <- fread(cmd = paste(getInsertSizes, bamFile), sep = "\t", header = FALSE)
-#     refs <- dt[[1]]
-#     dt <- dt[, -1]
-#     sapply(refTypes, function(refType) {
-#         ref <- references[[refType]]
-#         m <- as.matrix( dt[refs == ref$genome] )
-#         colnames(m) <- NULL
-#         m
-#     }, simplify = FALSE, USE.NAMES = TRUE)
-# }, mc.cores = env$N_CPU)
-# # })
-# names(insertSizes) <- samples$sample_name
-
-# message("saving insertSizes for app")
-# obj <- list(
-#     bin_size    = env$BIN_SIZE,
-#     samples     = samples,
-#     references  = references,
-#     insertSizes = insertSizes
-# )
-# saveRDS(
-#     obj, 
-#     file = paste(env$DATA_FILE_PREFIX, "insertSizes.rds", sep = '.')
-# )
-# message()
-# str(obj)
-# rm(obj)
-# message()
-
-# message("calculating sample-specific bin mappability based on insert size distribution")
-# # rowSums insertSizes
-# # insert size to levels
-# # fraction per insert size level
-# # weighted mean of level-specific bin mappability
-# # use below to correct bin counts (divde by mappability, with min mappability threshold)
-
-# message("calculating sample bin counts, stratified by genome")
-# countChromBins <- paste('bash', file.path(env$ACTION_DIR, 'count_chrom_bins.sh'))
-# insertTypes <- c('all_inserts','intermediate')
-# nInsertTypes <- length(insertTypes)
-
-# # best thing here will be to establish what the best output data structure is
-# # not going to use intermediate insert assessment any longer (just use NRLL, they proved redundant)
-
-# binCounts <- sapply(refTypes, function(refType) { # so, one list entry for genome, one for spike-in, same as bins
-#     message(paste(' ', refType))
-#     ref <- references[[refType]]
-#     array( # each refType is an array with dim1 = bins, dim2 = insertTypes, dim3 = samples
-#         do.call(c, mclapply(1:nSamples, function(sampleI) {
-#         # do.call(c, lapply(1:nSamples, function(sampleI) {
-#             sample <- samples[sampleI]
-#             message(paste0('   ', sample$filename_prefix, ' = ', sample$sample_name, " (", sample$staging, ")"))
-#             bamFile <- file.path(env$INPUT_DIR, sample$base_folder, sample[[ref$folder_type]], paste0(sample$filename_prefix, '.*.bam'))
-#             unlist(lapply(insertTypes, function(insertType) { # bins concatenated in two chunks, one per insert type
-
-#                 # this chroms isn't correct, can just run all chroms over both genome, just like bins map is
-#                 # alternatively, need to split the bins object into two by genome
-
-#                 unlist(lapply(ref$chroms, function(chrom) { # all bins values over all ordered chroms
-#                     fread(cmd = paste(countChromBins, bamFile, insertType, chrom, ref$fai_file)) # one value per bin on chrom
-#                 }))
-#             }))
-#         }, mc.cores = env$N_CPU)),
-#         # })),
-#         dim = c(
-#             ref$n_bins, 
-#             nInsertTypes, 
-#             nSamples
-#         ), 
-#         dimnames = list(
-#             bin = NULL, 
-#             insert_type = insertTypes, 
-#             sample_name = samples$sample_name
-#         )
-#     )
-# }, simplify = FALSE, USE.NAMES = TRUE)
-
-# message()
-# message("saving binCounts for app")
-# obj <- list(
-#     bin_size    = env$BIN_SIZE,
-#     samples     = samples,
-#     references  = references,
-#     bins        = bins,
-#     binCounts   = binCounts
-# )
-# saveRDS(
-#     obj, 
-#     file = paste(env$DATA_FILE_PREFIX, "binCounts.rds", sep = '.')
-# )
-# str(obj)
-#=====================================================================================

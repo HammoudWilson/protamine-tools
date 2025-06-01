@@ -35,11 +35,11 @@ source(file.path(rUtilDir, 'workflow.R'))
 checkEnvVars(list(
     string = c(
         'PRIMARY_GENOME',
-        'GENOME_BINS_BED',
-        'DATA_FILE_PREFIX',
         'BIGWIG_FILE_FORWARD',
         'BIGWIG_FILE_REVERSE',
-        'LIFTOVER_CHAIN'
+        'LIFTOVER_CHAIN',
+        'GENOME_BINS_BED',
+        'DATA_FILE_PREFIX'
     ),
     integer = c(
         'BIN_SIZE',

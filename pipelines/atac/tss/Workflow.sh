@@ -2,6 +2,7 @@
 
 # initialize shared variables
 source ${MODULES_DIR}/genome/set_genome_vars.sh
+source ${MODULES_DIR}/insert/set_insert_vars.sh
 source ${MODULES_DIR}/tss/set_tss_vars.sh
 
 # initialize temporary directory

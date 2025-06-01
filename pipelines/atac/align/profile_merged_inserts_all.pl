@@ -1,4 +1,3 @@
-
 # this script is not executed within a pipeline
 # it is used in BAM_OUTPUT_DIR as
 #     samtools cat *.bam | samtools view - | perl profile_merged_inserts_all.pl
@@ -49,8 +48,8 @@ use constant {
 };
 
 # variables
-my $MIN_MAPQ = 30;
-my @MAPPABILITY_KMER_LENGTHS = split(/\s+/, "35 40 45 50 55 60 70 80 90 100 120 140 160 180 200 220 240 260 280 300");
+my $MIN_MAPQ = 30; # appropriate for Bowtie2
+my @MAPPABILITY_SIZE_LEVELS = split(/\s+/, "35 40 45 50 55 60 70 80 90 100 120 140 160 180 200 220 240 260 280 300");
 my %counts = map {
     $_ => {
         n_inserts                  => 0,
@@ -64,7 +63,7 @@ my %counts = map {
         acgt_bases_aligned_failed  => 0,
         acgt_bases_aligned_passed  => 0,
     }
- } @MAPPABILITY_KMER_LENGTHS;
+ } @MAPPABILITY_SIZE_LEVELS;
 
 # run the alignment data
 while(my $line = <STDIN>){ 
@@ -94,16 +93,16 @@ while(my $line = <STDIN>){
 sub getInsertSizeLevel {
     my ($insertSize) = @_;
     my $level = 0;
-    foreach my $kmerLength (@MAPPABILITY_KMER_LENGTHS) {
-        $kmerLength > $insertSize and last;
-        $level = $kmerLength;
+    foreach my $insertSizeLevel (@MAPPABILITY_SIZE_LEVELS) {
+        $insertSizeLevel > $insertSize and last;
+        $level = $insertSizeLevel;
     }
     return $level;
 }
 
 # print the mappability profile
-foreach my $insert_size_level (@MAPPABILITY_KMER_LENGTHS) {
-    my $profile = $counts{$insert_size_level};
+foreach my $insertSizeLevel (@MAPPABILITY_SIZE_LEVELS) {
+    my $profile = $counts{$insertSizeLevel};
 
     my $frac_unaligned      = $$profile{n_inserts} ? $$profile{n_inserts_unaligned}      / $$profile{n_inserts} : 0;
     my $frac_aligned_failed = $$profile{n_inserts} ? $$profile{n_inserts_aligned_failed} / $$profile{n_inserts} : 0;
@@ -114,7 +113,7 @@ foreach my $insert_size_level (@MAPPABILITY_KMER_LENGTHS) {
     my $frac_gc_aligned_passed = $$profile{acgt_bases_aligned_passed} ? $$profile{gc_bases_aligned_passed} / $$profile{acgt_bases_aligned_passed} : 0;
 
     print join("\t", 
-        $insert_size_level,
+        $insertSizeLevel,
 
         $$profile{n_inserts},
         $$profile{n_inserts_unaligned},

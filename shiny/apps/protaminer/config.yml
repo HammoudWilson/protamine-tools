@@ -15,7 +15,7 @@ version: v0.0.0
 uploadTypes:
     protaminer: 
         contentFileTypes: # anything not listed will not be available to the app
-            insertSizes:
+            collate:
                 required: true
             # binCounts:
             #     required: true
@@ -41,6 +41,8 @@ appSteps:
         module: sourceFileUpload
     insertSizes:
         module: insertSizes
+    modelParameters:
+        module: modelParameters
     # normalizeGC:
     #     module: normalizeGC
     # scoreSummary:

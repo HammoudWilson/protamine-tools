@@ -46,7 +46,6 @@ export GENOME_METADATA_PREFIX=${GENOME_METADATA_DIR}/${GENOME}
 export GENOME_GAPS_FILE=${GENOME_METADATA_PREFIX}.gaps.txt
 export GENOME_EXCLUSIONS_BED=${GENOME_METADATA_PREFIX}.exclusions.bed
 export GENOME_GC5BASE_WIG=${GENOME_METADATA_PREFIX}.gc5Base.wigVarStep.gz
-# export GENOME_TN5_BIAS_H5=${GENOME_METADATA_PREFIX}.tn5_bias.h5
 #------------------------------------------------------------------------
 export GENOME_ANNOTATIONS_DIR=${GENOME_DIR}/annotations
 export GENOME_GENCODE_PREFIX=${GENOME_ANNOTATIONS_DIR}/${GENOME}.gencode.${GENCODE_RELEASE}
@@ -54,8 +53,6 @@ export GENOME_GTF=${GENOME_GENCODE_PREFIX}.basic.annotation.gtf.gz
 export GENES_BED=${GENOME_GENCODE_PREFIX}.genes.bed.gz
 #------------------------------------------------------------------------
 export ALIGNER_INDEX_DIR=${GENOME_DIR}/aligner_indices
-export MINIMAP2_INDEX_DIR=${ALIGNER_INDEX_DIR}/minimap2
-mkdir -p ${MINIMAP2_INDEX_DIR}
 #------------------------------------------------------------------------
 export GENOME_ANNOTATIONS_DIR=${GENOME_DIR}/annotations
 mkdir -p ${GENOME_ANNOTATIONS_DIR}

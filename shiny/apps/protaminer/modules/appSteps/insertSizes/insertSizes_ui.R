@@ -75,7 +75,7 @@ insertSizesUI <- function(id, options) {
                 ),
                 # two matrix plots
                 staticPlotBoxUI(
-                    ns("insertSizeMatrix_genome"), 
+                    ns("insertSizeMatrix_primary"), 
                     "Spermatid Insert Size vs. Insert GC",
                     width = 12,
                     status = "primary",
@@ -91,12 +91,7 @@ insertSizesUI <- function(id, options) {
                     collapsible = TRUE,
                     collapsed = TRUE,
                     solidHeader = TRUE
-                )
-            ),
-            # insert size distribution plots
-            column(
-                width = 6,
-                # box with insert size distribution setting inputs
+                ),
                 box(
                     width = 12,
                     title = NULL,
@@ -123,7 +118,7 @@ insertSizesUI <- function(id, options) {
                 ),
                 # two insert size distribution plots
                 staticPlotBoxUI(
-                    ns("insertSizesPlot_genome"), 
+                    ns("insertSizesPlot_primary"), 
                     "Spermatid Insert Sizes",
                     width = 12,
                     status = "primary",
@@ -138,14 +133,6 @@ insertSizesUI <- function(id, options) {
                     collapsible = TRUE,
                     solidHeader = TRUE
                 ),
-                # staticPlotBoxUI(
-                #     ns("insertSizesPlot_combined"), 
-                #     "Combined Insert Sizes",
-                #     width = 12,
-                #     status = "primary",
-                #     collapsible = TRUE,
-                #     solidHeader = TRUE
-                # ),
                 NULL
             ),
             NULL

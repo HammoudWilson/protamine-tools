@@ -1,6 +1,3 @@
-use strict;
-use warnings;
-
 # action:
 #     trim SEQ and QUAL to 150bp, i.e., drop the inconsistently-present 151st base
 #     trim trailing data from QNAME (not critical but done)
@@ -8,6 +5,9 @@ use warnings;
 #     FASTQ stream from one read on STDIN
 # output: 
 #     FASTQ stream from one read on STDOUT with trimmed SEQ and QUAL
+
+use strict;
+use warnings;
 
 # constants
 use constant READ_LEN => 150;

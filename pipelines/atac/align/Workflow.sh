@@ -5,7 +5,7 @@ source ${MODULES_DIR}/utilities/shell/create_temp_dir.sh
 
 # initialize shared variables
 source ${MODULES_DIR}/genome/set_genome_vars.sh
-source $MODULES_DIR/mappability/set_mappability_vars.sh
+source $MODULES_DIR/insert/set_insert_vars.sh
 
 # create the bowtie2 index if needed
 runWorkflowStep 1 index index.sh
