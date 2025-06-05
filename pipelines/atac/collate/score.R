@@ -1,13 +1,14 @@
 # action:
 #     calculate and analyze the distributions of the following score metrics per bin:
 #         genome-level (not specific to samples at different spermiogenic stages):
-#               gc   = aggregated bin GC content over all samples
-#               txn  = (nascent) Transcription count per million reads
+#               gc       = aggregated bin GC content over all samples
+#               txn      = (nascent) Transcription count per million reads
 #         sample-level (specific to each sample at different spermiogenic stages):
-#               gcrz = GC Residual Z-Score (excess or deficit of reads relative to GC peers)
-#               nrll = protamine- vs. histone-associated Normalized Relative Log Likelihood
+#               gcrz_obs = GC Residual Z-Score (excess or deficit of reads relative to GC peers), based on observed read counts
+#               gcrz_wgt = as above, now based on Tn5 site weights, i.e., including Tn5 kmer preference correction before GC regression
+#               nrll     = protamine- vs. histone-associated Normalized Relative Log Likelihood
 #     scores are always calculated relative to the primary genome distribution
-#         scores may be present for the spike-in genome, but should generally be disregarded as unmeaningful
+#         scores may be present for the spike-in genome, but should be disregarded as unmeaningful
 # input:
 #     sample metadata file
 #     composite genome bins BED file
@@ -31,6 +32,7 @@ message("initializing")
 suppressPackageStartupMessages(suppressWarnings({
     library(data.table)
     library(parallel)
+    library(MASS) # for glm.nb
 }))
 #-------------------------------------------------------------------------------------
 # load, parse and save environment variables
@@ -52,6 +54,7 @@ checkEnvVars(list(
         'HISTONE_STAGE',
         'PROTAMINE_STAGE',
         'STAGE_TYPES',
+        'GC_LIMITS',
         'TRANSCRIPTION_BED',
         'SHM_FILE_PREFIX'
     ),
@@ -69,6 +72,8 @@ rUtilDir <- file.path(env$MODULES_DIR, 'bin')
 sourceScripts(rUtilDir, c('bin_functions'))
 rUtilDir <- file.path(env$MODULES_DIR, 'score')
 sourceScripts(rUtilDir, c('score_functions'))
+rUtilDir <- file.path(env$MODULES_DIR, 'score', 'nbinomCountsGC')
+sourceScripts(rUtilDir, c('nbinomCountsGC_class', 'nbinomCountsGC_methods'))
 #-------------------------------------------------------------------------------------
 # set some options
 options(scipen = 999) # prevent 1+e6 in printed, which leads to read.table error when integer expected
@@ -85,8 +90,12 @@ message("parsing spermiogenic stage types and GC limits")
 stageTypes <- unpackStageTypes(env)
 gcLimits <- unpackGcLimits(env)
 
-message("calculating aggregated bin GC content")
+message("calculating aggregated bin GC content and number of alleles")
 collate$bins[, gc := rowMeans(collate$gc_bin_smp, na.rm = TRUE)]
+for(genome in c(collate$env$PRIMARY_GENOME, collate$env$SPIKE_IN_GENOME)) {
+    I <- getGenomeBins(collate$bins, genome)
+    collate$bins[I, nAlleles := ifelse(chrom %in% paste0(c('chrX', 'chrY'), "-", genome), 1L, 2L)]
+}
 
 message("extracting histone- and protamine-associated insert size distributions for primary genome")
 emissProbsFile <- extractInsertSizeEps(collate$samples, collate$f_obs_ref_isl_smp$primary, env)
@@ -120,7 +129,7 @@ scores$genome$txn <- if(file.exists(env$TRANSCRIPTION_BED)) {
 message("analyzing sample-level scores")
 scores$sample <- sapply(names(scoreTypes$sample), function(scoreTypeName) {
     scoreType <- scoreTypes$sample[[scoreTypeName]]
-    if(scoreType$gcBiasDependent) return(NULL)
+    # if(scoreType$gcBiasDependent) return(NULL)
     message(paste(" ", scoreTypeName))
     scoreFnName <- paste("get", scoreTypeName, sep = "_")
     sampleScores  <- analyzeSampleScores(
@@ -153,26 +162,38 @@ scores$sample <- sapply(names(scoreTypes$sample), function(scoreTypeName) {
     )
 }, simplify = FALSE, USE.NAMES = TRUE)
 
+message("aggregating GC regression fits for app")
+gcBiasModels <- sapply(c("gcrz_obs", "gcrz_wgt"), function(grcz_type) {
+    sapply(collate$samples$sample_name, function(sample_name) {
+        tmpFile <- paste(env$SHM_FILE_PREFIX, "gcBiasModel", grcz_type, sample_name, "rds", sep = '.')
+        readRDS(tmpFile)
+    }, simplify = FALSE, USE.NAMES = TRUE)
+}, simplify = FALSE, USE.NAMES = TRUE)
+
 message()
 message("saving output for app")
 env$MAPPABILITY_SIZE_LEVELS <- as.integer(strsplit(env$MAPPABILITY_SIZE_LEVELS, " ")[[1]])
-obj <- list(
-    env = env[c(
-        'PRIMARY_GENOME',
-        'SPIKE_IN_GENOME',
-        'GENOME',
-        'MAPPABILITY_SIZE_LEVELS',
-        'MIN_INSERT_SIZE',
-        'MAX_INSERT_SIZE',
-        'BIN_SIZE',
-        'HISTONE_STAGE',
-        'PROTAMINE_STAGE'
-    )],
-    samples     = collate$samples,
-    references  = collate$references,
-    stageTypes  = stageTypes,
-    gcLimits    = gcLimits,
-    scores      = scores
+obj <- c(
+    list(
+        env = env[c(
+            'PRIMARY_GENOME',
+            'SPIKE_IN_GENOME',
+            'GENOME',
+            'MAPPABILITY_SIZE_LEVELS',
+            'MIN_INSERT_SIZE',
+            'MAX_INSERT_SIZE',
+            'BIN_SIZE',
+            'HISTONE_STAGE',
+            'PROTAMINE_STAGE'
+        )],
+        samples     = collate$samples,
+        references  = collate$references,
+        stageTypes  = stageTypes,
+        gcLimits    = gcLimits,
+        gcBiasModels = gcBiasModels
+    ),
+    scores$genome, # thus all individual score objects appear at the top level of the scores object in the app
+    scores$sample
 )
 saveRDS(
     obj, 

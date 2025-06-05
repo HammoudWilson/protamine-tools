@@ -27,7 +27,7 @@ actions:
                 ram-per-cpu: 2G
         job-manager:
             recommended:
-                time-limit: 24:00:00
+                time-limit: 30:00:00
         description: "parse and align ATAC-seq reads to the composite genome using Bowtie2"
     sites:
         order: 2
@@ -89,6 +89,15 @@ package:
     sites: # the pipeline action after which a data package should assembled
         uploadType: protamine-atac-sites # a signal to the Stage 2 framework regarding the package contents
         files:
+            samples-metadata-file:
+                type: csv
+                file: $METADATA_FILE
+            n-inserts-by-stage:
+                type: tsv
+                file: $DATA_FILE_PREFIX.n_inserts_by_stage.txt
+            tn5-kmers-file:
+                type: csv
+                file: $TN5_KMERS_FILE
             primary-sites-observed:
                 type: rds
                 file: $DATA_FILE_PREFIX.primary.tn5_site_counts_obs.rds

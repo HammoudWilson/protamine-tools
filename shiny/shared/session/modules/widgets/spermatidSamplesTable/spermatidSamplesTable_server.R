@@ -7,8 +7,9 @@
 #----------------------------------------------------------------------
 spermatidSamplesTableServer <-  function(
     id, 
-    sourceId, # a reactive that returns the id of one selected source
-    selection = "multiple"
+    samples, # a reactive that returns a samples metadata data.table
+    selection = "multiple",
+    n_ref_wgt_is_gc_smp = NULL # a reactive that returns similarly named object from collate output, when available
 ) {
     moduleServer(id, function(input, output, session) {
 #----------------------------------------------------------------------
@@ -18,9 +19,9 @@ spermatidSamplesTableServer <-  function(
 #----------------------------------------------------------------------
 selectedRows <- rowSelectionObserver('table', input)
 allSamples <- reactive({
-    sourceId <- sourceId()
-    req(sourceId)
-    paCollateData_v5(sourceId)$samples
+    samples <- samples()
+    req(samples)
+    samples[order(staging_order)]
 })
 filteredSamples <- reactive({
     filteredSamples <- allSamples()
@@ -50,10 +51,14 @@ selectedSpermatidSamples <- reactive({
 # render the selection table
 #----------------------------------------------------------------------
 getNInserts <- function(refType, sampleNames){
-    n_is_gc <- paCollateData_v5(sourceId())$n_is_gc_ref[[refType]]
-    sapply(sampleNames, function(sample_name) {
-        sum(n_is_gc[,,sample_name], na.rm = TRUE)
-    })
+    if (is.null(n_ref_wgt_is_gc_smp)) {
+        NA_integer_
+    } else {
+        n_is_gc_smp <- n_ref_wgt_is_gc_smp()[[refType]]$observed
+        sapply(sampleNames, function(sample_name) {
+            sum(n_is_gc_smp[,,sample_name], na.rm = TRUE)
+        })
+    }
 }
 output$table <- renderDT(
     {

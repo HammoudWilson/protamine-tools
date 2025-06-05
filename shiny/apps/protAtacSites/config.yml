@@ -1,0 +1,52 @@
+---
+#----------------------------------------------------------------------
+# app metadata
+#----------------------------------------------------------------------
+name: protAtacSites
+description: "Explore Tn5 cleavage site utilization between spermatid ATAC-seq samples"
+version: v0.0.0
+# suiteVersions:
+#     suiteName: v0.0.0
+
+#----------------------------------------------------------------------
+# project data file type(s) associated with this app
+# the keys in uploadTypes are matched to key uploadType in incoming package.yml
+#----------------------------------------------------------------------
+uploadTypes:
+    protamine-atac-sites: 
+        contentFileTypes: # anything not listed will not be available to the app
+            samples-metadata-file:
+                required: true
+            n-inserts-by-stage:
+                required: true
+            tn5-kmers-file:
+                required: true
+            primary-sites-observed:
+                required: true
+            spike-in-sites-observed:
+                required: true
+            primary-sites-expected:
+                required: true
+            spike-in-sites-expected:
+                required: true
+#----------------------------------------------------------------------
+# labels and definitions for all sequential analysis steps shown in sidebar
+#----------------------------------------------------------------------
+# module = the appSteps module used for a sequential step
+#    the keyed name of a step becomes its namespace in the 'app' object
+# shortLabel = as shown on dashboard menu (required if not provided as module default)
+# shortDescription = as shown on the Overview page (required if not provided as module default)
+# options = passed to both <module>UI and <module>Server functions
+#    longLabel = the title for the appStep tabbed page
+#    alwaysVisible = declares that step is NOT sequential and thus always available
+#    other options are module specific; see module definitions
+#----------------------------------------------------------------------
+appSteps:
+    upload: # nearly always the 1st step of every app
+        module: sourceFileUpload
+    protAtacCounts:
+        module: paSampleCounts
+    protAtacSites:
+        module: paTn5Sites
+    protAtacSiteDiff:
+        module: paTn5SiteDiff

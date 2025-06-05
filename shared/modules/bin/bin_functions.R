@@ -13,7 +13,10 @@ isExcludedBin <- function(chrom, genome, included, gc, gcLimits){
 isIncludedAutosomeBin <- function(chrom, genome, included, gc, gcLimits, isAutosome){
     !isExcludedBin(chrom, genome, included, gc, gcLimits) & isAutosome
 }
-getIncudedAutosomeBins <- function(bins, genome, gcLimits){
+getIncludedAutosomeBins <- function(bins, genome, gcLimits){
     isAutosome <- bins[, !startsWith(chrom, c("chrX-", "chrY-"))]
     isIncludedAutosomeBin(bins$chrom, genome, bins$included, bins$gc, gcLimits, isAutosome)
+}
+getGenomeBins <- function(bins, genome){
+    bins[, endsWith(chrom, paste0("-", genome))]
 }

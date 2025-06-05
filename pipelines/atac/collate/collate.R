@@ -130,6 +130,21 @@ sampleData <- mclapply(1:nrow(samples), function(sampleI) {
     ins_bin_isl <- fread(cmd = paste(collateSampleInserts, smp$filename_prefix), sep = "\t", header = FALSE)
     setnames(ins_bin_isl, c('chr', 'bs0', 'isl','wgt'))
 
+    # calculate the distribution of insert Tn5 weights (do this pre-limit to support plotting in app)
+    # value is passed as int(round(log10(wgt) * 10))
+    n_ins_wgt <- ins_bin_isl[wgt > 0, .(log10_wgt = as.integer(round(log10(wgt) * 10)))][, .(n_ins = .N), keyby = .(log10_wgt)]
+
+    # enforce limits on weights to avoid excessive impact of extreme values, especially at high weights from low-preference sites
+    # empirical observation indicates the following approximate quantiles across all samples:
+    #     1%  ~ -2.2, i.e., 0.0063, >100-fold lower  weight than the unit insert count
+    #     50% ~ -0.8, i.e., 0.16,   ~6-fold   lower  weight than the unit insert count (remember, there are a lot of these inserts)
+    #     99% ~  1.1, i.e., 12.6,   ~12-fold  higher weight than the unit insert count (rare inserts have pre-limit values approaching 1e5!)
+    #     ~10% of inserts have weights > 1
+    min_wgt <- quantile(ins_bin_isl$wgt, 0.01, na.rm = TRUE)
+    max_wgt <- quantile(ins_bin_isl$wgt, 0.99, na.rm = TRUE)
+    ins_bin_isl[wgt < min_wgt, wgt := min_wgt]
+    ins_bin_isl[wgt > max_wgt, wgt := max_wgt]
+
     # recover the insert size vs. gc distributions for the sample, stratified by genome and weighting
     # used for plotting in app
     n_is_gc <- fread(paste(env$TMP_FILE_PREFIX, smp$filename_prefix, "n_is_gc.txt", sep = "."), sep = "\t", header = FALSE)
@@ -190,7 +205,8 @@ sampleData <- mclapply(1:nrow(samples), function(sampleI) {
     list(
         bins = bins_smp[, .(n_obs, n_wgt, mpp, gc)],
         f_obs_ref_isl   = f_obs_ref_isl,
-        n_ref_wgt_is_gc = n_ref_wgt_is_gc
+        n_ref_wgt_is_gc = n_ref_wgt_is_gc,
+        n_ins_wgt       = n_ins_wgt
     )
 }, mc.cores = env$N_CPU)
 # })
@@ -236,10 +252,13 @@ n_ref_wgt_is_gc_smp <- sapply(refTypes, function(refType) {
         )
     }, simplify = FALSE, USE.NAMES = TRUE)
 }, simplify = FALSE, USE.NAMES = TRUE)
-rm(sampleData)
+n_ins_wgt_smp <- sapply(samples$sample_name, function(sample_name) {
+    sampleData[[sample_name]]$n_ins_wgt
+}, simplify = FALSE, USE.NAMES = TRUE)
 
 message()
 message("saving collated sample data for app")
+rm(sampleData)
 env$MAPPABILITY_SIZE_LEVELS <- as.integer(strsplit(env$MAPPABILITY_SIZE_LEVELS, " ")[[1]])
 obj <- list(
     env = env[c(
@@ -262,7 +281,8 @@ obj <- list(
     mpp_bin_smp   = mpp_bin_smp,
     gc_bin_smp    = gc_bin_smp,
     f_obs_ref_isl_smp   = f_obs_ref_isl_smp,
-    n_ref_wgt_is_gc_smp = n_ref_wgt_is_gc_smp
+    n_ref_wgt_is_gc_smp = n_ref_wgt_is_gc_smp,
+    n_ins_wgt_smp = n_ins_wgt_smp
 )
 saveRDS(
     obj, 

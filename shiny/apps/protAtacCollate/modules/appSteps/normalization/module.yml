@@ -1,0 +1,71 @@
+#----------------------------------------------------------------------
+# ui
+#----------------------------------------------------------------------
+shortLabel:       "Normalization" # shown on dashboard menu 
+shortDescription: "Explore the application of various normalization methods." # shown on Overview page
+longLabel:        "Explore bin count normalization" # shown at top of appStep page 
+
+#----------------------------------------------------------------------
+# server
+#----------------------------------------------------------------------
+types: # names of the type(s) of this module ...
+    - normalization
+sourceTypes: null # ... and of the module(s) on which it depends
+
+#----------------------------------------------------------------------
+# dependencies
+#----------------------------------------------------------------------
+packages: # required R packages
+    R:  null
+    Bioconductor: null
+
+## optional data classes and UI modules this module will use
+## e.g., might expect to find shared/optional/classes/<classType>/<className>/<className>_*.R
+#classes:
+#    classType:
+#        - className            
+#modules: null
+
+#----------------------------------------------------------------------
+# module-level settings
+#----------------------------------------------------------------------
+settings:
+    Dot_Plots:
+        N_Plotted_Bins:
+            type:   numericInput
+            value:  50000
+            min:    5000
+            max:    10000
+            step:   5000
+#         <settingName>:
+#             type:   numericInput
+#             value:  1
+#             min:    1
+#             max:    100
+#             step:   1 
+#         <settingName>:
+#             type: selectInput
+#             choices:
+#                 - abc
+#                 - xyz
+#             value: abc    
+#         <settingName>:
+#             type: radioButtons
+#             choices:
+#                 - abc
+#                 - xyz
+#             value: abc    
+#         <settingName>:
+#             type: checkboxGroupInput
+#             choices:
+#                 - abc
+#                 - xyz
+#             value: abc 
+#         <settingName>:
+#             type: checkboxInput
+#             value: true 
+#         <settingName>:
+#             type:   fileInput
+#             accept: 
+#                 - ".csv"
+#                 - ".txt"

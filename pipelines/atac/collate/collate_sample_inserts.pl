@@ -96,14 +96,14 @@ while(<STDIN>){
 
     # calculate the summable insert Tn5 site weights
     #   multiply site frequencies at each independent insert end
-    #   divided exp / obs to weight less preferred sites more heavily in bin counts
+    #   divided exp / obs to weight less Tn5-preferred sites more heavily in bin counts
     my $tn5LI = $tn5KmerIs{$ins[TN5_SITE_LEFT]};
     my $tn5RI = $tn5KmerIs{$ins[TN5_SITE_RIGHT]};
     (!defined $tn5LI or !defined $tn5RI) and next; # only count inserts with known Tn5 sites, i.e., no N bases allowed at ends
     my $islI = $insertSizeLevelIs[$ins[INSERT_SIZE_LEVEL]];
-    my $weight = ($siteFreqExp[$tn5LI][$islI] * $siteFreqExp[$tn5RI][$islI]) / 
-                 ($siteFreqObs[$tn5LI][$islI] * $siteFreqObs[$tn5RI][$islI]);  
-
+    my $weight = ($siteFreqExp[$tn5LI][$islI] * $siteFreqExp[$tn5RI][$islI]) / # "expected" refers to the Tn5 cleavage site frequency in the genome
+                 ($siteFreqObs[$tn5LI][$islI] * $siteFreqObs[$tn5RI][$islI]);  # "observed" refers to sites found in the sample data)
+                                                                               # neither can be zero since tn5LI was a kmer found in the genome, but ratio can be unstable
     # increment the appropriate insert size vs. GC table
     my $is = $ins[END1] - $ins[START0];
     my $gcI = int($ins[FRAC_GC] * 100 + 0.5); # convert to integer percent GC

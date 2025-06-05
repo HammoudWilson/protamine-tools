@@ -12,5 +12,5 @@ options:
         short: c
         type: character
         required: false
-        default: 0.25,0.65
-        description: "comma-delimited lower and upper bin GC content limits; bins outside these limits are excluded"
+        default: 0.25,0.6 # values optimized for mm39 primary genome; do not change them except for other species
+        description: "comma-delimited lower and upper bin GC limits; bins outside these limits are excluded (defaults match mm39)"
