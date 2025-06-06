@@ -28,7 +28,7 @@ zScore.nbinomCountsGC <- function(nb, binCounts, fractionGC, binCN = 2){
 
     # get the expected bin count based on bin fraction GC and CN
     # expectedReadCount = rpa(reads per allele) * nAlleles
-    mu <- predict(nb, suppressGcOutliers.nbinomCountsGC(nb, fractionGC), type = 'mu') * binCN 
+    mu <- predict.nbinomCountsGC(nb, suppressGcOutliers.nbinomCountsGC(nb, fractionGC), type = 'mu') * binCN 
 
     # get the probability on th higher and lower side of the observed bin counts
     binCounts <- as.integer(ceiling(binCounts + 0.001))

@@ -86,13 +86,19 @@ scoreMapRowImage <- function(scoreTypeName, binI, b, scoreValues, colorFn, confi
 
 # coordinate the assembly of a one complete score map group image for a single score type
 # called by the paScoreMap track builder function
-scoreMapGroupImage <- function(scoreTypeName, sourceId, bd, binI, b, config){
+scoreMapGroupImage <- function(scoreTypeName, sourceId, metadata, config, coord, binI, b){
     startSpinner(session, message = paste("rendering", scoreTypeName))
+    scoreType <- getScoreType(scoreTypeName)
     scoreLevel <- getScoreLevel(scoreTypeName)
-    scoreType <- getScoreType(sourceId, scoreTypeName)
+    isSampleScore <- scoreLevel == "sample"
     sepImage <- scoreMapSeparatorImage(config)
-    summaryScores <- getStageTypeDeltaScores(sourceId, scoreTypeName)[[1]][[scoreType$summaryType]][binI]
-    seriesAggScores <- getSeriesAggScores(sourceId, scoreTypeName, bd$samples, config)
+    scores <- list()
+    summaryScores <- if(isSampleScore) {
+        scores[[scoreType$summaryType]] <- getSampleScores(metadata, config, coord, scoreTypeName, scoreType$summaryType)
+        scores[[scoreType$summaryType]]$stageType
+    } else {
+        getGenomeScores(sourceId, scoreTypeName, binI)
+    }
     imager::imappend(c(
 
         # a single row representing the fully aggregated score results for a scoreType
@@ -109,37 +115,44 @@ scoreMapGroupImage <- function(scoreTypeName, sourceId, bd, binI, b, config){
             ),
             sepImage
         ),
-        if(scoreLevel == "sample" && config$Aggregate_By != "none") c(
+        if(isSampleScore && config$Aggregate_By != "none") {
+            seriesAggNames <- getSeriesAggNames(metadata, config)
+            if(is.null(scores$score)) scores$score <- getSampleScores(metadata, config, coord, scoreTypeName, "score")
+            # scores$score <- getSampleScores(metadata, config, coord, scoreTypeName, "quantile")
+            c(
+                # one or more rows representing sample-level primary scores
+                # depending on the user setting for Aggregate_By, there may be one row per sample, stage, or stage type
+                # these are _absolute_ scores; thus, it is possible for a single sample to have asymmetric scores that are ~all high or low
+                lapply(
+                    seriesAggNames,
+                    function(seriesName) scoreMapRowImage(
+                        scoreTypeName, binI, b, 
+                        scores$score[[seriesName]], 
+                        getSeriesSampleColors, config, "score",
+                        labelLabel = if(seriesAggNames[1] == seriesName) scoreType$trackScoreLabel else NULL,
+                        legendLabel = seriesName
+                    )
+                ),
+                list(sepImage),
 
-            # one or more rows representing sample-level primary scores
-            # depending on the user setting for Aggregate_By, there may be one row per sample, stage, or stage type
-            # these are _absolute_ scores; thus, it is possible for a single sample to have asymmetric score that are ~all high or low
-            lapply(
-                names(seriesAggScores),
-                function(seriesName) scoreMapRowImage(
-                    scoreTypeName, binI, b, 
-                    seriesAggScores[[seriesName]]$score[binI], 
-                    getSeriesSampleColors, config, "score",
-                    labelLabel = if(names(seriesAggScores)[1] == seriesName) scoreType$trackScoreLabel else NULL,
-                    legendLabel = seriesName
-                )
-            ),
-            list(sepImage),
-
-            # one or more rows representing intra-sample (or intra-group) _relative_ scores, expressed as per-sample/group quantiles
-            # thus, these should show symmetric distributions for each sample or group with ~equal numbers of high and low scores
-            # these rows are only not needed for GC residual Z scores which are already centered and symmetric
-            if(scoreTypeName != "gcrz") lapply(
-                names(seriesAggScores),
-                function(seriesName) scoreMapRowImage(
-                    scoreTypeName, binI, b, 
-                    seriesAggScores[[seriesName]]$quantile[binI], 
-                    getSeriesQuantileColors, config, "quantile",
-                    labelLabel = if(names(seriesAggScores)[1] == seriesName) scoreType$summaryType else NULL,
-                    legendLabel = seriesName
-                )
-            ) else list(),
-            list(sepImage)
-        ) else list()
+                # one or more rows representing intra-sample (or intra-group) _relative_ scores, expressed as per-sample/group quantiles
+                # thus, these should show symmetric distributions for each sample or group with ~equal numbers of high and low scores
+                # these rows are not needed for GC residual Z scores which are already centered and symmetric
+                if(!startsWith(scoreTypeName, "gcrz")) {
+                    if(is.null(scores$quantile)) scores$quantile <- getSampleScores(metadata, config, coord, scoreTypeName, "quantile")
+                    lapply(
+                        seriesAggNames,
+                        function(seriesName) scoreMapRowImage(
+                            scoreTypeName, binI, b,  
+                            scores$quantile[[seriesName]], 
+                            getSeriesQuantileColors, config, "quantile",
+                            labelLabel = if(seriesAggNames[1] == seriesName) scoreType$summaryType else NULL,
+                            legendLabel = seriesName
+                        )
+                    )
+                } else list(),
+                list(sepImage)
+            ) 
+        } else list()
     ), axis = 'y')
 }

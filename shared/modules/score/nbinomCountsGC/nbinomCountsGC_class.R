@@ -60,7 +60,7 @@ theta <- nb$theta # shape/size/overdisperion factor, reciprocal of alpha
 model <- data.table(
     fractionGC = fractionGC_,    
     readsPerAllele_mu = sapply(fractionGC_, function(fgc){ # the fit value of mu as a function of binned fraction GC
-        exp(predict.nbinomCountsGC(nb, data.frame( # exp accounts for log link in glm.nb
+        exp(predict(nb, data.frame( # exp accounts for log link in glm.nb
             fractionGC  = fgc,
             fractionGC2 = fgc ** 2,
             fractionGC3 = fgc ** 3

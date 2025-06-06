@@ -1,4 +1,6 @@
-# data recover from atac/collate data packages
+#----------------------------------------------------------------------
+# data recovery from atac/collate data packages
+#----------------------------------------------------------------------
 paCollate_ttl <- CONSTANTS$ttl$month
 paCollate_force <- FALSE
 paCollate_create <- "asNeeded"
@@ -34,7 +36,7 @@ paCollate_get_component <- function(sourceId, type){
     }
 }
 
-# helper to load smaller collate components into RAM
+# load smaller collate components into RAM
 paCollate_load_ram <- function(sourceId, type){
     paCollate_getCached(
         type,
@@ -52,6 +54,9 @@ paCollate_load_ram_reactive <- function(sourceId, type) reactive({
     paCollate_load_ram(sourceId, type)
 })
 
+#----------------------------------------------------------------------
+# getters for collate components
+#----------------------------------------------------------------------
 # parsed environment variables
 paCollate_env <- function(sourceId) paCollate_load_ram(sourceId, "env")
 
@@ -69,15 +74,24 @@ paCollate_refs <- function(sourceId) paCollate_load_ram(sourceId, "references")
 # bins (without associate count data)
 paCollate_bins <- function(sourceId) paCollate_load_ram(sourceId, "bins")
 
+# gc bias models, i.e., negative binomial regresssion fits
+paCollate_gc_bias_models <- function(sourceId) paCollate_loadPersistent(
+    sourceId = sourceId,
+    contentFileType = "gcBiasModels",
+    spinnerMessage = "loading gc bias models"
+)
+
 # bin parameters by sample name
 paCollate_gc_bin_smp <- function(sourceId, sample_name) paCollate_load_ram(sourceId, "gc_bin_smp")[, sample_name]
 paCollate_n_ins_wgt_smp <- function(sourceId, sample_name) paCollate_load_ram(sourceId, "n_ins_wgt_smp")[[sample_name]]
 
+#----------------------------------------------------------------------
 # handle reads per bin (rpb) normalization patterns
-paCollate_rpb_smp <- function(sourceId, normalizeTn5Site, normalizeMappability){
+#----------------------------------------------------------------------
+paCollate_rpb_smp <- function(sourceId, normalizeTn5Site){
     paCollate_getCached(
         "rpb_smp",
-        keyObject = list(sourceId, normalizeTn5Site, normalizeMappability),
+        keyObject = list(sourceId, normalizeTn5Site),
         from = 'ram',
         # create = "once",
         createFn = function(...) {
@@ -90,28 +104,21 @@ paCollate_rpb_smp <- function(sourceId, normalizeTn5Site, normalizeMappability){
                 n_obs_bin_smp
             }
 
-            # increase the counts of poorly mappable bins, based on normalizeMappability
-            if(normalizeMappability){
-                mpp_bin_smp <- paCollate_get_component(sourceId, "mpp_bin_smp")
-                rpb_smp <- ifelse(rpb_smp > 0 & mpp_bin_smp > 0, rpb_smp / mpp_bin_smp, 0)
-            }
+            # increase the counts of poorly mappable bins
+            mpp_bin_smp <- paCollate_get_component(sourceId, "mpp_bin_smp")
+            rpb_smp <- ifelse(rpb_smp > 0 & mpp_bin_smp > 0, rpb_smp / mpp_bin_smp, 0)
 
-            # if any normalization was applied, rescale counts to sum to the number of observed reads
+            # rescale counts to sum to the number of observed reads
             # this is done to maintain the same statistical weight pre- and post-normalization
-            if(normalizeTn5Site || normalizeMappability){
-                env  <- paCollate_env(sourceId)
-                bins <- paCollate_bins(sourceId)
-                gc_bin <- rowMeans(paCollate_load_ram(sourceId, "gc_bin_smp"))
-                for (genome in c(env$PRIMARY_GENOME, env$SPIKE_IN_GENOME)) {
-                    I_ref  <- getGenomeBins(bins, genome)
-                    I_norm <- getIncludedAutosomeBins(bins, gc_bin, genome)
-                    for(j in 1:ncol(rpb_smp)){
-                        n_obs  <- sum(n_obs_bin_smp[I_norm, j])
-                        n_norm <- sum(rpb_smp[I_norm, j])
-                        rpb_smp[I_ref, j] <- rpb_smp[I_ref, j] / n_norm * n_obs
-                        # dprint(paste(n_obs, n_norm, sum(rpb_smp[I_norm, j])))
-                    }
-                }
+            env  <- paCollate_env(sourceId)
+            bins <- paCollate_bins(sourceId)
+            gc_bin <- rowMeans(paCollate_load_ram(sourceId, "gc_bin_smp"))
+            I_ref  <- getGenomeBins(bins, env$PRIMARY_GENOME)
+            I_norm <- getIncludedAutosomeBins(bins, gc_bin, env$PRIMARY_GENOME)
+            for(j in 1:ncol(rpb_smp)){
+                n_obs  <- sum(n_obs_bin_smp[I_norm, j])
+                n_norm <- sum(rpb_smp[I_norm, j])
+                rpb_smp[I_ref, j] <- rpb_smp[I_ref, j] / n_norm * n_obs
             }
             rpb_smp
         },

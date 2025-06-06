@@ -26,3 +26,7 @@ runWorkflowStep 2 score score.sh
 # DEV USE
 # # profile and establish corrections for in Tn5 site bias
 # runWorkflowStep 3 collate bias.sh
+
+# clean up
+rm -rf ${SHM_DIR_WRK}
+rm -rf ${TMP_DIR_WRK}

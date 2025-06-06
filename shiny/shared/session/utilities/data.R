@@ -139,65 +139,6 @@ getGenomeBins <- function(bins, genome){
 #     )$value
 # }
 
-# score level and stages
-getScoreLevel <- function(scoreTypeName){
-         if(scoreTypeName %in% names(scoreTypes$genome)) 'genome'
-    else if(scoreTypeName %in% names(scoreTypes$sample)) 'sample'
-    else "NA"
-}
-getScoreType <- function(scoreTypeName){
-    scoreLevel <- getScoreLevel(scoreTypeName)
-    scoreTypes[[scoreLevel]][[scoreTypeName]]
-}
-getTypedStages <- function(sourceId) unlist(paScores(sourceId)$stageTypes)
-getStageTypesByStage <- function(sourceId, stages) unlist(paScores(sourceId)$reverseStageTypes[stages])
-
-#----------------------------------------------------------------------
-# sample-level score structure summary and associated score object retrieval
-#----------------------------------------------------------------------
-getGenomeScores <- function(sourceId, scoreTypeName){ # returns a single genome-level score object
-    x <- list(paScores(sourceId)$scores$genome[[scoreTypeName]])
-    names(x) <- scoreTypeName
-    x
-}
-getSampleScoresList <- function(sourceId, scoreTypeName){ # returns a list of sample-level score objects based on GC normalization
-    if(scoreTypeName == "gcrz"){
-        gcResidualsZ(sourceId)
-    } else {
-        paScores(sourceId)$scores$sample[[scoreTypeName]]
-    }
-}
-getSampleScores <- function(sourceId, scoreTypeName, samples){ # returns a list of sample-level score objects
-    getSampleScoresList(sourceId, scoreTypeName)$sampleScores[samples$sample_name]
-}
-getStageScores <- function(sourceId, scoreTypeName, samples){ # returns a list of stage-level score objects matching a list of samples
-    getSampleScoresList(sourceId, scoreTypeName)$aggregateScores$by_stage[unique(samples$stage)]
-}
-getStageTypeScores <- function(sourceId, scoreTypeName, samples){ # returns a list of stageType-level score objects matching a list of samples
-    stageTypes <- getStageTypesByStage(sourceId, samples$stage)
-    getSampleScoresList(sourceId, scoreTypeName)$aggregateScores$by_stageType[unique(stageTypes)]
-}
-getStageTypeDeltaScores <- function(sourceId, scoreTypeName, cleanDist = FALSE){ # returns a single score object for the delta between stage types (or a genome-level score object)
-    list(
-        stageType_delta = if(getScoreLevel(scoreTypeName) == "sample") {
-            getSampleScoresList(sourceId, scoreTypeName)$aggregateScores$stageType_delta
-        } else {
-            x <- paScores(sourceId)$scores$genome[[scoreTypeName]]
-            if(scoreTypeName == "txn" && cleanDist) x$dist <- x$dist[x %between% scoreTypes$genome$txn$valueLim]
-            x
-        }
-    )
-}
-getSeriesAggScores <- function(sourceId, scoreTypeName, samples, config){
-    switch(
-        config$Aggregate_By,
-        sample      = getSampleScores(sourceId, scoreTypeName, samples),
-        stage       = getStageScores(sourceId, scoreTypeName, samples),
-        stage_type  = getStageTypeScores(sourceId, scoreTypeName, samples)
-    )
-}
-
-
 
 
 

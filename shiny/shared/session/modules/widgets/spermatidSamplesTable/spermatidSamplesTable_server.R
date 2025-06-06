@@ -60,23 +60,24 @@ getNInserts <- function(refType, sampleNames){
         })
     }
 }
+tableData <- reactive({
+    x <- filteredSamples()[,
+        .(
+            batch   = batch, 
+            prefix  = filename_prefix, 
+            name    = sample_name, 
+            staging = staging, 
+            stage   = stage,
+            primary  = getNInserts("primary",  sample_name),
+            spike_in = getNInserts("spike_in", sample_name)
+        )
+    ]
+    x[, frac_spike := round(spike_in / (primary + spike_in), 3)]
+    stopSpinner(session)
+    x
+})
 output$table <- renderDT(
-    {
-        x <- filteredSamples()[,
-            .(
-                batch   = batch, 
-                prefix  = filename_prefix, 
-                name    = sample_name, 
-                staging = staging, 
-                stage   = stage,
-                primary  = getNInserts("primary",  sample_name),
-                spike_in = getNInserts("spike_in", sample_name)
-            )
-        ]
-        x[, frac_spike := round(spike_in / (primary + spike_in), 3)]
-        stopSpinner(session)
-        x
-    },
+    { tableData() },
     options = list(
         paging = FALSE,
         searching = FALSE  
@@ -85,6 +86,30 @@ output$table <- renderDT(
     selection = selection,
     editable = FALSE, 
     rownames = FALSE # must be true for editing to work, not sure why (datatables peculiarity)
+)
+
+#----------------------------------------------------------------------
+# render the all summary plot
+#----------------------------------------------------------------------
+summaryPlot <- staticPlotBoxServer(
+    "summaryPlot",
+    maxHeight = "400px",
+    create = function() {
+        samples <- tableData()
+        req(samples)
+        columns <- list(
+            primary_count = "primary",
+            fraction_spike = "frac_spike"
+        )
+        d <- samples[[columns[[input$summaryPlotColumn]]]]
+        if(input$summaryPlotColumn == "primary_count") d <- d / 1e6 # convert to millions
+        ylab <- if(input$summaryPlotColumn == "primary_count") "Primary Inserts (M)" 
+                else "Fraction Spike-in"
+        names(d) <- samples$staging
+        par(mar = c(5, 4, 0, 0) + 0.1)
+        barplot(d, las=2, ylab = ylab, cex.names = 0.75)
+    }
+
 )
 
 #----------------------------------------------------------------------

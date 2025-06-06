@@ -116,9 +116,12 @@ package:
             collate:
                 type: rds
                 file: $DATA_FILE_PREFIX.collate.rds
-            # scores:
-            #     type: rds
-            #     file: $DATA_FILE_PREFIX.scores.rds
+            gcBiasModels:
+                type: rds
+                file: $DATA_FILE_PREFIX.gcBiasModels.rds
+            scores: # no longer includes the bin-level score matrices, only score summaries
+                type: rds
+                file: $DATA_FILE_PREFIX.scores.rds
     tss:
         uploadType: protamine-atac-tss # a signal to the Stage 2 framework regarding the package contents
         files:

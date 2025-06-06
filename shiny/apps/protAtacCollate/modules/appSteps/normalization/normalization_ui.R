@@ -75,15 +75,6 @@ normalizationUI <- function(id, options) {
                             value = FALSE
                         )
                     ),
-                    column(
-                        width = 6,
-                        style = "margin-bottom: 5px;",
-                        checkboxInput(
-                            ns("normalizeMappability"),
-                            "Apply Mappability Normalization",
-                            value = TRUE
-                        )
-                    ),
                     NULL
                 ),
                 # two matrix plots

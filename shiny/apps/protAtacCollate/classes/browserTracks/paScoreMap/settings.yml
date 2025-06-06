@@ -1,0 +1,59 @@
+# template for settings relevant to the paSampleComposite browserTrack type
+
+# uncomment this section to include standard settings from widgets/browserTrack/settings.yml
+# see: https://github.com/wilsontelab/genomex-mdi-tools
+# include:
+#     - height, etc.
+
+# uncomment this section to specify settings that are common to multiple tracks in an app or suite
+# shared:
+#     - ../shared_settings.yml # interpreted relative to the track's own settings.yml file
+
+# uncomment this section to specify track-specific settings, using the same format as for settingsServer
+# see: https://midataint.github.io/mdi-apps-framework/docs/settings/yaml-declarations.html
+settings:
+    Score_Map:
+        Aggregate_By:
+            type:   selectInput
+            choices:
+                - none
+                - sample
+                - stage
+                - stage_type
+            value: stage
+        Row_Height_Pixels:
+            type:   numericInput
+            value:  13
+            min:    6
+            max:    25
+            step:   1
+        Min_Txn_Log10_CPM:
+            type:   numericInput
+            value:  -1
+            min:    -2
+            max:    0
+            step:   0.25
+        Max_Txn_Log10_CPM:
+            type:   numericInput
+            value:  1
+            min:    0
+            max:    5
+            step:   0.25 
+        Max_Z_Score: # applied to native Z score and quantiles
+            type:   numericInput
+            value:  2
+            min:    0.5
+            max:    10
+            step:   0.5
+        NRLL_Limits:
+            type:   textInput
+            value:  -0.7,0.1,0.5
+    Data_Path:
+        Scores_Dir:
+            type:   textInput
+            value:  ""
+# uncomment this section to specify track-specific settings
+# presets:
+#     Preset_Name:
+#         Family:
+#             Option: value

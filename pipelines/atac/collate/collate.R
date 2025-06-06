@@ -113,7 +113,6 @@ for(refType in refTypes) {
     refs[[refType]]$chroms <- bins[I, unique(chr)]
     refs[[refType]]$n_bins <- sum(I)
     refs[[refType]]$binI <- range(which(I)) 
-    # bins[I, nAlleles := ifelse(chr %in% paste0(c('chrX', 'chrY'), "-", genome), 1L, 2L)]
 }
 
 message("collating (merged) read pair data by sample")
@@ -273,8 +272,8 @@ obj <- list(
     samples    = samples,
     references = refs,
     bins = bins[, .(
-        chrom = chr, start0 = bs0, # end1 = be1, 
-        included = included #, nAlleles = nAlleles
+        chrom = chr, start0 = bs0, 
+        included = included
     )],
     n_obs_bin_smp = n_obs_bin_smp,
     n_wgt_bin_smp = n_wgt_bin_smp,

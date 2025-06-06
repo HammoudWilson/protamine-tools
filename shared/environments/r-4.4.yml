@@ -18,3 +18,4 @@ dependencies:
     - r-base=4.4
     - r-essentials=4.4
     - r-r.utils=2.12
+    - r-mass=7

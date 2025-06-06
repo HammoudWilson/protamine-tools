@@ -51,6 +51,31 @@ spermatidSamplesTableUI <- function(id, width = 4) {
             solidHeader = TRUE,
             collapsible = FALSE,
             DTOutput(ns("table"))
-        )
+        ),
+
+        # statistic summary all samples
+        box(
+            width = width,
+            title = NULL,
+            status = 'primary',
+            solidHeader = FALSE,
+            collapsible = FALSE,
+            radioButtons(
+                ns("summaryPlotColumn"),
+                label = "Summary Plot Column",
+                choices = c("primary_count","fraction_spike"),
+                selected = "primary_count",
+                inline = TRUE
+            )
+        ),
+        staticPlotBoxUI(
+            ns("summaryPlot"), 
+            "Summary Plot, All Samples",
+            width = width,
+            status = "primary",
+            collapsible = TRUE,
+            collapsed = TRUE,
+            solidHeader = TRUE
+        ),
     )
 }

@@ -17,8 +17,10 @@ uploadTypes:
         contentFileTypes: # anything not listed will not be available to the app
             collate:  
                 required: true
-            # scores:
-            #     required: true
+            gcBiasModels:  
+                required: true
+            scores:
+                required: true
 
 #----------------------------------------------------------------------
 # labels and definitions for all sequential analysis steps shown in sidebar
@@ -39,3 +41,7 @@ appSteps:
         module: insertSizes
     normalization:
         module: normalization
+    scoreSummary:
+        module: scoreSummary
+    browser:
+        module: genomex-mdi-tools//trackBrowser

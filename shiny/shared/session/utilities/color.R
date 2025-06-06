@@ -1,37 +1,23 @@
-# establish the dynamic color palettes for heat map and other visualizations
+# establish the color palettes for heat map and other visualizations
 
-# functions that convert different types of normalized scores to color ranges
-z_score_color <- function(zScore, maxZScore){
-    minZScore <- -maxZScore 
-    z <- pmax(minZScore, pmin(maxZScore, zScore))
-    I <- floor(nTrackMapColorsPerSide * abs(z) / maxZScore) + 1L
-    ifelse(z < 0, trackMapColors$low[I], trackMapColors$high[I])
-}
-quantile_score_color <- function(quantile, maxQuantile){
-    minQuantile <- 1 - maxQuantile
-    quantile <- pmax(minQuantile, pmin(maxQuantile, quantile))
-    I <- floor(nTrackMapColorsPerSide * abs(quantile - 0.5) / (maxQuantile - 0.5)) + 1L
-    ifelse(quantile < 0.5, trackMapColors$low[I], trackMapColors$high[I])
-}
-cpm_score_color <- function(log10cpm, minLog10Cpm = -1, maxLog10Cpm = 1){
-    log10cpm <- pmax(minLog10Cpm, pmin(maxLog10Cpm, log10cpm))
-    I <- floor(nTrackMapColorsPerSide * (log10cpm - minLog10Cpm) / (maxLog10Cpm - minLog10Cpm)) + 1L
-    trackMapColors$high[I]
-}
-nrll_score_color <- function(nrll, maxNrll){
-    minNrll <- -maxNrll
-    nrll <- pmax(minNrll, pmin(maxNrll, nrll))
-    I <- floor(nTrackMapColorsPerSide * abs(nrll) / maxNrll) + 1L
-    ifelse(nrll < 0, trackMapColors$low[I], trackMapColors$high[I])
-}
-fraction_score_color <- function(fraction, minFraction = 0, maxFraction = 1){
-    midpoint <- (minFraction + maxFraction) / 2
-    fraction <- pmax(minFraction, pmin(maxFraction, fraction))
-    I <- floor(nTrackMapColorsPerSide * abs(fraction - midpoint) / (maxFraction - midpoint)) + 1L
-    ifelse(fraction < midpoint, trackMapColors$low[I], trackMapColors$high[I])
-}
-
-# functions to get distribution trace colors
+#----------------------------------------------------------------------
+# get (staged) distribution trace colors
+#----------------------------------------------------------------------
+stageColors <- c(
+    CONSTANTS$plotlyColors$black, # spermatid stages, e.g., early_RS, etc.
+    CONSTANTS$plotlyColors$blue,
+    CONSTANTS$plotlyColors$orange,
+    CONSTANTS$plotlyColors$green,
+    CONSTANTS$plotlyColors$purple,
+    CONSTANTS$plotlyColors$red,
+    CONSTANTS$plotlyColors$yellow,
+    CONSTANTS$plotlyColors$teal
+)
+stageTypeColors <- c(
+    CONSTANTS$plotlyColors$red, # spermatid stage types, e.g., round, etc.
+    CONSTANTS$plotlyColors$blue,
+    CONSTANTS$plotlyColors$purple
+)
 getSampleColorsByStage <- function(allSamples, samples){
     orderedSamples <- allSamples[order(staging_order)]
     stages <- orderedSamples[, unique(stage)]
@@ -60,24 +46,119 @@ getStageTypeColors <- function(sourceId, allSamples, samples){
     names(colors) <- allStageTypes
     colors[stageTypes]
 }
+
+#----------------------------------------------------------------------
+# convert different types of normalized scores to dynamic color ranges for heat maps
+#----------------------------------------------------------------------
+# establish a range of 61 colors for heat maps, with 30 colors on each side of the neutral color (grey)
+paColors <- list(
+    RED  = rgb(0.9, 0,   0),
+    GREY = rgb(0.75, 0.75, 0.75),
+    BLUE = rgb(0,   0,   1)
+)
+nTrackMapColorsPerSide <- 30
+trackMapColors <- list(
+    low  = colorRampPalette(c(paColors$GREY, paColors$BLUE))(nTrackMapColorsPerSide + 1), # blue color is cold/depleted,
+    high = colorRampPalette(c(paColors$GREY, paColors$RED))( nTrackMapColorsPerSide + 1)  # red  color is hot/ enriched
+)
+
+# implement color spreading functions for different score types
+z_score_color <- function(zScore, config){
+    minZScore <- -config$Max_Z_Score
+    z <- pmax(minZScore, pmin(config$Max_Z_Score, zScore))
+    I <- floor(nTrackMapColorsPerSide * abs(z) / config$Max_Z_Score) + 1L
+    ifelse(z < 0, trackMapColors$low[I], trackMapColors$high[I])
+}
+# quantile_score_color <- function(quantile, config){
+#     minQuantile <- 1 - maxQuantile
+#     quantile <- pmax(minQuantile, pmin(maxQuantile, quantile))
+#     I <- floor(nTrackMapColorsPerSide * abs(quantile - 0.5) / (maxQuantile - 0.5)) + 1L
+#     ifelse(quantile < 0.5, trackMapColors$low[I], trackMapColors$high[I])
+# }
+quantile_score_color <- function(quantile, config){
+    # prevent infinite Z-scores by clamping extreme quantiles to ~6 sigma, i.e., 1e-9
+    quantile <- pmax(1e-9, pmin(1-1e-9, quantile))
+    # use normal distribution to weight quantiles
+    z <- qnorm(quantile)
+    z_score_color(z, config)
+}
+cpm_score_color <- function(log10cpm, config){
+    min <- config$Min_Txn_Log10_CPM
+    max <- config$Max_Txn_Log10_CPM
+    log10cpm <- pmax(min, pmin(max, log10cpm))
+    I <- floor(nTrackMapColorsPerSide * (log10cpm - min) / (max - min)) + 1L
+    trackMapColors$high[I]
+}
+# nrll_score_color <- function(nrll, config){
+#     # limit values are low, mid, and high points
+#     NRLL_Limits <- as.numeric(strplit(config$NRLL_Limits, ",")[[1]])
+#     nrll <- pmax(NRLL_Limits[1], pmin(NRLL_Limits[3], nrll))
+#     I <- floor(nTrackMapColorsPerSide * abs(nrll) / config$Max_NRLL) + 1L
+#     ifelse(nrll < 0, trackMapColors$low[I], trackMapColors$high[I])
+# }
+nrll_score_color <- function(nrll, config){
+    NRLL_Limits <- as.numeric(strsplit(config$NRLL_Limits, ",")[[1]])
+    low  <- NRLL_Limits[1]
+    mid  <- NRLL_Limits[2]
+    high <- NRLL_Limits[3]
+    nrll <- pmax(low, pmin(high, nrll))
+    I <- ifelse(nrll < mid,
+        # scale in lower range
+        floor(nTrackMapColorsPerSide * abs(nrll - mid) / abs(low - mid)) + 1L,
+        # scale in upper range (enriched for small insert pattern)
+        floor(nTrackMapColorsPerSide * abs(nrll - mid) / abs(high - mid)) + 1L
+    )
+    ifelse(nrll < mid, trackMapColors$low[I], trackMapColors$high[I])
+}
+fraction_score_color <- function(fraction, config){
+    minFraction <- config$Min_Fraction
+    maxFraction <- config$Max_Fraction
+    midpoint <- (minFraction + maxFraction) / 2
+    fraction <- pmax(minFraction, pmin(maxFraction, fraction))
+    I <- floor(nTrackMapColorsPerSide * abs(fraction - midpoint) / (maxFraction - midpoint)) + 1L
+    ifelse(fraction < midpoint, trackMapColors$low[I], trackMapColors$high[I])
+}
+
+#----------------------------------------------------------------------
+# get heatmap track colors for different score types and aggregation levels 
+#----------------------------------------------------------------------
+
+# color the top group-level summary row of every track heatmap group
+# this is the single score value for genome-level scores
+# or the stageType delta for sample-level scores
 getSeriesSummaryColors <- function(scoreTypeName, scoreValues, config){ # used to color the top group-level summary row of every track heatmap group
     switch(
         scoreTypeName,
-        gc   = z_score_color(       scoreValues, config$Max_Z_Score),
-        txn  = cpm_score_color(     scoreValues, config$Min_Txn_Log10_CPM, config$Max_Txn_Log10_CPM),
-        gcrz = quantile_score_color(scoreValues, config$Max_Quantile), # all sample-level summary scores use quantiles, i.e., assume non-parametric distributions
-        iisf = quantile_score_color(scoreValues, config$Max_Quantile),
-        nrll = quantile_score_color(scoreValues, config$Max_Quantile)
+
+        # genome scores here are equivalent to sample-level getSeriesSampleColors below use as is
+        gc_z     = z_score_color(       scoreValues, config), 
+        txn      = cpm_score_color(     scoreValues, config),
+
+        # sample-level summary scores (deltas) use quantiles, where we assume non-parametric distributions
+        gcrz_obs = quantile_score_color(scoreValues, config), 
+        gcrz_wgt = quantile_score_color(scoreValues, config),
+        nrll     = quantile_score_color(scoreValues, config)
     )
 }
-getSeriesSampleColors <- function(scoreTypeName, scoreValues, config){ # used to color the subsequent sample-level rows of every track heatmap group
+
+# color the subsequent sample-level rows of every track heatmap group
+# i.e., these values are provided as absolute scores by scoreMapGroupImage
+getSeriesSampleColors <- function(scoreTypeName, scoreValues, config){ 
+    dprint(range(scoreValues, na.rm = TRUE))
     switch(
         scoreTypeName,
-        gcrz = z_score_color(scoreValues,           config$Max_Z_Score),
-        iisf = fraction_score_color(scoreValues, 0, config$Max_Fraction_IIS), # unlike gcrz and nrll, iisf is not inherently centered or symmetric
-        nrll = nrll_score_color(scoreValues,        config$Max_NRLL)
+        gcrz_obs = z_score_color(   scoreValues, config),  # these score values are already Z scores
+        gcrz_wgt = z_score_color(   scoreValues, config),
+        nrll     = nrll_score_color(scoreValues, config)
+        # if doing this, then scoreMapGroupImage needs to pass quantiles not scores
+        # gcrz_obs = quantile_score_color(scoreValues, config), 
+        # gcrz_wgt = quantile_score_color(scoreValues, config),
+        # nrll     = quantile_score_color(scoreValues, config)
     )
 }
-getSeriesQuantileColors <- function(scoreTypeName, scoreValues, config){ # like above, now coloring the quantile rows for intra-sample/group relative scores
-    quantile_score_color(scoreValues, config$Max_Quantile)
+
+# color final quantile rows for intra-sample/intra-group relative scores
+# i.e., these values are provided as quantiles by scoreMapGroupImage
+getSeriesQuantileColors <- function(scoreTypeName, scoreValues, config){  # scoreTypeName unused but needed for consistency
+    quantile_score_color(scoreValues, config)
 }

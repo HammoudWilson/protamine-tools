@@ -54,25 +54,33 @@ env <- reactive({
 # appStep outcomes, saved to disk since these are ~one-time analysis steps
 # includes GC bias fit, chromosome-level data and junction fits, but not HMM
 #----------------------------------------------------------------------
-gcBiasFileName <- "gcBiasModels.rds"
-gcBiasFile <- reactive({
-    sourceId <- sourceId()
-    req(sourceId)
-    expandSourceFilePath(sourceId, gcBiasFileName)
-})
-invalidateGcBiasModels <- reactiveVal(1)
-getGcBiasModels <- function(gcBiasFile = NULL, sourceId = NULL){
-    if(is.null(gcBiasFile)) gcBiasFile <- expandSourceFilePath(sourceId, gcBiasFileName)
-    if(file.exists(gcBiasFile)) readRDS(gcBiasFile) else list()
-}
-gcBiasModels <- reactive({ # gc bias model from negative binomial are calculated synchronously
-    invalidateGcBiasModels()
-    getGcBiasModels( gcBiasFile = gcBiasFile() )
-})
+# gcBiasFileName <- "gcBiasModels.rds"
+# gcBiasFile <- reactive({
+#     sourceId <- sourceId()
+#     req(sourceId)
+#     expandSourceFilePath(sourceId, gcBiasFileName)
+# })
+# invalidateGcBiasModels <- reactiveVal(1)
+# getGcBiasModels <- function(gcBiasFile = NULL, sourceId = NULL){
+#     if(is.null(gcBiasFile)) gcBiasFile <- expandSourceFilePath(sourceId, gcBiasFileName)
+#     if(file.exists(gcBiasFile)) readRDS(gcBiasFile) else list()
+# }
+# gcBiasModels <- reactive({ # gc bias model from negative binomial are calculated synchronously
+#     invalidateGcBiasModels()
+#     getGcBiasModels( gcBiasFile = gcBiasFile() )
+# })
 gcBiasModel <- reactive({
-    gcBiasModels <- gcBiasModels()
+    # gcBiasModels <- gcBiasModels()    
+    # gcBiasModels[[selectedSampleName]]
+    sourceId <- sourceId()
     selectedSampleName <- selectedSampleName()
-    gcBiasModels[[selectedSampleName]]
+    req(sourceId, selectedSampleName)
+    gcBiasModels <- paCollate_gc_bias_models(sourceId)
+    grcz_type <- if(input$normalizeTn5Site) "gcrz_wgt" else "gcrz_obs"
+    list(
+        sample_name = selectedSampleName,
+        fit = gcBiasModels[[grcz_type]][[selectedSampleName]]
+    )
 })
 
 #----------------------------------------------------------------------
@@ -96,7 +104,7 @@ gcBiasPlotData <- reactive({
     startSpinner(session, message = paste("plotting", selectedSampleName))
     I <- randomPrimaryBinI()
     gc_bin <- paCollate_gc_bin_smp(sourceId, selectedSampleName) # fractionGC
-    rpb    <- paCollate_rpb_smp(sourceId, input$normalizeTn5Site, input$normalizeMappability)[, selectedSampleName]
+    rpb    <- paCollate_rpb_smp(sourceId, input$normalizeTn5Site)[, selectedSampleName]
     data.table(
         x = gc_bin[I], # same as fractionGC
         y = rpb[I],    # rpb = reads per bin
@@ -107,8 +115,7 @@ gcBiasPlotData <- reactive({
 gcOverplotData <- reactive({
     gcBiasModel <- gcBiasModel()
     if(!isTruthy(gcBiasModel)) return(NULL)
-    selectedSample <- selectedSample()
-    startSpinner(session, message = paste("overplotting", selectedSample$sample_name))
+    startSpinner(session, message = paste("overplotting", gcBiasModel$sample_name))
     nb <- gcBiasModel$fit
     gc <- nb$model$fractionGC
     data.table(
@@ -159,12 +166,11 @@ gcBiasPlot <- interactiveScatterplotServer(
 gcResidualBiasPlotData <- function(){
     gcBiasModel <- gcBiasModel()
     sourceId <- sourceId()
-    selectedSampleName <- selectedSampleName()
-    req(gcBiasModel, sourceId, selectedSampleName)
-    startSpinner(session, message = paste("GC bias", selectedSampleName))
+    req(gcBiasModel, sourceId)
+    startSpinner(session, message = paste("GC bias", gcBiasModel$sample_name))
     I <- randomPrimaryBinI()
-    gc_bin <- paCollate_gc_bin_smp(sourceId, selectedSampleName) # fractionGC
-    rpb    <- paCollate_rpb_smp(sourceId, input$normalizeTn5Site, input$normalizeMappability)[, selectedSampleName]
+    gc_bin <- paCollate_gc_bin_smp(sourceId, gcBiasModel$sample_name) # fractionGC
+    rpb    <- paCollate_rpb_smp(sourceId, input$normalizeTn5Site)[, gcBiasModel$sample_name]
     binCN <- 2 # bd$bins$genome[I, nAlleles]
     data.table(
         x = gc_bin[I],
@@ -241,7 +247,7 @@ tn5vsGCPlot <- staticPlotBoxServer(
 wgtDistPlot <- staticPlotBoxServer(
     "wgtDistPlot",
     maxHeight = "400px",
-        create = function() {
+    create = function() {
         sourceId <- sourceId()
         selectedSampleName <- selectedSampleName()
         req(sourceId, selectedSampleName)
@@ -280,7 +286,7 @@ wgtDistPlot <- staticPlotBoxServer(
 #     req(sourceId)
 #     bins <- paCollate_bins(sourceId)
 #     gc_bin <- paCollate_gc_bin_smp(sourceId, selectedSample$sample_name) # fractionGC
-#     rpb    <- paCollate_rpb_smp(sourceId, input$normalizeTn5Site, input$normalizeMappability)[, selectedSample$sample_name]
+#     rpb    <- paCollate_rpb_smp(sourceId, input$normalizeTn5Site)[, selectedSample$sample_name]
 #     genome <- paCollate_env(sourceId)$PRIMARY_GENOME
 
 #     I <- getIncludedAutosomeBins(bins, gc_bin, genome)

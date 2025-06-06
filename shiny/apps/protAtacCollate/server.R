@@ -6,6 +6,7 @@
 
 # objects instantiated here are available to all appStep modules in a session
 paCollateCache <- new_dataCache('paCollate')
+paScoresCache  <- new_dataCache('paScores')
 
 # appServer() is called after all modules are instantiated
 appServer <- function(){
