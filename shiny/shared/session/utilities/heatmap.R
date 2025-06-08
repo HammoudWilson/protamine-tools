@@ -94,8 +94,8 @@ scoreMapGroupImage <- function(scoreTypeName, sourceId, metadata, config, coord,
     sepImage <- scoreMapSeparatorImage(config)
     scores <- list()
     summaryScores <- if(isSampleScore) {
-        scores[[scoreType$summaryType]] <- getSampleScores(metadata, config, coord, scoreTypeName, scoreType$summaryType)
-        scores[[scoreType$summaryType]]$stageType
+        scores$quantile <- getSampleScores(metadata, config, coord, scoreTypeName, "quantile")
+        scores$quantile$stageType # yes, this is stageType_delta (was named this way in score_functions.R)
     } else {
         getGenomeScores(sourceId, scoreTypeName, binI)
     }
@@ -117,19 +117,27 @@ scoreMapGroupImage <- function(scoreTypeName, sourceId, metadata, config, coord,
         ),
         if(isSampleScore && config$Aggregate_By != "none") {
             seriesAggNames <- getSeriesAggNames(metadata, config)
-            if(is.null(scores$score)) scores$score <- getSampleScores(metadata, config, coord, scoreTypeName, "score")
-            # scores$score <- getSampleScores(metadata, config, coord, scoreTypeName, "quantile")
+            isGcrz <- startsWith(scoreTypeName, "gcrz")
+            if(isGcrz && config$GCRZ_As_Quantiles) { # give user the option to plot GCRZ scores as quantiles
+                scores$data <- getSampleScores(metadata, config, coord, scoreTypeName, "quantile")
+                colorFn <- getSeriesQuantileColors
+                labelLabel <- "quantile"
+            } else {
+                scores$data <- getSampleScores(metadata, config, coord, scoreTypeName, "score")
+                colorFn <- getSeriesSampleColors
+                labelLabel <- scoreType$trackScoreLabel
+            }
             c(
                 # one or more rows representing sample-level primary scores
                 # depending on the user setting for Aggregate_By, there may be one row per sample, stage, or stage type
-                # these are _absolute_ scores; thus, it is possible for a single sample to have asymmetric scores that are ~all high or low
+                # these may be _absolute_ scores; thus, a single sample may have asymmetric scores that are ~all high or low
                 lapply(
                     seriesAggNames,
                     function(seriesName) scoreMapRowImage(
                         scoreTypeName, binI, b, 
-                        scores$score[[seriesName]], 
-                        getSeriesSampleColors, config, "score",
-                        labelLabel = if(seriesAggNames[1] == seriesName) scoreType$trackScoreLabel else NULL,
+                        scores$data[[seriesName]], 
+                        colorFn, config, "score",
+                        labelLabel = if(seriesAggNames[1] == seriesName) labelLabel else NULL,
                         legendLabel = seriesName
                     )
                 ),
@@ -137,8 +145,8 @@ scoreMapGroupImage <- function(scoreTypeName, sourceId, metadata, config, coord,
 
                 # one or more rows representing intra-sample (or intra-group) _relative_ scores, expressed as per-sample/group quantiles
                 # thus, these should show symmetric distributions for each sample or group with ~equal numbers of high and low scores
-                # these rows are not needed for GC residual Z scores which are already centered and symmetric
-                if(!startsWith(scoreTypeName, "gcrz")) {
+                # these rows are not needed for GC residual Z scores which are already centered and symmetric relative values
+                if(!isGcrz) {
                     if(is.null(scores$quantile)) scores$quantile <- getSampleScores(metadata, config, coord, scoreTypeName, "quantile")
                     lapply(
                         seriesAggNames,
@@ -146,7 +154,7 @@ scoreMapGroupImage <- function(scoreTypeName, sourceId, metadata, config, coord,
                             scoreTypeName, binI, b,  
                             scores$quantile[[seriesName]], 
                             getSeriesQuantileColors, config, "quantile",
-                            labelLabel = if(seriesAggNames[1] == seriesName) scoreType$summaryType else NULL,
+                            labelLabel = if(seriesAggNames[1] == seriesName) "quantile" else NULL,
                             legendLabel = seriesName
                         )
                     )

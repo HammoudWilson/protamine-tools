@@ -24,11 +24,14 @@ build.tssFragsTrack <- function(track, reference, coord, layout){
     startSpinner(session, message = "getting tss data")
     sourceId <- track$settings$items()[[1]]$Source_ID
     req(sourceId)
-    tfd <- paTssFragsData(sourceId)
+    tfd <- paTss_frags(sourceId)
     req(tfd)
     txnState <- track$settings$get("TSS_Frags","Transcription_State")
     tssFrags <- do.call(rbind, lapply(names(tfd$tssFrags[[txnState]]), function(sample_name_){
-        tf <- tfd$tssFrags[[txnState]][[sample_name_]][chrom == coord$chromosome & start0 < coord$end & end1 >= coord$start]
+        tf <- tfd$tssFrags[[txnState]][[sample_name_]][
+            startsWith(chrom, paste0(coord$chromosome, "-")) & 
+            start0 < coord$end & 
+            end1 >= coord$start]
         tf[, .(
             stage = tfd$samples[sample_name == sample_name_, stage],
             start1 = start0 + 1,
@@ -37,7 +40,6 @@ build.tssFragsTrack <- function(track, reference, coord, layout){
         )]
     }))
     req(nrow(tssFrags) > 0)
-
     stages <- tfd$samples[, unique(stage)]
     nStages <- length(stages)
 
@@ -97,7 +99,7 @@ navigation.tssFragsTrack <- function(track, session, id, browser){
         sourceId <- track$settings$items()[[1]]$Source_ID
         req(sourceId)
         txnState <- track$settings$get("TSS_Frags","Transcription_State")
-        paTssFragsData(sourceId)$tss[[txnState]]
+        paTss_frags(sourceId)$tss[[txnState]]
     })
     tagList(
         trackNavTable(
@@ -108,7 +110,9 @@ navigation.tssFragsTrack <- function(track, session, id, browser){
             tableData = trackNavData, # populate a table based on track settings, etc.
             actionFn = function(selectedRow){
                 req(selectedRow)
+                dstr(selectedRow)
                 d <- trackNavData()[selectedRow]
+                d$chrom <- strsplit(d$chrom, "-")[[1]][1]
                 handleTrackNavTableClick(1, track, d$chrom, d$start, d$end)
             }
         )

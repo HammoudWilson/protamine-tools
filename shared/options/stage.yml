@@ -16,7 +16,7 @@ options:
         description: "name of a single spermatid stage that best represents the protamine transition state"
     stage-types:
         order: 3
-        short: y
+        short: x
         type: character
         required: false
         default: round:early_RS,int_RS,late_RS;elong:early_ES,int_ES # deliberately omit earliest_ES, late_ES, which has low signal, and mESC

@@ -150,27 +150,3 @@ paCollate_rpb_smp <- function(sourceId, normalizeTn5Site){
 #     n_ref_wgt_is_gc_smp = n_ref_wgt_is_gc_smp
 #     n_ins_wgt_smp = n_ins_wgt_smp
 # )
-
-
-# # load v5 data
-# paCollateData_v5 <- function(sourceId){
-#     # startSpinner(session, message = paste("loading collate v5"))
-
-#     # dataFilePath <- getSourceFilePath(sourceId, fileType, parentDir = NULL)
-
-#     filePath <- loadPersistentFile(
-#         sourceId = sourceId, 
-#         contentFileType = "collate", 
-#         ttl = CONSTANTS$ttl$month,
-#         # force = TRUE,
-#         postProcess = function(x){
-#             x$bins[, ":="(
-#                 primary = chrom %in% x$references$primary$chroms,
-#                 included = included == 1
-#             )]
-#             x
-#         }
-#     )
-#     # stopSpinner(session)
-#     persistentCache[[filePath]]$data
-# }

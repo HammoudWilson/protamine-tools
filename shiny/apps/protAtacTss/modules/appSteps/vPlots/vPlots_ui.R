@@ -1,15 +1,15 @@
 #----------------------------------------------------------------------
-# UI components for the protAtac_vPlots appStep module
+# UI components for the vPlots appStep module
 #----------------------------------------------------------------------
 
 # module ui function
-protAtac_vPlotsUI <- function(id, options) {
+vPlotsUI <- function(id, options) {
 
     # initialize namespace
     ns <- NS(id)
     
     # override missing options to module defaults
-    options <- setDefaultOptions(options, stepModuleInfo$protAtac_vPlots)
+    options <- setDefaultOptions(options, stepModuleInfo$vPlots)
 
     # return the UI contents
     standardSequentialTabItem(
@@ -41,7 +41,7 @@ protAtac_vPlotsUI <- function(id, options) {
                 width = 4,
                 solidHeader = TRUE,
                 status = "primary",
-                collapsible = FALSE
+                collapsible = TRUE
             ),
             bufferedTableUI(
                 ns("samples2"),
@@ -49,7 +49,7 @@ protAtac_vPlotsUI <- function(id, options) {
                 width = 4,
                 solidHeader = TRUE,
                 status = "primary",
-                collapsible = FALSE
+                collapsible = TRUE
             )
         ),
 

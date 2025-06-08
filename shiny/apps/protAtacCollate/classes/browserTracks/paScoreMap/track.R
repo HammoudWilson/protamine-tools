@@ -41,6 +41,7 @@ build.paScoreMapTrack <- function(track, reference, coord, layout){
         Min_Txn_Log10_CPM  = track$settings$get("Score_Map","Min_Txn_Log10_CPM"),
         Max_Txn_Log10_CPM  = track$settings$get("Score_Map","Max_Txn_Log10_CPM"),
         Aggregate_By       = track$settings$get("Score_Map","Aggregate_By"),
+        GCRZ_As_Quantiles  = track$settings$get("Score_Map","GCRZ_As_Quantiles"),
         basesPerPixel      = basesPerPixel
     )
     config$totalWidthPixels <- plotWidthPixels + config$labelWidthPixels + config$legendWidthPixels 

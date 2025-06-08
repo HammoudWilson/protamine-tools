@@ -2,8 +2,8 @@
 
 # uncomment this section to include standard settings from widgets/browserTrack/settings.yml
 # see: https://github.com/wilsontelab/genomex-mdi-tools
-# include:
-#     - height, etc.
+include:
+    - height
 
 # uncomment this section to specify settings that are common to multiple tracks in an app or suite
 # shared:
@@ -12,47 +12,26 @@
 # uncomment this section to specify track-specific settings, using the same format as for settingsServer
 # see: https://midataint.github.io/mdi-apps-framework/docs/settings/yaml-declarations.html
 settings:
-    Score_Map:
+    Footprint:
         Aggregate_By:
             type:   selectInput
             choices:
-                - none
                 - sample
                 - stage
                 - stage_type
             value: stage
-        Row_Height_Pixels:
+        Plot_Inserts_As:
+            type:   selectInput
+            choices:
+                - endpoint_counts
+                - v_plot
+                - insert_spans
+            value: endpoint_counts
+        Max_Width_Bases:
             type:   numericInput
-            value:  13
-            min:    6
-            max:    25
-            step:   1
-        Min_Txn_Log10_CPM:
-            type:   numericInput
-            value:  -1
-            min:    -2
-            max:    0
-            step:   0.25
-        Max_Txn_Log10_CPM:
-            type:   numericInput
-            value:  1
-            min:    0
-            max:    5
-            step:   0.25 
-        Max_Z_Score: # applied to native Z score and quantiles
-            type:   numericInput
-            value:  2
-            min:    0.5
-            max:    10
-            step:   0.5
-        NRLL_Limits:
-            type:   textInput
-            value:  -0.7,0.1,0.5
-        GCRZ_As_Quantiles:
-            type:   checkboxInput
-            value:  true
+            value:  10000
     Data_Path:
-        Scores_Dir:
+        Inserts_Bgz_Dir:
             type:   textInput
             value:  ""
 # uncomment this section to specify track-specific settings

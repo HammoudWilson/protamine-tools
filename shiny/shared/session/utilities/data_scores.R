@@ -1,40 +1,12 @@
 #----------------------------------------------------------------------
 # data recovery from atac/collate data packages
 #----------------------------------------------------------------------
-# paScores_ttl <- CONSTANTS$ttl$month
-# paScores_force <- FALSE
 paScores_create <- "asNeeded"
-# paScores_loadPersistent <- function(..., sep = "\t", header = FALSE, force = NULL, spinnerMessage = NULL){
-#     if (!is.null(spinnerMessage)) startSpinner(session, message = spinnerMessage)
-#     if (is.null(force)) force <- paScores_force
-#     filePath <- loadPersistentFile(..., sep = sep, header = header, force = force, ttl = paScores_ttl)
-#     persistentCache[[filePath]]$data
-# }
 paScores_getCached <- function(..., create = NULL, spinnerMessage = NULL){
     if (!is.null(spinnerMessage)) startSpinner(session, message = spinnerMessage)
     if (is.null(create)) create <- paScores_create
     paScoresCache$get(..., permanent = TRUE, create = create)$value
 }
-
-# # break a data package into its component object types and return the requested type object
-# paScores_break_file <- function(sourceId, type){
-#     expandSourceFilePath(sourceId, paste0("scores-", type, ".rds"))
-# }   
-# paScores_get_component <- function(sourceId, type){
-#     typeFile <- paScores_break_file(sourceId, type)
-#     if(file.exists(typeFile)){
-#         readRDS(typeFile)
-#     } else {
-#         startSpinner(session, message = "loading scores data")
-#         x <- readRDS(getSourceFilePath(sourceId, "scores"))
-#         for(type_ in names(x)){
-#             startSpinner(session, message = paste("breaking", type_))
-#             filePath <- paScores_break_file(sourceId, type_)
-#             if(!file.exists(filePath)) saveRDS(x[[type_]], file = filePath)
-#         }
-#         x[[type]]
-#     }
-# }
 
 #----------------------------------------------------------------------
 # load collate scores components into RAM
@@ -151,8 +123,46 @@ getSampleScores <- function(metadata, config, coord, scoreTypeName, dataType){ #
             rep("numeric", length(scoreTable$colNames) - 3)
         )
     )
-# colClasses= is an unnamed vector of types, length 45, 
-# but there are 42 columns in the input.
+}
+getSampleScores_regions <- function(metadata, config, scoreTypeName, dataType){ # returns a list of sample-level score objects based on GC normalization
+    paScores_getCached(
+        "bed_region_scores",
+        keyObject = list(config$sourceId, config$bedFileName, scoreTypeName, dataType),
+        from = 'disk',
+        createFn = function(...) {
+            scoresDir <- trimws(config$Scores_Dir)
+            if(scoresDir == "") scoresDir <- metadata$env$SCORES_DIR
+            scoreTable <- metadata$scoreTables[[scoreTypeName]][[dataType]]
+            bgzFileName <- scoreTable$bgzFile
+            bgzFile <- file.path(scoresDir, bgzFileName)
+            req(file.exists(bgzFile))
+            bins <- paScores_bins(config$sourceId) # remember, score bins are primary genome only
+            I <- getIncludedAutosomeBins_scores(bins)
+            d <- fread(
+                bgzFile, 
+                header = FALSE, 
+                sep = "\t",
+                col.names = scoreTable$colNames, 
+                colClasses = c(
+                    "character", # chrom
+                    "integer",   # start0
+                    "integer",   # end1
+                    rep("numeric", length(scoreTable$colNames) - 3)
+                )
+            )[I]
+            overlaps <- foverlaps(
+                d,                # larger table, smaller intervals
+                config$bedData,   # keyed, smaller table, larger intervals
+                type = "any",     # detect any overlap
+                mult = "first",   # we only need to know if there is at least one overlap
+                nomatch = NA,     # keep non-matching rows
+                which = TRUE      # return indices instead of joined data
+            )
+            d[, hasOverlap := !is.na(overlaps)] 
+            d
+        },
+        spinnerMessage = paste("parsing overlaps")
+    )
 }
 getSeriesAggNames <- function(metadata, config){
     switch(
@@ -162,9 +172,6 @@ getSeriesAggNames <- function(metadata, config){
         stage_type = names(metadata$stageTypes)
     )
 }
-# getStageTypeDeltaScores <- function(metadata, config, coord, scoreTypeName){ # returns a single score object for the delta between stage types (or a genome-level score object)
-#     getSampleScores(metadata, config, coord, scoreTypeName, summaryType, "stageType_delta")
-# }
 
     # env = env[c(
     #     'PRIMARY_GENOME',

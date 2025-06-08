@@ -1,18 +1,18 @@
 #----------------------------------------------------------------------
-# server components for the protAtac_vPlots appStep module
+# server components for the vPlots appStep module
 #----------------------------------------------------------------------
 
 #----------------------------------------------------------------------
 # BEGIN MODULE SERVER
 #----------------------------------------------------------------------
-protAtac_vPlotsServer <- function(id, options, bookmark, locks) { 
+vPlotsServer <- function(id, options, bookmark, locks) { 
     moduleServer(id, function(input, output, session) {    
 #----------------------------------------------------------------------
 
 #----------------------------------------------------------------------
 # initialize module
 #----------------------------------------------------------------------
-module <- 'protAtac_vPlots'
+module <- 'vPlots'
 appStepDir <- getAppStepDir(module)
 options <- setDefaultOptions(options, stepModuleInfo[[module]])
 settings <- activateMdiHeaderLinks( # uncomment as needed
@@ -82,13 +82,13 @@ sourceId <- dataSourceTableServer("source", selection = "single")
 samples <- reactive({ # vector of the names of all co-analyzed samples
     sourceId <- sourceId()
     req(sourceId)
-    paTssFragsData(sourceId)$samples
+    paTss_frags(sourceId)$samples
 })
 tss <- reactive({
     sourceId <- sourceId()
     req(sourceId)
     txnState <- settings$get("V_Plot","Transcription_State")
-    paTssFragsData(sourceId)$tss[[txnState]]
+    paTss_frags(sourceId)$tss[[txnState]]
 })
 filteredTssI1 <- reactive({
     tss <- tss()
@@ -149,7 +149,7 @@ binTssFrags <- function(selectedSamplesReactive){
     startSpinner(session, message = "binning frags")
     inc <- settings$get("V_Plot","BP_Per_Bin")
     txnState <- settings$get("V_Plot","Transcription_State")
-    lapply(paTssFragsData(sourceId)$tssFrags[[txnState]][selectedSamples$sample_name], function(tf) {
+    lapply(paTss_frags(sourceId)$tssFrags[[txnState]][selectedSamples$sample_name], function(tf) {
         tf[, ":="(
             x = round((start_to_tss + (end_to_tss - start_to_tss) / 2) / inc, 0) * inc, # distance before applying nucleosome distance correction
             y = round((end1 - start0) / inc, 0) * inc

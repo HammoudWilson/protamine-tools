@@ -45,3 +45,5 @@ appSteps:
         module: scoreSummary
     browser:
         module: genomex-mdi-tools//trackBrowser
+    regionEnrichment:
+        module: regionEnrichment

@@ -1,7 +1,7 @@
 # establish the color palettes for heat map and other visualizations
 
 #----------------------------------------------------------------------
-# get (staged) distribution trace colors
+# get (staged) distribution trace colors for consistent plotting
 #----------------------------------------------------------------------
 stageColors <- c(
     CONSTANTS$plotlyColors$black, # spermatid stages, e.g., early_RS, etc.
@@ -50,6 +50,7 @@ getStageTypeColors <- function(sourceId, allSamples, samples){
 #----------------------------------------------------------------------
 # convert different types of normalized scores to dynamic color ranges for heat maps
 #----------------------------------------------------------------------
+
 # establish a range of 61 colors for heat maps, with 30 colors on each side of the neutral color (grey)
 paColors <- list(
     RED  = rgb(0.9, 0,   0),
@@ -89,13 +90,6 @@ cpm_score_color <- function(log10cpm, config){
     I <- floor(nTrackMapColorsPerSide * (log10cpm - min) / (max - min)) + 1L
     trackMapColors$high[I]
 }
-# nrll_score_color <- function(nrll, config){
-#     # limit values are low, mid, and high points
-#     NRLL_Limits <- as.numeric(strplit(config$NRLL_Limits, ",")[[1]])
-#     nrll <- pmax(NRLL_Limits[1], pmin(NRLL_Limits[3], nrll))
-#     I <- floor(nTrackMapColorsPerSide * abs(nrll) / config$Max_NRLL) + 1L
-#     ifelse(nrll < 0, trackMapColors$low[I], trackMapColors$high[I])
-# }
 nrll_score_color <- function(nrll, config){
     NRLL_Limits <- as.numeric(strsplit(config$NRLL_Limits, ",")[[1]])
     low  <- NRLL_Limits[1]
@@ -130,35 +124,31 @@ getSeriesSummaryColors <- function(scoreTypeName, scoreValues, config){ # used t
     switch(
         scoreTypeName,
 
-        # genome scores here are equivalent to sample-level getSeriesSampleColors below use as is
-        gc_z     = z_score_color(       scoreValues, config), 
-        txn      = cpm_score_color(     scoreValues, config),
+        # genome scores here are equivalent to sample-level getSeriesSampleColors below
+        # provided by scoreMapGroupImage as raw score values, used as is
+        gc_z = z_score_color(  scoreValues, config), 
+        txn  = cpm_score_color(scoreValues, config),
 
-        # sample-level summary scores (deltas) use quantiles, where we assume non-parametric distributions
-        gcrz_obs = quantile_score_color(scoreValues, config), 
-        gcrz_wgt = quantile_score_color(scoreValues, config),
-        nrll     = quantile_score_color(scoreValues, config)
+        # sample-level summary scores (deltas) use quantiles, i.e., assume non-parametric distributions
+        # always provided as quantiles by scoreMapGroupImage
+        quantile_score_color(scoreValues, config)
     )
 }
 
 # color the subsequent sample-level rows of every track heatmap group
 # i.e., these values are provided as absolute scores by scoreMapGroupImage
 getSeriesSampleColors <- function(scoreTypeName, scoreValues, config){ 
-    dprint(range(scoreValues, na.rm = TRUE))
     switch(
         scoreTypeName,
         gcrz_obs = z_score_color(   scoreValues, config),  # these score values are already Z scores
         gcrz_wgt = z_score_color(   scoreValues, config),
         nrll     = nrll_score_color(scoreValues, config)
-        # if doing this, then scoreMapGroupImage needs to pass quantiles not scores
-        # gcrz_obs = quantile_score_color(scoreValues, config), 
-        # gcrz_wgt = quantile_score_color(scoreValues, config),
-        # nrll     = quantile_score_color(scoreValues, config)
     )
 }
 
 # color final quantile rows for intra-sample/intra-group relative scores
-# i.e., these values are provided as quantiles by scoreMapGroupImage
+# these values are always provided as quantiles by scoreMapGroupImage
+# also used for GCRZ scores if the user requested quantiles
 getSeriesQuantileColors <- function(scoreTypeName, scoreValues, config){  # scoreTypeName unused but needed for consistency
     quantile_score_color(scoreValues, config)
 }

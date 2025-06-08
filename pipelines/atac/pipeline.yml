@@ -83,7 +83,7 @@ actions:
                 ram-per-cpu: 2G
         job-manager:
             recommended:
-                time-limit: 2:00:00
+                time-limit: 4:00:00
         description: "map ATAC fragments around (in)active TSSs at base-level resolution"
 package:
     sites: # the pipeline action after which a data package should assembled
@@ -128,6 +128,9 @@ package:
             tssFrags:
                 type: rds
                 file: $DATA_FILE_PREFIX.tssFrags.rds
+            footprint:
+                type: rds
+                file: $DATA_FILE_PREFIX.footprint.rds
 container:
     supported: false
     registry:  ghcr.io  # domain name of your OCI-compatible, oras-accessible, container registry [ghcr.io]

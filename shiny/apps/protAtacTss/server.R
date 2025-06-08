@@ -7,10 +7,10 @@
 # objects instantiated here are available to all appStep modules in a session
 
 # session cache objects
-fragsCache          <- new_dataCache('fragsCache')
+tssCache <- new_dataCache('tssCache')
 
 # track and other reactives
-fragsWorkingSourceId   <- reactiveVal(NULL)
+tssWorkingSourceId   <- reactiveVal(NULL)
 
 # appServer() is called after all modules are instantiated
 appServer <- function(){

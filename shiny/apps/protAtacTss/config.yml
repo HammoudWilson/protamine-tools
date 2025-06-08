@@ -3,7 +3,7 @@
 # app metadata
 #----------------------------------------------------------------------
 name: protAtacTss
-description: "Visualize protamine ATAC-seq data over multiple samples in TSS regions"
+description: "Visualize protamine ATAC-seq data over multiple samples in TSS regions and footprints"
 version: v0.0.0
 # suiteVersions:
 #     suiteName: v0.0.0
@@ -16,6 +16,8 @@ uploadTypes:
     protamine-atac-tss: 
         contentFileTypes: # anything not listed will not be available to the app
             tssFrags:  
+                required: true
+            footprint:
                 required: true
 
 #----------------------------------------------------------------------
@@ -34,6 +36,6 @@ appSteps:
     upload: # nearly always the 1st step of every app
         module: sourceFileUpload
     vPlots:
-        module: protAtac_vPlots
+        module: vPlots
     browser:
         module: genomex-mdi-tools//trackBrowser

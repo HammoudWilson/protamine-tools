@@ -8,14 +8,14 @@ insertTypes <- c('all_inserts', 'intermediate')
 # score types metadata
 scoreTypes <- list(
     genome = list(
+        # see definition of gc_z below, copied from gc
         gc = list(
             label = "GC",
             unit = "Percent",
             trackHeaderLabel = "GC Percent",
             trackSummaryLabel = "Z Score",
             class = "baseComposition",
-            valueLim = gcLimits,
-            summaryType = "score"
+            valueLim = gcLimits
         ),
         txn = list(
             label = "Round Spermatid PRO-seq",
@@ -23,8 +23,7 @@ scoreTypes <- list(
             trackHeaderLabel = "Round Spermatid PRO-seq",
             trackSummaryLabel = "log10 CPM",
             class = "transcription",
-            valueLim = log10(c(1e-3, 1e3)),
-            summaryType = "score"
+            valueLim = log10(c(1e-3, 1e3))
         )
     ),
     sample = list(
@@ -38,9 +37,7 @@ scoreTypes <- list(
             trackScoreLabel = "Z Score",
             class = "coverage",
             valueLim = c(-3, 3),
-            deltaLim = c(-3, 3),
-            # summaryType = "score"
-            summaryType = "quantile"
+            deltaLim = c(-3, 3)
         ),
         gcrz_wgt = list(
             distUnit = 0.1,
@@ -48,13 +45,11 @@ scoreTypes <- list(
             log10 = FALSE,
             label = "GC Residual",
             unit = "Z Score",
-            trackHeaderLabel = "GC Regression Weighted",
+            trackHeaderLabel = "GC Regression Tn5 Weighted",
             trackScoreLabel = "Z Score",
             class = "coverage",
             valueLim = c(-3, 3),
-            deltaLim = c(-3, 3),
-            # summaryType = "score"
-            summaryType = "quantile"
+            deltaLim = c(-3, 3)
         ),
         nrll = list(
             distUnit = 0.1,
@@ -64,10 +59,8 @@ scoreTypes <- list(
             trackScoreLabel = "NRLL",
             class = "insertSize",
             valueLim = c(-1.5, 1.5),
-            deltaLim = c(-1.5, 0.5),
-            summaryType = "quantile"
+            deltaLim = c(-1.5, 0.5)
         )
     )
 )
 scoreTypes$genome$gc_z <- scoreTypes$genome$gc
-

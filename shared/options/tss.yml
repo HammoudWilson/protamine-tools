@@ -1,7 +1,14 @@
 ---
 options:
-    tss-bed:
+    metadata-file: 
         order: 1
+        short: M
+        type: string
+        required: true
+        default: null
+        description: "path to a metadata file with sample information"
+    tss-bed:
+        order: 2
         short: B
         type: character
         required: false
