@@ -289,7 +289,6 @@ output$downloadGcResiduals <- downloadHandler(
         req(sourceId)
         startSpinner(session, message = "downloading GC residuals")
         x <- getSampleScoresList(sourceId, "gcrz")
-        dstr(x)
         saveRDS(x, tmpFile)
         stopSpinner(session)
     }

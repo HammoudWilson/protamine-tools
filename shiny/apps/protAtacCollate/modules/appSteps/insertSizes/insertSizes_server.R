@@ -121,8 +121,6 @@ normalizeInsertSizes <- function(isdt_this, isdt_ref){
     x <- do.call(cbind, lapply(seriesNames, function(series){
         nInserts_this <- sum(isdt_this[[series]], na.rm = TRUE)
         nInserts_ref  <- sum(isdt_ref[[series]], na.rm = TRUE)
-        dmsg(nInserts_this)
-        dmsg(nInserts_ref)
         isdt_this[[series]] * (nInserts_this / nInserts_ref)
     })) %>% as.data.table
     setnames(x, seriesNames)
@@ -179,6 +177,7 @@ insertSizesPlot <- function(refType){
                 xaxs = "i"
             )
             abline(v = env$MAPPABILITY_SIZE_LEVELS - 0.5, col = "grey80")
+            abline(v = c(meanNucleosomeFragSize, meanDinucleosomeFragSize), col = CONSTANTS$plotlyColors$brown, lty = 3)
             for(series in seriesNames){
                 plot$addLines( # addLines follows the same pattern, etc.
                     x = env$MIN_INSERT_SIZE:env$MAX_INSERT_SIZE,

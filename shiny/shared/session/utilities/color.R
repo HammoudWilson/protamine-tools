@@ -31,12 +31,23 @@ getSampleColorsBySample <- function(samples){
     names(colors) <- orderedSamples$sample_name
     colors
 }
+getStageColor <- function(metadata, stage){
+    orderedSamples <- metadata$samples[order(staging_order)]
+    stages <- orderedSamples[, unique(stage)]
+    colors <- stageColors[1:length(stages)]
+    names(colors) <- stages
+    colors[stage]
+}
 getStageColors <- function(allSamples, samples){
     orderedSamples <- allSamples[order(staging_order)]
     stages <- orderedSamples[, unique(stage)]
     colors <- stageColors[1:length(stages)]
     names(colors) <- stages
     colors[samples[, unique(stage)]]
+}
+getStageTypeColor <- function(metadata, stageType){
+    stageTypeStages <- metadata$stageTypes[[stageType]]
+    getStageColor(metadata, stageTypeStages[1])
 }
 getStageTypeColors <- function(sourceId, allSamples, samples){
     orderedSamples <- allSamples[order(staging_order)]

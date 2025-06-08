@@ -30,7 +30,10 @@ packages: # required R packages
 # module-level settings
 #----------------------------------------------------------------------
 settings: 
-    Data_Path:
+    Enrichment_Data:
+        N_Downsample_Bins:
+            type:   numericInput
+            value:  100000
         Scores_Dir:
             type:   textInput
             value:  ""

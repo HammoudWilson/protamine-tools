@@ -35,15 +35,13 @@ build.paScoreMapTrack <- function(track, reference, coord, layout){
         labelWidthPixels   = as.integer(layout$mai$left  * layout$dpi),
         legendWidthPixels  = as.integer(layout$mai$right * layout$dpi),
         Scores_Dir         = track$settings$get("Data_Path","Scores_Dir"),
-        Row_Height_Pixels  = track$settings$get("Score_Map","Row_Height_Pixels"),
-        Max_Z_Score        = track$settings$get("Score_Map","Max_Z_Score"),
-        NRLL_Limits        = track$settings$get("Score_Map","NRLL_Limits"),
-        Min_Txn_Log10_CPM  = track$settings$get("Score_Map","Min_Txn_Log10_CPM"),
-        Max_Txn_Log10_CPM  = track$settings$get("Score_Map","Max_Txn_Log10_CPM"),
-        Aggregate_By       = track$settings$get("Score_Map","Aggregate_By"),
-        GCRZ_As_Quantiles  = track$settings$get("Score_Map","GCRZ_As_Quantiles"),
         basesPerPixel      = basesPerPixel
     )
+    config <- c(config, sapply(
+        names(track$settings$Score_Map()), 
+        function(x) track$settings$get("Score_Map", x),
+        simplify = FALSE, USE.NAMES = TRUE
+    ))
     config$totalWidthPixels <- plotWidthPixels + config$labelWidthPixels + config$legendWidthPixels 
 
     # collect bins within the coordinate range

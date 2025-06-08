@@ -38,6 +38,7 @@ checkEnvVars(list(
     integer = c(
         'MIN_INSERT_SIZE',
         'MAX_INSERT_SIZE',
+        'MAX_SITE_WEIGHT',
         'N_CPU'
     ),
     double = c(

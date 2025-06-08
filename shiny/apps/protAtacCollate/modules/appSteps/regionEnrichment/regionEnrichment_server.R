@@ -135,7 +135,7 @@ enrichmentPlotData <- reactive({
         sourceId = sourceId,
         bedFileName = bedFileName(),
         bedData = bedData,
-        Scores_Dir = settings$get("Data_Path","Scores_Dir")
+        Scores_Dir = settings$get("Enrichment_Data","Scores_Dir")
     )
     getSampleScores_regions(metadata, config, input$enrichmentScoreType, "score")
 })
@@ -145,13 +145,38 @@ enrichmentPlot <- function(plot, columns, message){
     d <- enrichmentPlotData()
     startSpinner(session, message = message)
     scoreType <- scoreTypes$sample[[input$enrichmentScoreType]]
-    par(mar = c(4,4,0,0) + 0.1)
+    N_Downsample_Bins <- settings$get("Enrichment_Data","N_Downsample_Bins")
+    titleSuffix <- ""
+    I <- if(N_Downsample_Bins > 0){
+        titleSuffix <- paste0(" (", format(N_Downsample_Bins, big.mark = ",", scientific = FALSE), " total bins)")
+        sample(1:nrow(d), N_Downsample_Bins)
+    } else TRUE
+
+    par(mar = c(4,4,2,4) + 0.1)
     plot$initializeFrame(
-        xlim = c(0.5, nColumns + 0.5),
+        xlim = c(0.4, nColumns + 0.6),
         ylim = scoreType$valueLim,
         xlab = "", # if(isDelta) paste(label, "Delta") else label,
-        ylab = "" # "Frequency"
-    )    
+        ylab = scoreType$enrichmentLabel,
+        title = paste(input$enrichmentScoreType, titleSuffix),
+        xaxt = "n",
+        xaxs = "i"
+    )
+    plot$addMarginLegend(
+        nColumns + 0.7, scoreType$valueLim[2], lty = 1, lwd = 2, 
+        legend = c("In", "Out"), bty = "n",
+        col = c(CONSTANTS$plotlyColors$green, CONSTANTS$plotlyColors$red), cex = 0.9
+    )
+    axis(1, at = 1:nColumns, labels = FALSE)
+    text(
+        x = 1:nColumns, 
+        y = par("usr")[3] - 0.1 * diff(par("usr")[3:4]), 
+        labels = columns, 
+        srt = 35, 
+        adj = 1, 
+        xpd = TRUE, 
+        cex = 0.9
+    )
     abline(h = 0)
     colors <- c(
         CONSTANTS$plotlyColors$green,
@@ -164,8 +189,8 @@ enrichmentPlot <- function(plot, columns, message){
         medians$in_[i]  <- median(d[[columns[i]]][d$hasOverlap == TRUE],  na.rm = TRUE)
         medians$out_[i] <- median(d[[columns[i]]][d$hasOverlap == FALSE], na.rm = TRUE)
         vioplot::vioplot(
-            d[hasOverlap == TRUE][[columns[i]]], 
-            d[hasOverlap == FALSE][[columns[i]]], 
+            d[I][hasOverlap == TRUE][[columns[i]]], 
+            d[I][hasOverlap == FALSE][[columns[i]]], 
             ylim = scoreType$valueLim, 
             names = "in",  
             col = colors_, 
@@ -215,6 +240,7 @@ byStageTypePlot <- staticPlotBoxServer(
         sourceId <- sourceId()
         req(sourceId)
         metadata <- paScores_metadata(sourceId)
+        stopSpinner(session)
         columns <- names(metadata$stageTypes)
         req(columns)
         enrichmentPlot(byStageTypePlot, columns, message = "rendering stage type plot")

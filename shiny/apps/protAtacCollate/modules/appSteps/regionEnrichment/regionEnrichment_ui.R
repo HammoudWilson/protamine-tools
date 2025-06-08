@@ -103,7 +103,7 @@ regionEnrichmentUI <- function(id, options) {
                     status = "primary",
                     collapsible = TRUE,
                     solidHeader = TRUE,
-                    collapsed = FALSE
+                    collapsed = TRUE
                 ),
                 staticPlotBoxUI(
                     ns("byStageTypePlot"), 

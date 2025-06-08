@@ -110,7 +110,6 @@ navigation.tssFragsTrack <- function(track, session, id, browser){
             tableData = trackNavData, # populate a table based on track settings, etc.
             actionFn = function(selectedRow){
                 req(selectedRow)
-                dstr(selectedRow)
                 d <- trackNavData()[selectedRow]
                 d$chrom <- strsplit(d$chrom, "-")[[1]][1]
                 handleTrackNavTableClick(1, track, d$chrom, d$start, d$end)

@@ -43,7 +43,7 @@ appSteps:
         module: normalization
     scoreSummary:
         module: scoreSummary
-    browser:
-        module: genomex-mdi-tools//trackBrowser
+    # browser:
+    #     module: genomex-mdi-tools//trackBrowser
     regionEnrichment:
         module: regionEnrichment

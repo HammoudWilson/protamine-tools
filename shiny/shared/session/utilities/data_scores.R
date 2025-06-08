@@ -5,7 +5,7 @@ paScores_create <- "asNeeded"
 paScores_getCached <- function(..., create = NULL, spinnerMessage = NULL){
     if (!is.null(spinnerMessage)) startSpinner(session, message = spinnerMessage)
     if (is.null(create)) create <- paScores_create
-    paScoresCache$get(..., permanent = TRUE, create = create)$value
+    protaminerCache$get(..., permanent = TRUE, create = create)$value
 }
 
 #----------------------------------------------------------------------
@@ -17,7 +17,6 @@ paScores_metadata <- function(sourceId){
         "score_summary",
         key = sourceId,
         from = 'ram',
-        # create = "once",
         createFn = function(...) {
             x <- readRDS(getSourceFilePath(sourceId, "scores"))
             x$bins <- NULL
@@ -42,7 +41,6 @@ paScores_bins <- function(sourceId){
         "score_bins",
         key = sourceId,
         from = 'ram',
-        # create = "once",
         createFn = function(...) {
             x <- readRDS(getSourceFilePath(sourceId, "scores"))
             x$bins[, ":="(

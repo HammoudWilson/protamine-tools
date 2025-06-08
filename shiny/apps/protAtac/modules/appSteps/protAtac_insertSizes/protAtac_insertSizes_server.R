@@ -63,10 +63,6 @@ normalizeInsertSizes <- function(this, ref){
     x
 }
 getInsertSizeData <- function(insertSizes, refType, samples, aggregate, normalize){
-    for (x in samples$sample_name){
-        dprint(x)
-        dprint(sum(insertSizes[[refType]][[x]]))
-    }
     this <- insertSizes[[refType]][, .SD, .SDcols = samples$sample_name]
     if(aggregate) this <- aggregateInsertSizes(this, samples)
     if(normalize){

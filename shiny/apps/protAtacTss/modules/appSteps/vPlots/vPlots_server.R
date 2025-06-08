@@ -31,7 +31,6 @@ settings <- activateMdiHeaderLinks( # uncomment as needed
 #----------------------------------------------------------------------
 meanNucDist_proximal   <- -175
 meanNucDist_distal     <-  133
-meanNucleosomeFragSize <-  210
 DIAG_X1 <- -170 
 DIAG_Y1 <- meanNucleosomeFragSize
 DIAG_X2 <- 0
@@ -228,7 +227,7 @@ renderVPlot <- function(plot, lim, dt1, dt2 = NULL){
         z.column = "x",
         settings = plot$settings,
         legendTitle = "Count",
-        h = meanNucleosomeFragSize,
+        h = c(meanNucleosomeFragSize, meanDinucleosomeFragSize),
         v = plotV[[Plot_Center]],
         border = NA
     )

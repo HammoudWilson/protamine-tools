@@ -7,10 +7,7 @@
 # objects instantiated here are available to all appStep modules in a session
 
 # session cache objects
-tssCache <- new_dataCache('tssCache')
-
-# track and other reactives
-tssWorkingSourceId   <- reactiveVal(NULL)
+protaminerCache <- new_dataCache('protaminerCache')
 
 # appServer() is called after all modules are instantiated
 appServer <- function(){

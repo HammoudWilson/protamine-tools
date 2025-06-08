@@ -19,6 +19,8 @@ uploadTypes:
                 required: true
             footprint:
                 required: true
+            scores:
+                required: true
 
 #----------------------------------------------------------------------
 # labels and definitions for all sequential analysis steps shown in sidebar
@@ -39,3 +41,13 @@ appSteps:
         module: vPlots
     browser:
         module: genomex-mdi-tools//trackBrowser
+        options:
+            tracks:
+                - paScoreMap
+                - atacFootprint
+                - tssFrags
+            # presets:
+            #     BruSeq_generic:
+            #         TESTING:
+            #             Data:
+            #                 Plot_As: points

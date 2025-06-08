@@ -22,7 +22,8 @@ use constant {
 };
 
 # variables
-my $PRIMARY_GENOME = $ENV{PRIMARY_GENOME};
+my $PRIMARY_GENOME  = $ENV{PRIMARY_GENOME};
+my $MAX_SITE_WEIGHT = $ENV{MAX_SITE_WEIGHT};
 my @MAPPABILITY_SIZE_LEVELS = split(/\s+/, $ENV{MAPPABILITY_SIZE_LEVELS});
 my ($nInserts, $wInserts) = (0, 0); # counters for inserts and weighted inserts
 
@@ -73,15 +74,17 @@ while(<STDIN>){
     # calculate the insert Tn5 site weights
     #   divide exp / obs to weight less Tn5-preferred sites more heavily when summing position counts
     #   "expected" refers to the Tn5 cleavage site frequency in the genome
-    #   "observed" refers to sites found in the sample data)
-    #   neither can be zero since tn5LI was a kmer found in the genome, but ratio can be unstable
-    #   instability limits not enforced here, this is deferred to handling in the app
+    #   "observed" refers to sites found in the sample data
+    #   neither can be zero since tn5LI was a kmer found in the genome, but the ratio can be unstable
+    #   enforce a maximum weight to avoid excessive impact of outliers; must be done now since weights are summed here
     my $tn5LI = $tn5KmerIs{$ins[TN5_SITE_LEFT]};
     my $tn5RI = $tn5KmerIs{$ins[TN5_SITE_RIGHT]};
     (!defined $tn5LI or !defined $tn5RI) and next; # only count inserts with known Tn5 sites, i.e., no N bases allowed at ends
     my $islI = $insertSizeLevelIs[$ins[INSERT_SIZE_LEVEL]];
     my $wStart = int($siteFreqExp[$tn5LI][$islI] / $siteFreqObs[$tn5LI][$islI] * 1000 + 0.5) / 1000;
     my $wEnd   = int($siteFreqExp[$tn5RI][$islI] / $siteFreqObs[$tn5RI][$islI] * 1000 + 0.5) / 1000;
+    $wStart > $MAX_SITE_WEIGHT and $wStart = $MAX_SITE_WEIGHT;
+    $wEnd   > $MAX_SITE_WEIGHT and $wEnd   = $MAX_SITE_WEIGHT;
 
     # print individual inserts with bin and endpoint weights
     print join("\t", 
@@ -92,7 +95,7 @@ while(<STDIN>){
         $wEnd
     ), "\n";
     $nInserts++;
-    $wInserts += ($wStart + $wEnd) / 2;
+    $wInserts += ($wStart + $wEnd) / 2; # divide by 2 to keep counts and weights on a similar scale
 }
 
 # print tallies for normalizing visualization plot

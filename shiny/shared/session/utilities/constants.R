@@ -1,6 +1,10 @@
 # limit values
 gcLimits <- c(0.25, 0.6) # optimal for mm39 genome; for normalization plots only, all other inherit from pipeline env
 
+# empirically determine insert size values
+meanNucleosomeFragSize   <- 205
+meanDinucleosomeFragSize <- 375
+
 # data types
 refTypes <- c('genome', 'spike_in')
 insertTypes <- c('all_inserts', 'intermediate')
@@ -33,6 +37,7 @@ scoreTypes <- list(
             log10 = FALSE,
             label = "GC Residual",
             unit = "Z Score",
+            enrichmentLabel = "GC Regression Observed (Z)",
             trackHeaderLabel = "GC Regression Observed",
             trackScoreLabel = "Z Score",
             class = "coverage",
@@ -45,6 +50,7 @@ scoreTypes <- list(
             log10 = FALSE,
             label = "GC Residual",
             unit = "Z Score",
+            enrichmentLabel = "GC Regression Tn5 Weighted (Z)",
             trackHeaderLabel = "GC Regression Tn5 Weighted",
             trackScoreLabel = "Z Score",
             class = "coverage",
@@ -55,6 +61,7 @@ scoreTypes <- list(
             distUnit = 0.1,
             label = "Protamine Transition Enrichment",
             unit = "NRLL",
+            enrichmentLabel = "Protamine Transition (NRLL)",
             trackHeaderLabel = "Protamine Transition Enrichment",
             trackScoreLabel = "NRLL",
             class = "insertSize",

@@ -251,10 +251,6 @@ observeEvent(solveTrainingHMM_monitor(), {
     req(!new$pending)
     if(new$success){
         new <- new$value
-
-        dmsg("solveTrainingHMM_monitor")
-        dstr(new)
-
         tr <- getTrainingResults(sourceId = new$sourceId)
         tr[[new$trainingSetName]] <- list(
             states = new$states,

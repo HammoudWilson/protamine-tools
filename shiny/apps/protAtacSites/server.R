@@ -5,7 +5,7 @@
 #----------------------------------------------------------------------
 
 # objects instantiated here are available to all appStep modules in a session
-paTn5SitesCache <- new_dataCache('paTn5Sites')
+protaminerCache <- new_dataCache('protaminerCache')
 
 # appServer() is called after all modules are instantiated
 appServer <- function(){

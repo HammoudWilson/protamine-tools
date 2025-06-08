@@ -3,17 +3,15 @@ paTn5Site_ttl <- CONSTANTS$ttl$month
 paTn5Site_force <- FALSE
 paTn5Site_create <- "asNeeded"
 paTn5Sites_loadPersistent <- function(..., sep = "\t", header = FALSE, force = NULL, spinnerMessage = NULL){
-    # dmsg(spinnerMessage)
     if (!is.null(spinnerMessage)) startSpinner(session, message = spinnerMessage)
     if (is.null(force)) force <- paTn5Site_force
     filePath <- loadPersistentFile(..., sep = sep, header = header, force = force, ttl = paTn5Site_ttl)
     persistentCache[[filePath]]$data
 }
 paTn5Sites_getCached <- function(..., create = NULL, spinnerMessage = NULL){
-    # dmsg(spinnerMessage)
     if (!is.null(spinnerMessage)) startSpinner(session, message = spinnerMessage)
     if (is.null(create)) create <- paTn5Site_create
-    paTn5SitesCache$get(..., permanent = TRUE, create = create)$value
+    protaminerCache$get(..., permanent = TRUE, create = create)$value
 }
 
 # helper list for paTn5Sites data access
@@ -314,7 +312,6 @@ paTn5Sites_tn5SetData <- function(sourceId) paTn5Sites_getCached(
     "tn5SetData",
     keyObject = list(sourceId, paTn5Sites_sampleIs_RS, paTn5Sites_sampleIs_ES),
     from = 'disk',
-    # create = "once",
     createFn = function(...){
         f_rs <- paTn5Sites_f_prm_obs_set(sourceId, paTn5Sites_sampleIs_RS, "RS") %>% log10()
         f_es <- paTn5Sites_f_prm_obs_set(sourceId, paTn5Sites_sampleIs_ES, "ES") %>% log10()
