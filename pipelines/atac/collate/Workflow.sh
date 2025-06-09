@@ -12,10 +12,12 @@ source ${MODULES_DIR}/utilities/shell/create_shm_dir.sh  # for storing the genom
 source ${MODULES_DIR}/utilities/shell/create_temp_dir.sh # for storing intermediate files
 
 # copy genome fasta into shared memory for speed
-echo "copying genome fasta to shared memory"
-export GENOME_FASTA_SHM=${SHM_FILE_PREFIX}.genome.fa
-cp ${GENOME_FASTA} ${GENOME_FASTA_SHM}
-cp ${GENOME_FASTA}.fai ${GENOME_FASTA_SHM}.fai
+if [ "${PUSHING_TO_SERVER}" = "" ]; then
+    echo "copying genome fasta to shared memory"
+    export GENOME_FASTA_SHM=${SHM_FILE_PREFIX}.genome.fa
+    cp ${GENOME_FASTA} ${GENOME_FASTA_SHM}
+    cp ${GENOME_FASTA}.fai ${GENOME_FASTA_SHM}.fai
+fi
 
 # establish binned read counts and insert size distributions per sample
 runWorkflowStep 1 collate collate.sh
