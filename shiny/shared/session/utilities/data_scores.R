@@ -171,6 +171,31 @@ getSeriesAggNames <- function(metadata, config){
     )
 }
 
+#----------------------------------------------------------------------
+# support score data download
+#----------------------------------------------------------------------
+getSampleScores_all <- function(sourceId, scoreTypeName){ # returns a list of sample-level score objects based on GC normalization
+    metadata <- paScores_metadata(sourceId)
+    scoresDir <- metadata$env$SCORES_DIR
+    scoreTable <- metadata$scoreTables[[scoreTypeName]]$score
+    bgzFileName <- scoreTable$bgzFile
+    bgzFile <- file.path(scoresDir, bgzFileName)
+    req(file.exists(bgzFile))
+    fread(
+        cmd = paste("zcat", bgzFile),
+        header = FALSE, 
+        sep = "\t",
+        col.names = scoreTable$colNames, 
+        colClasses = c(
+            "character", # chrom
+            "integer",   # start0
+            "integer",   # end1
+            rep("numeric", length(scoreTable$colNames) - 3)
+        )
+    )
+}
+
+
     # env = env[c(
     #     'PRIMARY_GENOME',
     #     'SPIKE_IN_GENOME',

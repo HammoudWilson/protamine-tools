@@ -51,3 +51,5 @@ appSteps:
             #         TESTING:
             #             Data:
             #                 Plot_As: points
+    downloader:
+        module: downloader
