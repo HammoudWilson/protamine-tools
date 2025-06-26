@@ -1,38 +1,28 @@
 # action:
-#     calculate nuc (nucleosome fragment coverage) and ends (endpoint count) for all bins on a chromosome
+#     run ab initio positioned nucleosome scoring on a spermatid stage
 # input:
-#     $BAM_FILE     as arg1
-#     $CHROM        as arg2
-#     $AI_BIN_SIZE  as arg3
-#     $MIN_NUC_SIZE as arg4
-#     $MAX_NUC_SIZE as arg5
-#     $FAI_FILE     as arg6
-#     $MIN_MAPQ
-#     $MIN_INSERT_SIZE
-#     $MAX_INSERT_SIZE
+#     $STAGE_TYPE as arg1
+#     $STAGE as arg2
 # outputs:
-#     one line per chromosome bin with columns nuc,ends
+#     PENDING tabix-indexed BGZ_FILE in $TASK_DIR/inserts_bgz
 
 # get arguments
-export BAM_FILE=$1 # can be multiple BAM files
-export CHROM=$2
-export AI_BIN_SIZE=$3
-export MIN_NUC_SIZE=$4
-export MAX_NUC_SIZE=$5
-export FAI_FILE=$6
-export BIN_SIZE=$MAX_INSERT_SIZE # thus, BIN_SIZE does nothing additional in pull_insert_endpoints.sh
-export ENFORCE_EXCLUSIONS=1
+export STAGE_TYPE=$1
+export STAGE=$2
+export BGZ_FILE_PREFIX=${STAGE_TYPE}.${STAGE}
+export BGZ_FILE_NAME=${BGZ_FILE_PREFIX}.bed.bgz
+export BGZ_FILE=${TASK_DIR}/inserts_bgz/${BGZ_FILE_NAME}
 
-# get the maximum possible bin number from the chromosome size
-# used by score_ab_initio.pl
-CHROM_SIZE=`awk '$1=="'$CHROM'"' $FAI_FILE | cut -f2`
-export MAX_BIN_I0=$((($CHROM_SIZE - 1) / $AI_BIN_SIZE))
+export NFR_FILE=${TASK_DIR}/ab_initio_bgz/${BGZ_FILE_PREFIX}.nfr.bed.bgz
 
-# pull all distinct insert endpoints from the bam file
-bash $ACTION_DIR/../pull_insert_endpoints.sh | 
+export AB_INITIO=/nfs/turbo/path-wilsonte-turbo/mdi/wilsontelab/greatlakes/mdi/suites/definitive/protamine-tools/pipelines/atac/tss/crates/target/debug/ab_initio
 
-# unpack to sorted BED3
-perl $ACTION_DIR/unpack_chrom_inserts.pl | 
+# tabix ${BGZ_FILE} chr1:100000000-150000000 | 
+# ${AB_INITIO}
 
-# calculate TSS distances for eventual plotting
-perl $ACTION_DIR/score_ab_initio.pl
+zcat ${BGZ_FILE} | 
+${AB_INITIO} | 
+bgzip -c > ${NFR_FILE}
+tabix -p bed ${NFR_FILE}
+
+zcat ${NFR_FILE}

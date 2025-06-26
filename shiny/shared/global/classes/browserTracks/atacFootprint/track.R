@@ -46,6 +46,11 @@ build.atacFootprintTrack <- function(track, reference, coord, layout){
         function(x) track$settings$get("Footprint", x),
         simplify = FALSE, USE.NAMES = TRUE
     ))
+    config <- c(config, sapply(
+        names(track$settings$Dinuc_Calls()), 
+        function(x) track$settings$get("Dinuc_Calls", x),
+        simplify = FALSE, USE.NAMES = TRUE
+    ))
     startSpinner(session, message = "loading inserts")
     inserts <- paTss_get_inserts(metadata, coord, config)
     nSeries <- length(inserts)
@@ -77,6 +82,52 @@ build.atacFootprintTrack <- function(track, reference, coord, layout){
             abline(h = yOffset, col = "black")
             paTSS_add_series(inserts[[i]], yOffset, ylim_series, seriesRange, seriesNames[i], metadata, config)
             text(coord$start, yOffset + 0.8, seriesNames[i], pos = 4, cex = 1.25)
+        }
+
+        if(coord$width <= config$Max_Width_Bp && config$Aggregate_By == "stage"){
+            ai <- paTss_ab_initio(sourceId)[
+                chrom  == coord$chrom & 
+                start0 <  coordEnd1 & # wider than the plotted spans, includes the analysis flanks
+                end1   >= coordStart1
+            ][order(center0)]
+            if(nrow(ai) > 0){
+                ai$half_width_gap <- (ai$gap_len - 1) / 2
+                ai$half_width <- ai$half_width_gap + 147
+                ai$inner_start <- ai$center0 - ai$half_width_gap + 1
+                ai$inner_end   <- ai$center0 + ai$half_width_gap + 1
+                ai$outer_start <- ai$center0 - ai$half_width + 1
+                ai$outer_end   <- ai$center0 + ai$half_width + 1
+                for(i in 1:nSeries){
+                    yOffset <- nSeries - i
+                    ai_stage <- ai[index_stage == seriesNames[i]]
+                    N <- nrow(ai_stage)
+                    if(N == 0) next
+
+                    dmsg()
+                    dmsg(seriesNames[i])
+                    dprint(ai_stage[, .(outer_start, outer_end, gap_len, index_score)])
+
+                    color <- sapply(1:N, function(j) if(j %% 2 == 1) CONSTANTS$plotlyColors$red else CONSTANTS$plotlyColors$orange)
+                    y0 <-    sapply(1:N, function(j) if(j %% 2 == 1) yOffset + 0.025 else yOffset + 0.075)
+                    y1 <-    sapply(1:N, function(j) if(j %% 2 == 1) yOffset + 0.925 else yOffset + 0.975)
+                    rect(
+                        ai_stage$outer_start, 
+                        y0,
+                        ai_stage$outer_end, 
+                        y1, 
+                        border = color,
+                        lwd = config$Overlay_Line_Width
+                    )
+                    rect(
+                        ai_stage$inner_start, 
+                        y0,
+                        ai_stage$inner_end, 
+                        y1, 
+                        border = color,
+                        lwd = config$Overlay_Line_Width + 0.5
+                    )
+                }
+            }
         }
     })
 

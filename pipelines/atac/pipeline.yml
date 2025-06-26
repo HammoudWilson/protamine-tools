@@ -75,6 +75,7 @@ actions:
             - annotation
             - stage
             - tss
+            - ab_initio
         resources:
             required:
                 total-ram: 8G
@@ -134,6 +135,9 @@ package:
             scores: # to support paScoreMap track in tss app
                 type: rds
                 file: $DATA_FILE_PREFIX.scores.rds
+            ab_initio:
+                type: rds
+                file: $DATA_FILE_PREFIX.ab_initio.rds
         extraPushFiles: # files pushed to remote server in addition to the data package but not included in the package
             - $TASK_DIR/scores
             - $TASK_DIR/inserts_bgz

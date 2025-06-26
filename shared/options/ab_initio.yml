@@ -1,0 +1,9 @@
+---
+options:
+    ab-initio-stages: 
+        order: 1
+        short: A
+        type: string
+        required: false
+        default: early_RS,int_RS,late_RS,earliest_ES,early_ES,int_ES
+        description: "comma-separated list of stages to analyze for dinucleosome footprints"

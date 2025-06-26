@@ -67,6 +67,13 @@ settings:
         Insert_Color_Alpha:
             type:   numericInput
             value:  0.5
+    Dinuc_Calls:
+        Max_Width_Bp:
+            type:   numericInput
+            value:  10000
+        Overlay_Line_Width:
+            type:   numericInput
+            value:  1.5
     Data_Path:
         Inserts_Bgz_Dir:
             type:   textInput

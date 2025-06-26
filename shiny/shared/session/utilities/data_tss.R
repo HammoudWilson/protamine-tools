@@ -22,6 +22,18 @@ paTss_footprint <- function(sourceId){
     persistentCache[[filePath]]$data
 }
 
+# load ab_initio data
+paTss_ab_initio <- function(sourceId){
+    startSpinner(session, message = "loading dinuc calls")
+    filePath <- loadPersistentFile(
+        sourceId = sourceId, 
+        contentFileType = "ab_initio", 
+        ttl = CONSTANTS$ttl$month
+    )
+    stopSpinner(session)
+    persistentCache[[filePath]]$data
+}
+
 # add one group's data to a footprint track plot based on plot type
 paTSS_add_series <- function(inserts, yOffset, ylim_series, seriesRange, seriesName, metadata, config){
     sizeH <- c(metadata$env$MIN_INSERT_SIZE, meanNucleosomeFragSize, meanDinucleosomeFragSize) # horizontal lines for size-based traces

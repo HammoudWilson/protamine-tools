@@ -21,6 +21,8 @@ uploadTypes:
                 required: true
             scores:
                 required: true
+            ab_initio:
+                required: false
 
 #----------------------------------------------------------------------
 # labels and definitions for all sequential analysis steps shown in sidebar
