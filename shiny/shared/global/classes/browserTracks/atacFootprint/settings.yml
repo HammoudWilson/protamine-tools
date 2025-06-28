@@ -26,6 +26,7 @@ settings:
                 - v_plot
                 - insert_spans
                 - endpoint_counts
+                - nucleosome_bias
             value: v_plot
         Max_Width_Bases:
             type:   numericInput
@@ -67,10 +68,10 @@ settings:
         Insert_Color_Alpha:
             type:   numericInput
             value:  0.5
-    Dinuc_Calls:
-        Max_Width_Bp:
-            type:   numericInput
-            value:  10000
+    Nucleosome_Chains:
+        Show_Nucleosome_Chains:
+            type:   checkboxInput
+            value:  true
         Overlay_Line_Width:
             type:   numericInput
             value:  1.5

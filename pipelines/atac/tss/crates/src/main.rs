@@ -1,8 +1,9 @@
 //! This program reads insert endpoints from stage-level insert_bgz files, 
 //! stores the counts in a coordinate map, and searches for positioned 
 //! dinucleosomes ab initio, i.e., with no other guidance than the inserts 
-//! themselves. Work is done for one chromosome provided with stage 
-//! information as command line arguments.
+//! themselves. Overlapping dinucleosomes are merged into positioned 
+//! nucleosome chains as the final output. Work is done for one chromosome  
+//! provided with stage information as command line arguments.
 //!  
 //! Insert endpoints are counted in two maps per stage, one for insert endpoints, 
 //! one for insert centers of fragments of sizes consistent with them spanning a 
@@ -18,8 +19,8 @@
 //! within the putative spans of the two positioned nucleosomes. Insert centers
 //! are counted twice, once for each endpoint, for consistent weighting. Increasing
 //! gap lengths are linearly penalized to counteract expansion to larger and larger
-//! gaps simply because they capture more inserts, thus helping ensure that 
-//! nucleosomes are taken into account in the scoring.
+//! gaps simply because they capture more inserts, helping ensure that nucleosomes 
+//! are taken into account in the scoring, not just insert density.
 //! 
 //! Regions without positioned nucleosomes are expected to yield low insert counts,
 //! reflecting a lower overall accessibility of the chromatin in those regions.
@@ -35,7 +36,13 @@
 //! for each stage such that stages with more data must have a higher score to call 
 //! a region as a positioned dinucleosome.
 //! 
-//! Finally, for each candidate dinucleosome discovered for each stage, a score
+//! After dinucleosomes are collected and ordered, they are merged into chains
+//! of overlapping nucleosomes, either by using a score-weighted average of the 
+//! position of an overlapping nucleosome, or by extending the chain to include  
+//! two addtional nucleosomes when the overlap occurs in the implied gap between 
+//! two adjacent dinucleosomes.
+//! 
+//! Finally, for each candidate nucleosome chain discovered for each stage, a score
 //! is calculated for the same span in all other stages for cross-comparison.
 //! These and other final scores are reported without gap extension penalties,
 //! which were only used to optimize the initial dinucleosome search.
@@ -75,7 +82,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // use insert counts to set stage-specific score thresholds
     insert_map.set_min_scores();
 
-    // find positioned dinucleosomes independently by stage, print to STDOUT
+    // find positioned dinucleosomes independently by stage
+    // print overlapping nucleosome chains to STDOUT
     insert_map.find_dinucs_by_stage(&chrom);
 
     Ok(())

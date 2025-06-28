@@ -1,8 +1,7 @@
 // dependencies
 use std::process::{Command, Stdio};
-use std::io::{BufReader, BufRead};
+use std::io::{BufReader, BufRead, Write, BufWriter, stdout};
 use std::collections::HashMap;
-use std::io::Write;
 use rayon::prelude::*;
 use rayon::join;
 use wide::i16x8; // must use i16x8 as u16x8 doesn't support all desired functions with stable Rust
@@ -14,7 +13,7 @@ const MAX_NUC_LEN:  usize = 320; // upper size limit of fragments counted as nuc
 const MIN_GAP_LEN:  i16   = 51;  // minimum allowed central NFR length
 const MAX_GAP_LEN:  i16   = 351; // maximum allowed central NFR length
 const MAX_J0:       usize = MAX_GAP_LEN as usize; // same as  MAX_GAP_LEN, but as usize for indexing
-const GAP_LEN_STEP: usize = 4;   // step size for the central NFR gap lengths, only every other odd number is used
+const GAP_LEN_STEP: usize = 4;   // step size for the central NFR gap lengths, every other odd number is used
 const MIN_HALF_GAP: i16   = (MIN_GAP_LEN - 1) / 2; // used for dinuc collision avoidance
 const BLOCK_HALF_LEN: i16 = NUC_LEN + MIN_HALF_GAP; 
 const COLLISION_TOLERANCE: i16 = 10; // some slop to allow for imprecise nucleosome positioning
@@ -34,7 +33,7 @@ const MIN_SCORE:  i16 = 150; // minimum score to report a positioned dinucleosom
 const EARLY_REJECTION_SCORE: i16 = -999; // early rejection score for positions with too few endpoints that weren't subject to full mask processing
 const GAP_LEN_PENALTY_BASE:  f64 = 1.0; // penalty for extending the gap length by one base, used to disfavor longer gaps with few additional endpoints (WAS 0.5)
 
-// configure a struct to hold insert endpoint counts for one stage
+// struct to hold insert endpoint counts for one stage
 struct StageInsertMap {
     // vectors of insert counts
     // one vector for counting base positions of each insert endpoint, for scoring nucleosome-free (accessible) regions
@@ -63,16 +62,157 @@ impl StageInsertMap {
     }
 }
 
-// configure a struct to hold and process insert endpoint counts
+// struct to assemble chains of overlapping dinucleosomes
+struct NucChain {
+    start0:       u32,      // start position of the overall chain span, including FLANK_LEN
+    end1:         u32,      // end position of the overall chain span
+    nuc_starts0:  Vec<u32>, // two or more 0-referenced start positions of the nucleosomes in the chain
+    merge_types:  Vec<u8>,  // types of the nucleosome merges, 0 for flank overlap, 1 for nucleosome overlap
+    dinuc_scores: Vec<i16>, // the original scores of all the merged dinucleosomes
+}
+impl NucChain {
+
+    // start a new nucleosome chain from a single input dinucleosome
+    pub fn new(i0: u32, score: i16, gap_len: i16) -> Self {
+        let mut chain = NucChain{
+            start0: 0,
+            end1: 0,
+            nuc_starts0:  vec![0; 10000], // more nucleosomes than will ever be required in a chain
+            merge_types:  vec![0; 10000],
+            dinuc_scores: vec![0; 10000],
+        };
+        chain.reset(i0, score, gap_len);
+        chain
+    }
+
+    // reset the chain by jumping to the next non-overlapping dinucleosome without reallocation
+    pub fn reset(&mut self, i0: u32, score: i16, gap_len: i16) {
+        let half_gap_len = ((gap_len - 1) / 2) as u32;
+        let half_len = (FLANK_LEN + NUC_LEN) as u32 + half_gap_len;
+
+        if half_len > i0 {
+            panic!("RESET i0 = {}, half_len = {}", i0, half_len);
+        }
+        if half_gap_len + NUC_LEN as u32 > i0 {
+            panic!("RESET i0 = {}, half_gap_len = {}, NUC_LEN = {}", i0, half_gap_len, NUC_LEN);
+        }
+
+        self.start0 = i0 - half_len;
+        self.end1 = i0 + half_len + 1;
+        self.nuc_starts0[0] = i0 - half_gap_len - NUC_LEN as u32;
+        self.nuc_starts0[1] = i0 + half_gap_len + 1;
+        self.nuc_starts0.truncate(2);
+        self.merge_types.truncate(0);
+        self.dinuc_scores[0] = score;
+        self.dinuc_scores.truncate(1);
+    }
+
+    // attempt to merge an overlapping dinucleosome into the current working chain
+    // return true if the dinucleosome was merged, false if no overlap
+    pub fn merge_overlap(&mut self, i0: u32, score: i16, gap_len: i16) -> bool {
+        let half_gap_len = ((gap_len - 1) / 2) as u32;
+        let half_len = (FLANK_LEN + NUC_LEN) as u32 + half_gap_len;
+
+        if half_len > i0 {
+            panic!("MERGE i0 = {}, half_len = {}", i0, half_len);
+        }
+        if half_gap_len + NUC_LEN as u32 > i0 {
+            panic!("MERGE i0 = {}, half_gap_len = {}, NUC_LEN = {}", i0, half_gap_len, NUC_LEN);
+        }
+
+        let nuc_start0_left  = *self.nuc_starts0.last().unwrap();  // rightmost nucleosome start in the working chain
+        let nuc_start0_right = i0 - half_gap_len - NUC_LEN as u32; // leftmost  nucleosome start in the query dinucleosome
+
+        // handle overlapping nucleosomes by taking a weighted average of their start positions
+        // modifies the last nucleosome in the chain, then adds one new nucleosome
+        if nuc_start0_right < nuc_start0_left + NUC_LEN as u32 {
+            self.end1 = i0 + half_len + 1;
+            let i0_l = nuc_start0_left  as f64;
+            let i0_r = nuc_start0_right as f64;
+            let s_l  = *self.dinuc_scores.last().unwrap() as f64;
+            let s_r  = score as f64;
+            self.nuc_starts0.pop();
+            self.nuc_starts0.extend(vec![
+                ((i0_l * s_l + i0_r * s_r) / (s_l + s_r)) as u32, // not necessarily a multiple of CHROM_POS_STEP
+                i0 + half_gap_len + 1,
+            ]);
+            self.merge_types.push(1); // 1 for nucleosome overlap
+            self.dinuc_scores.push(score);
+            true
+
+        // handle overlapping flanks by fusing them into a new gap
+        // adds two new nucleosomes to the chain, one on each side of the new merged gap
+        } else if nuc_start0_right <= nuc_start0_left + (NUC_LEN + MAX_GAP_LEN) as u32 {
+            self.end1 = i0 + half_len + 1;
+            self.nuc_starts0.extend(vec![
+                nuc_start0_right, 
+                i0 + half_gap_len + 1,
+            ]);
+            self.merge_types.push(0); // 0 for flank overlap, i.e. without a nucleosome merge
+            self.dinuc_scores.push(score);
+            true
+
+        // otherwise return false if no overlap
+        } else {
+            false
+        }
+    }
+
+    // evaluate scores for all stages for a completed chain, i.e., one with no pending overlaps
+    // print chain to STDOUT for final table assembly in R
+    pub fn emit(&self, chrom: &str, stage: &str, insert_map: &InsertMap, writer: &mut BufWriter<impl Write>) {
+
+        // create custom masks for the exact chain
+        let chain_length = (self.end1 - self.start0) as usize;
+        let mut nfr_mask = vec![NFR_WEIGHT as u32; chain_length];
+        let mut nuc_mask = vec![0_u32;             chain_length];
+        for nuc_start0 in self.nuc_starts0.iter() {
+            let nuc_start_idx = (*nuc_start0 - self.start0) as usize;
+            let nuc_end_idx   = nuc_start_idx + NUC_LEN as usize;
+            nfr_mask[nuc_start_idx..nuc_end_idx].fill(0);
+            nuc_mask[nuc_start_idx..nuc_end_idx].fill(NUC_WEIGHT as u32);
+        }
+
+        // collect the scores for the chain across all stages, as well as the gap and nuc scores for the index stage
+        let (stage_scores, stage_counts, index_nfr_score, index_nuc_score) = insert_map.collect_stage_scores(
+            stage, self.start0 as usize, chain_length, 
+            nfr_mask, nuc_mask
+        );
+
+        // print the chain to STDOUT
+        let merge_types = if self.merge_types.is_empty() {
+            "NA".to_string()
+        } else {
+            self.merge_types.iter().map(|x| x.to_string()).collect::<Vec<_>>().join(",")
+        };
+        write!(
+            writer,
+            "{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n", 
+            chrom, // BED3 span of the overall chain
+            self.start0,
+            self.end1,
+            stage,
+            self.nuc_starts0.iter().map(|x| x.to_string()).collect::<Vec<_>>().join(","),
+            merge_types,
+            self.dinuc_scores.iter().map(|x| x.to_string()).collect::<Vec<_>>().join(","),
+            index_nfr_score,
+            index_nuc_score,
+            stage_scores,
+            stage_counts,
+        ).unwrap(); // do not expect any errors here
+    }
+}
+
+// struct to hold and process insert counts for positioned nucleosome discovery
 pub struct InsertMap {
 
     // the insert endpoint counts for each stage
-    data: HashMap<String, StageInsertMap>,
-    stages: Vec<String>, // the stages for which insert maps are created, for maintaining strict stage ordering per caller
+    data:   HashMap<String, StageInsertMap>,
+    stages: Vec<String>, // the stages for which insert maps are created, for maintaining strict stage ordering
 
     // central NFR, i.e., gap lengths used in analysis
     gap_lens: Vec<i16>,
-    odd_j0s: Vec<usize>, // same as gap_lens, as usize for indexing
+    odd_j0s:  Vec<usize>, // same as gap_lens, as usize for indexing
 
     // pre-calculated masks for scoring inserts
     // one mask for each NFR gap length from 0 to MAX_GAP_LEN in the outer vector (only some of these are used)
@@ -82,7 +222,7 @@ pub struct InsertMap {
     nuc_center_masks: Vec<Vec<i16>>, // pre-calculated masks for nucleosome center counting
 
     // the half-widths of the masks, i.e., the total number of positions on each side of the central base, by gap_len
-    half_mask_widths: Vec<usize>,
+    half_mask_widths:    Vec<usize>,
     max_half_mask_width: usize, // used to determine the working size of the chromosome score matrix
 
     // combined mask lengths over all scored spans, by gap_len
@@ -179,7 +319,11 @@ impl InsertMap {
             let stage_insert_map = self.data.get_mut(stage).unwrap();
             let mut cmd = Command::new("tabix")
                 .arg(file_path)
+
+                // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
                 .arg(chrom)
+                // .arg(format!("{}:25000000-50000000", chrom))
+
                 .stdout(Stdio::piped())
                 .spawn()?;
             let stdout = cmd.stdout.take().unwrap();
@@ -224,9 +368,9 @@ impl InsertMap {
     // cross-compare scores for all candidate dinucleosomes to all other stages
     // i is the index for the chromosome position, j is the index for the central NFR gap length
     pub fn find_dinucs_by_stage(&self, chrom: &str) {
-        eprintln!("    finding dinucleosomes");
-        let stdout = std::io::stdout();
-        let mut writer = std::io::BufWriter::new(stdout.lock());
+        eprintln!("    finding positioned nucleosomes");
+        let stdout = stdout();
+        let mut writer = BufWriter::new(stdout.lock());
         for stage in self.stages.iter() {
             eprintln!("      stage {}", stage);
             let stage_insert_map = self.data.get(stage).unwrap();
@@ -266,52 +410,65 @@ impl InsertMap {
                 min_chrom_i0,
                 stage_min_score
             );
-            dinuc_centers.par_sort_by_key(|&(i0, _, _)| i0); // sort by chromosome position of the gap center
+            dinuc_centers.par_sort_unstable_by_key(|&(i0, _, _)| i0); // sort by chromosome position of the gap center
 
-            // TODO: collapse overlapping dinucleosome calls into runs of multiple positioned nucleosomes
-            // the overlap must occur in the terminal nucleosome of two adjacent calls
-            //      could do this by using scores to optimize two gap lengths at once (those closest to the nucleosome overlap)
-            //          iterate this process until all overlapping dinucleosomes are collapsed
-            //      either that, or simply average the overlapping nucleosome centers, weighting by the scores of each dinucleosome
-            // doing this would require a revised output format that records chains, not just pairs of positioned nucleosomes
-
-            // cross-correlate scores of all dinucs found in this stage against all other stages
-            // print results for final table assembly in R
-            for (i0, score, gap_len) in dinuc_centers {
-                let j0 = gap_len as usize;
-                let gap_start_i0 = i0 as usize - (j0 - 1) / 2;
-                let gap_score = parse_score_part( // the portion of the score contributed by the endpoints in the central NFR gap
-                    &stage_insert_map.endpoints, 
-                    gap_start_i0, 
-                    j0, 
-                    NFR_WEIGHT
-                );
-                let nuc_score = parse_score_part( // the portion of the score contributed by the nucleosome centers flanking the central NFR gap
-                    &stage_insert_map.nuc_centers, 
-                    gap_start_i0 - NUC_LEN as usize, // putative nucleosome center on the left of the gap
-                    NUC_LEN as usize, 
-                    NUC_WEIGHT
-                ) + parse_score_part(
-                    &stage_insert_map.nuc_centers, 
-                    gap_start_i0 + j0, // putative nucleosome center on the right of the gap
-                    NUC_LEN as usize, 
-                    NUC_WEIGHT
-                );
-                write!(
-                    &mut writer,
-                    "{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n", 
-                    chrom, 
-                    i0 - self.half_mask_widths[j0] as u32,
-                    i0 + self.half_mask_widths[j0] as u32 + 1,
-                    i0, // gap center
-                    gap_len,
-                    stage,
-                    score + self.gap_len_penalties[j0], // report the actual score without the gap extension penalty used for optimizing fits
-                    gap_score,
-                    nuc_score,
-                    self.collect_stage_scores(stage, score, i0 as usize, j0)
-                ).unwrap(); // do not expect any errors here
+            // collapse overlapping dinucleosomes into nucleosome chains and print the results
+            let mut dinuc_iter = dinuc_centers.into_iter();
+            let mut chain = dinuc_iter.next().map(|(i0, score, gap_len)| {
+                NucChain::new(i0, score, gap_len) // initialize the working chain, allocated once
+            }).unwrap();
+            for (i0, score, gap_len) in dinuc_iter {
+                // check for two types of overlap between the working chain and the next dinucleosome
+                // if overlap found, merge the dinucleosome into the working chain
+                // otherwise emit the chain and start a new one
+                if !chain.merge_overlap(i0, score, gap_len) {
+                    chain.emit(chrom, stage, self, &mut writer);
+                    chain.reset(i0, score, gap_len);
+                }
             }
+            chain.emit(chrom, stage, self, &mut writer); // commit the last working chain
+
+            // // cross-correlate scores of all dinucs found in this stage against all other stages
+            // // print results for final table assembly in R
+            // for (i0, score, gap_len) in dinuc_centers {
+            //     let j0 = gap_len as usize;
+            //     let gap_start_i0 = i0 as usize - (j0 - 1) / 2;
+            //     let gap_score = parse_score_part( // the portion of the score contributed by the endpoints in the central NFR gap
+            //         &stage_insert_map.endpoints, 
+            //         gap_start_i0, 
+            //         j0, 
+            //         NFR_WEIGHT
+            //     );
+            //     let nuc_score = parse_score_part( // the portion of the score contributed by the nucleosome centers flanking the central NFR gap
+            //         &stage_insert_map.nuc_centers, 
+            //         gap_start_i0 - NUC_LEN as usize, // putative nucleosome center on the left of the gap
+            //         NUC_LEN as usize, 
+            //         NUC_WEIGHT
+            //     ) + parse_score_part(
+            //         &stage_insert_map.nuc_centers, 
+            //         gap_start_i0 + j0, // putative nucleosome center on the right of the gap
+            //         NUC_LEN as usize, 
+            //         NUC_WEIGHT
+            //     );
+            //     write!(
+            //         &mut writer,
+            //         "{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n", 
+            //         chrom, 
+            //         i0 - self.half_mask_widths[j0] as u32,
+            //         i0 + self.half_mask_widths[j0] as u32 + 1,
+
+            //         i0, // gap center
+            //         gap_len,
+
+            //         stage,
+
+            //         score + self.gap_len_penalties[j0], // report the actual score without the gap extension penalty used for optimizing fits
+            //         gap_score,
+            //         nuc_score,
+            //         self.collect_stage_scores(stage, score, i0 as usize, j0)
+
+            //     ).unwrap(); // do not expect any errors here
+            // }
         }
     }
 
@@ -360,20 +517,51 @@ impl InsertMap {
         dot_product - self.gap_len_penalties[j0] // the penalty is 0 for the shortest gap length, otherwise GAP_LEN / 2
     }
 
+    // // collect the scores for a given candidate dinucleosome across all stages
+    // fn collect_stage_scores(&self, index_stage: &str, index_stage_score: i16, i0: usize, j0: usize) -> String {
+    //     let mut scores: Vec<String> = Vec::new();
+    //     for stage in self.stages.iter() {
+    //         let stage_score = if stage == index_stage {
+    //             index_stage_score // use the previously score calculated for the index stage
+    //         } else {
+    //             let stage_insert_map = self.data.get(stage).unwrap();
+    //             self.dot_product(stage_insert_map, i0, j0) // otherwise calculate the score for the other stage
+    //         };
+    //         let final_score = stage_score + self.gap_len_penalties[j0]; // remove the gap extension penalty for best score linearity
+    //         scores.push(final_score.to_string());
+    //     }
+    //     scores.join("\t")
+    // }
+
     // collect the scores for a given candidate dinucleosome across all stages
-    fn collect_stage_scores(&self, index_stage: &str, index_stage_score: i16, i0: usize, j0: usize) -> String {
-        let mut scores: Vec<String> = Vec::new();
+    fn collect_stage_scores(
+        &self, index_stage: &str, start0: usize, chain_length: usize, 
+        nfr_mask: Vec<u32>, nuc_mask: Vec<u32>
+    ) -> (String, String, u32, u32) {
+        let mut stage_counts: Vec<String> = Vec::new();
+        let mut stage_scores: Vec<String> = Vec::new();
+        let mut index_nfr_score = 0;
+        let mut index_nuc_score = 0;
         for stage in self.stages.iter() {
-            let stage_score = if stage == index_stage {
-                index_stage_score // use the previously score calculated for the index stage
-            } else {
-                let stage_insert_map = self.data.get(stage).unwrap();
-                self.dot_product(stage_insert_map, i0, j0) // otherwise calculate the score for the other stage
-            };
-            let final_score = stage_score + self.gap_len_penalties[j0]; // remove the gap extension penalty for best score linearity
-            scores.push(final_score.to_string());
+            let stage_insert_map = self.data.get(stage).unwrap();
+            // TODO: slow enough to warrant SIMD?
+            let stage_count = stage_insert_map.endpoints[start0..start0 + chain_length].iter().map(|&x| x as u32).sum::<u32>();
+            let stage_nfr_score = stage_insert_map.endpoints[start0..start0 + chain_length].iter()
+                .zip(nfr_mask.iter())
+                .map(|(&count, &mask)| count as u32 * mask )
+                .sum::<u32>();
+            let stage_nuc_score = stage_insert_map.nuc_centers[start0..start0 + chain_length].iter()
+                .zip(nuc_mask.iter())
+                .map(|(&count, &mask)| count as u32 * mask )
+                .sum::<u32>();
+            stage_counts.push(stage_count.to_string());
+            stage_scores.push((stage_nfr_score + stage_nuc_score).to_string());
+            if stage == index_stage {
+                index_nfr_score = stage_nfr_score; // use the previously score calculated for the index stage
+                index_nuc_score = stage_nuc_score;
+            }
         }
-        scores.join("\t")
+        (stage_scores.join("\t"), stage_counts.join("\t"), index_nfr_score, index_nuc_score)
     }
 }
 
@@ -478,10 +666,10 @@ fn find_positioned_dinuc(
     }
 }
 
-// extract the component parts of the final dinuc scores
-// these are useful for distinguishing true positioned dinucleosomes from simpler high accessibility regions
-fn parse_score_part(data: &Vec<i16>, offset_i0: usize, length: usize, weight: i16) -> i16 {
-    data[offset_i0..offset_i0 + length].iter()
-        .map(|&n| n * weight)
-        .sum::<i16>()
-}
+// // extract the component parts of the final dinuc scores
+// // these are useful for distinguishing true positioned dinucleosomes from simpler high accessibility regions
+// fn parse_score_part(data: &Vec<i16>, offset_i0: usize, length: usize, weight: i16) -> i16 {
+//     data[offset_i0..offset_i0 + length].iter()
+//         .map(|&n| n * weight)
+//         .sum::<i16>()
+// }

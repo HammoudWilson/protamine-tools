@@ -24,7 +24,7 @@ paTss_footprint <- function(sourceId){
 
 # load ab_initio data
 paTss_ab_initio <- function(sourceId){
-    startSpinner(session, message = "loading dinuc calls")
+    startSpinner(session, message = "loading nuc chains")
     filePath <- loadPersistentFile(
         sourceId = sourceId, 
         contentFileType = "ab_initio", 
@@ -38,7 +38,7 @@ paTss_ab_initio <- function(sourceId){
 paTSS_add_series <- function(inserts, yOffset, ylim_series, seriesRange, seriesName, metadata, config){
     sizeH <- c(metadata$env$MIN_INSERT_SIZE, meanNucleosomeFragSize, meanDinucleosomeFragSize) # horizontal lines for size-based traces
     sizeH_ <- yOffset + sizeH / seriesRange # as above now in virtual axis units
-    sizedColor <- function() {
+    sizedColor <- function(transparent = TRUE) {
         color <- if(config$Color_Inserts_By == "stage"){
             switch(
                 config$Aggregate_By,
@@ -49,6 +49,7 @@ paTSS_add_series <- function(inserts, yOffset, ylim_series, seriesRange, seriesN
         } else { 
             CONSTANTS$plotlyColors[[config$Color_Inserts_By]] 
         } 
+        if(!transparent) return(color)
         color %>% addAlphaToColor(config$Insert_Color_Alpha)
     }
     switch(
@@ -103,6 +104,26 @@ paTSS_add_series <- function(inserts, yOffset, ylim_series, seriesRange, seriesN
                 y1 = inserts$y / seriesRange + yOffset, 
                 col = sizedColor(), 
                 lwd = config$Insert_Line_Width
+            )
+        },
+
+        # nucleosome bias is a simple XY plot
+        nucleosome_bias = {
+            abline(h = yOffset + 0.5, col = "grey")
+            axis(2, at = c(-0.9, 0, 0.9) + yOffset, labels = c("-1", "0", "1"), tick = FALSE, las = 1)
+            # points(
+            #     x = inserts$x,
+            #     y = inserts$y / seriesRange + yOffset,
+            #     col = sizedColor(FALSE),
+            #     pch = 16,
+            #     cex = 1
+            # )
+            lines(
+                x = inserts$x,
+                y = inserts$y / seriesRange + yOffset,
+                col = sizedColor(FALSE),
+                lty = 1,
+                lwd = 1.5
             )
         }
     )
@@ -175,6 +196,48 @@ paTss_parse_inserts <- function(inserts, metadata, config, footprint){
                 x2 = end1,
                 y = end1 - start0
             )]
+        },
+
+        # nucleosome bias plot the relative signal for mononucleosomes vs. intervening nucleosome-free regions
+        nucleosome_bias = {
+            windowSize <- 51
+            stepSize   <- 17
+            dstr(inserts)
+            dt <- inserts[, {
+                size    <- end1 - start0
+                start1  <- start0 + 1
+                center1 <- start1 + size / 2
+                is_mono_nuc <- size > 147 & size <= 320
+                is_di_nuc   <- size > 320 & size <= 485
+                is_sub_nuc  <- size < 147
+                weight <- pmax(startWeight, 5) + pmax(endWeight, 5)
+                m <- sapply(seq(config$coordStart1, config$coordEnd1 - windowSize, by = stepSize), function(windowStart1){
+                    windowEnd1 <- windowStart1 + windowSize - 1
+                    center_is_in_window <- between(center1, windowStart1, windowEnd1)
+
+                    # start_is_in_window  <- between(start1,  windowStart1, windowEnd1)
+                    # end_is_in_window    <- between(end1,    windowStart1, windowEnd1)
+                    # nuc <- sum(is_mono_nuc & center_is_in_window) * 2
+                    # nfr <- sum(is_di_nuc   & center_is_in_window) * 2 + sum(end_is_in_window)
+
+                    # nuc <- sum(is_mono_nuc & center_is_in_window)
+                    # nfr <- sum((is_sub_nuc | is_di_nuc) & center_is_in_window)
+
+                    nuc <- ifelse( is_mono_nuc             & center_is_in_window, weight, 0) %>% sum()
+                    nfr <- ifelse((is_sub_nuc | is_di_nuc) & center_is_in_window, weight, 0) %>% sum()
+
+                    denom <- nuc + nfr
+                    bias <- if(denom == 0) NA else (nuc - nfr) / denom
+                    c(
+                        x = windowStart1 + stepSize / 2, # midpoint of the window
+                        y = bias
+                    )
+                })
+                .(
+                    x = m[1, ],
+                    y = m[2, ] * 0.9 + 1
+                )
+            }]
         }
     )
 }

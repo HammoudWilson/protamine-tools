@@ -86,8 +86,8 @@ chroms <- chroms[!grepl('_', chrom) & !grepl('chrM', chrom) & !grepl('chrEBV', c
 
 message("finding positioned nucleosomes by chromosome")
 scoreAbInitio <- file.path(env$MDI_DIR, 'suites/definitive/protamine-tools/pipelines/atac/tss/crates/target/debug/ab_initio')
-# ab_initio <- do.call(rbind, lapply(which(chroms$chrom == "chr8"), function(chromI) {
-ab_initio <- do.call(rbind, lapply(which(chroms$chrom %in% c("chr1","chr8","chr9")), function(chromI) {
+ab_initio <- do.call(rbind, lapply(which(chroms$chrom == "chr8"), function(chromI) {
+# ab_initio <- do.call(rbind, lapply(which(chroms$chrom %in% c("chr1","chr8","chr9")), function(chromI) {
 # ab_initio <- do.call(rbind, lapply(1:nrow(chroms), function(chromI) {
     message(paste0("  ", chroms[chromI, chrom], " = ", chroms[chromI, length], " bp"))
     ai <- fread(cmd = paste(
@@ -99,10 +99,11 @@ ab_initio <- do.call(rbind, lapply(which(chroms$chrom %in% c("chr1","chr8","chr9
     ))
     setnames(ai, c(
         'chrom', 'start0', 'end1', 
-        'center0', 'gap_len',
-        'index_stage', 'index_score', 
-        'gap_score', 'nuc_score',
-        stages
+        'index_stage', 
+        'nuc_starts0', 'merge_types', 'dinuc_scores',
+        'index_nfr_score', 'index_nuc_score',
+        paste(stages, "score", sep = '_'),
+        paste(stages, "count", sep = '_')
     ))
     ai
 }))

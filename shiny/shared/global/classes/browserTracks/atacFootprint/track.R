@@ -47,8 +47,8 @@ build.atacFootprintTrack <- function(track, reference, coord, layout){
         simplify = FALSE, USE.NAMES = TRUE
     ))
     config <- c(config, sapply(
-        names(track$settings$Dinuc_Calls()), 
-        function(x) track$settings$get("Dinuc_Calls", x),
+        names(track$settings$Nucleosome_Chains()), 
+        function(x) track$settings$get("Nucleosome_Chains", x),
         simplify = FALSE, USE.NAMES = TRUE
     ))
     startSpinner(session, message = "loading inserts")
@@ -63,6 +63,8 @@ build.atacFootprintTrack <- function(track, reference, coord, layout){
         # at present counts are normalized within the window, not to the genome
         y <- unlist(sapply(inserts, function(d) c(d$starts$y, d$ends$y)))
         c(0, 1.05 * quantile(y[y > 0], config$Endpoint_Max_Quantile))
+    } else if(config$Plot_Inserts_As == "nucleosome_bias"){
+        c(-1, 1)
     } else {
         c(0, config$Max_Insert_Size * 1.05)
     }
@@ -77,6 +79,50 @@ build.atacFootprintTrack <- function(track, reference, coord, layout){
             xlim = coord$range, xlab = "", xaxt = "n", # nearly always set `xlim`` to `coord$range`
             ylim = ylim,  ylab = "", yaxt = "n",
             xaxs = "i", yaxs = "i") # always set `xaxs` and `yaxs` to "i"
+
+        # overplot the called nucleosome chains as rectangles
+        if(config$Show_Nucleosome_Chains && config$Aggregate_By == "stage"){
+            ai <- paTss_ab_initio(sourceId)[
+                chrom  == coord$chrom & 
+                start0 <  coordEnd1 & # wider than the plotted spans, includes the analysis flanks
+                end1   >= coordStart1
+            ][order(start0)]
+            if(nrow(ai) > 0){
+                for(stageI in 1:nSeries){
+                    yOffset <- nSeries - stageI
+                    ai_stage <- ai[index_stage == seriesNames[stageI]]
+                    nChains <- nrow(ai_stage)
+                    if(nChains == 0) next
+                    # dmsg()
+                    # dmsg(seriesNames[stageI])
+                    # dprint(ai_stage$merge_types)
+                    # dprint(ai_stage$dinuc_scores)
+                    rect(
+                        ai_stage$start0 + 1, 
+                        rep(yOffset, nChains),
+                        ai_stage$end1, 
+                        rep(yOffset + 0.975, nChains), 
+                        border = CONSTANTS$plotlyColors$red,
+                        lwd = config$Overlay_Line_Width
+                    )
+                    for(chainI in 1:nChains){
+                        nuc_starts0 <- as.integer(unlist(strsplit(ai_stage$nuc_starts0[chainI], ",")))
+                        nNucs <- length(nuc_starts0)
+                        rect(
+                            nuc_starts0 + 1, 
+                            rep(yOffset, nNucs),
+                            nuc_starts0 + 147, 
+                            rep(yOffset + 0.975, nNucs),
+                            border = NA, #CONSTANTS$plotlyColors$red,
+                            col = CONSTANTS$plotlyColors$red %>% addAlphaToColor(0.1),
+                            lwd = config$Overlay_Line_Width + 0.5
+                        )
+                    }
+                }
+            }
+        }
+
+        # plot the inserts
         for(i in 1:nSeries){ 
             yOffset <- (nSeries - i)
             abline(h = yOffset, col = "black")
@@ -84,51 +130,7 @@ build.atacFootprintTrack <- function(track, reference, coord, layout){
             text(coord$start, yOffset + 0.8, seriesNames[i], pos = 4, cex = 1.25)
         }
 
-        if(coord$width <= config$Max_Width_Bp && config$Aggregate_By == "stage"){
-            ai <- paTss_ab_initio(sourceId)[
-                chrom  == coord$chrom & 
-                start0 <  coordEnd1 & # wider than the plotted spans, includes the analysis flanks
-                end1   >= coordStart1
-            ][order(center0)]
-            if(nrow(ai) > 0){
-                ai$half_width_gap <- (ai$gap_len - 1) / 2
-                ai$half_width <- ai$half_width_gap + 147
-                ai$inner_start <- ai$center0 - ai$half_width_gap + 1
-                ai$inner_end   <- ai$center0 + ai$half_width_gap + 1
-                ai$outer_start <- ai$center0 - ai$half_width + 1
-                ai$outer_end   <- ai$center0 + ai$half_width + 1
-                for(i in 1:nSeries){
-                    yOffset <- nSeries - i
-                    ai_stage <- ai[index_stage == seriesNames[i]]
-                    N <- nrow(ai_stage)
-                    if(N == 0) next
 
-                    dmsg()
-                    dmsg(seriesNames[i])
-                    dprint(ai_stage[, .(outer_start, outer_end, gap_len, index_score)])
-
-                    color <- sapply(1:N, function(j) if(j %% 2 == 1) CONSTANTS$plotlyColors$red else CONSTANTS$plotlyColors$orange)
-                    y0 <-    sapply(1:N, function(j) if(j %% 2 == 1) yOffset + 0.025 else yOffset + 0.075)
-                    y1 <-    sapply(1:N, function(j) if(j %% 2 == 1) yOffset + 0.925 else yOffset + 0.975)
-                    rect(
-                        ai_stage$outer_start, 
-                        y0,
-                        ai_stage$outer_end, 
-                        y1, 
-                        border = color,
-                        lwd = config$Overlay_Line_Width
-                    )
-                    rect(
-                        ai_stage$inner_start, 
-                        y0,
-                        ai_stage$inner_end, 
-                        y1, 
-                        border = color,
-                        lwd = config$Overlay_Line_Width + 0.5
-                    )
-                }
-            }
-        }
     })
 
     # return the track's magick image and associated metadata
