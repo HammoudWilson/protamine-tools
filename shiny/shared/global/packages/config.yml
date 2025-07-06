@@ -4,4 +4,7 @@
 packages:
   R:  
     - imager
-  Bioconductor: null
+    - signal
+  Bioconductor: 
+    - AnnotationHub
+    - CTCF

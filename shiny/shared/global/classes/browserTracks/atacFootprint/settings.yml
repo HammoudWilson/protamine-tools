@@ -12,6 +12,25 @@ include:
 # uncomment this section to specify track-specific settings, using the same format as for settingsServer
 # see: https://midataint.github.io/mdi-apps-framework/docs/settings/yaml-declarations.html
 settings:
+    Navigation:
+        Nav_Type:
+            type:   selectInput
+            choices:
+                - table
+                - plot
+            value: table
+        Plot_Nav_Type:
+            type:   selectInput
+            choices:
+                - correlation
+                - umap
+            value: correlation
+        Table_Min_Max_RPKM:
+            type: numericInput
+            value: 7.5
+        Table_Chromosome:
+            type: textInput
+            value: ""
     Footprint:
         Aggregate_By:
             type:   selectInput
@@ -75,6 +94,42 @@ settings:
         Overlay_Line_Width:
             type:   numericInput
             value:  1.5
+        Bias_Window_Size:
+            type:   numericInput
+            value:  100
+        Bias_Step_Size:
+            type:   numericInput
+            value:  10
+        Bias_Method:
+            type:   selectInput
+            choices:
+                - centers_only
+                - centers_and_endpoints
+            value: centers_and_endpoints
+        Centers_Only_Weighting:
+            type:   selectInput
+            choices:
+                - count
+                - Tn5_weight
+            value: count
+        Center_Bias_Plots:
+            type:   checkboxInput
+            value:  true
+        Scale_Bias_Plots:
+            type:   checkboxInput
+            value:  true
+        FFT_Window_Function:
+            type:   selectInput
+            choices:
+                - bartlett
+                - blackman
+                - boxcar
+                - flattopwin
+                - gausswin
+                - hamming
+                - hanning
+                - triang
+            value: triang
     Data_Path:
         Inserts_Bgz_Dir:
             type:   textInput

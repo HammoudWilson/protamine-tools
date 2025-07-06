@@ -13,6 +13,8 @@ message("initializing")
 suppressPackageStartupMessages(suppressWarnings({
     library(data.table)
     library(parallel)
+    library(uwot)
+    library(RcppHNSW)
 }))
 #-------------------------------------------------------------------------------------
 # load, parse and save environment variables
@@ -35,7 +37,9 @@ checkEnvVars(list(
         'MDI_DIR'
     ),
     integer = c(
-        'N_CPU'
+        'N_CPU',
+        'UMAP_N_NEIGHBORS',
+        'KMEANS_K'
     )
 ))
 #-------------------------------------------------------------------------------------
@@ -53,6 +57,10 @@ options(warn = 2)
 #-------------------------------------------------------------------------------------
 message("parsing stages")
 stages <- strsplit(env$AB_INITIO_STAGES, ',')[[1]]
+stage_score_cols  <- paste(stages, "score",  sep = '_')
+stage_count_cols  <- paste(stages, "count",  sep = '_')
+stage_rpkm_cols   <- paste(stages, "rpkm",   sep = '_')
+stage_scaled_cols <- paste(stages, "scaled", sep = '_')
 
 message("parsing stage types")
 stageTypes <- unpackStageTypes(env)
@@ -84,36 +92,133 @@ chroms <- fread(paste0(env$PRIMARY_GENOME_FASTA, ".fai"))[, 1:2]
 setnames(chroms, c('chrom', 'length'))
 chroms <- chroms[!grepl('_', chrom) & !grepl('chrM', chrom) & !grepl('chrEBV', chrom)]
 
-message("finding positioned nucleosomes by chromosome")
-scoreAbInitio <- file.path(env$MDI_DIR, 'suites/definitive/protamine-tools/pipelines/atac/tss/crates/target/debug/ab_initio')
-ab_initio <- do.call(rbind, lapply(which(chroms$chrom == "chr8"), function(chromI) {
-# ab_initio <- do.call(rbind, lapply(which(chroms$chrom %in% c("chr1","chr8","chr9")), function(chromI) {
-# ab_initio <- do.call(rbind, lapply(1:nrow(chroms), function(chromI) {
+message("loading nInserts by stage")
+fp_stage <- readRDS(paste(env$DATA_FILE_PREFIX, "footprint.rds", sep = '.'))$footprint$stage
+nInserts <- sapply(stages, function(stage) fp_stage[[stage]]$nInserts, simplify = FALSE, USE.NAMES = TRUE)
+rm(fp_stage)
+
+message("finding positioned dinucleosomes by chromosome")
+# scoreAbInitio <- file.path(env$MDI_DIR, 'suites/definitive/protamine-tools/pipelines/atac/tss/crates/target/debug/ab_initio')
+scoreAbInitio <- file.path(env$MDI_DIR, 'suites/definitive/protamine-tools/pipelines/atac/tss/crates/target/release/ab_initio')
+# regions <- do.call(rbind, lapply(which(chroms$chrom == "chr8"), function(chromI) {
+# regions <- do.call(rbind, lapply(which(chroms$chrom %in% c("chr1","chr8","chr9")), function(chromI) {
+regions <- do.call(rbind, lapply(1:nrow(chroms), function(chromI) {
     message(paste0("  ", chroms[chromI, chrom], " = ", chroms[chromI, length], " bp"))
-    ai <- fread(cmd = paste(
+    regions <- fread(cmd = paste(
         scoreAbInitio,
         chroms[chromI, chrom],
         chroms[chromI, length],
         paste(stages, collapse = ','),
-        paste(stageInsertFiles, collapse = ',')
+        paste(stageInsertFiles, collapse = ','),
+        paste(unlist(nInserts), collapse = ',')
     ))
-    setnames(ai, c(
+    setnames(regions, c(
         'chrom', 'start0', 'end1', 
         'index_stage', 
         'nuc_starts0', 'merge_types', 'dinuc_scores',
         'index_nfr_score', 'index_nuc_score',
-        paste(stages, "score", sep = '_'),
-        paste(stages, "count", sep = '_')
+        stage_score_cols,
+        stage_count_cols
     ))
-    ai
+    regions
 }))
-setkey(ab_initio, chrom, start0, end1)
+setkey(regions, chrom, start0, end1)
+
+# unscaled and scaled RPKM values are calculated for stage-level regions as well as overlap groups
+message("converting counts to RPKM") # column-wise normalization; feature dimensionality reduction not required since <10 stages
+k <- regions[, (end1 - start0) / 1e3]
+for(stage in stages){ 
+    stage_count_col  <- paste(stage, "count",  sep = '_')
+    stage_rpkm_col   <- paste(stage, "rpkm",   sep = '_')
+    r <- regions[[stage_count_col]] / 2 # correct by two since inserts were mostly counted twice, once per end
+    m <- nInserts[[stage]] / 1e6
+    regions[[stage_rpkm_col]] <- round(r / k / m, 2)
+}
+rm(r, k, m)
+
+message("scaling regions as log2 fold-change from the mean of all stages") # row-wise normalization
+scaled <- do.call(rbind, mclapply(1:nrow(regions), function(i) {
+    rpkm <- unlist(regions[i, ..stage_rpkm_cols])
+    mean_rpkm <- mean(rpkm)
+    data.table(t(round(log2(rpkm / mean_rpkm), 2)))
+}, mc.cores = env$N_CPU))
+setnames(scaled, stage_scaled_cols)
+regions <- cbind(regions, scaled)
+rm(scaled)
+
+# umap and kmeans clustering only performed for region overlap groups
+message("solving region overlap group umaps")
+scalings <- c("scaled", "unscaled")
+metrics  <- c("euclidean", "cosine", "correlation") # only these for RcppHNSW
+overlapGroupI <- which(regions$index_stage == "overlap_group")
+umap <- sapply(scalings, function(scaling) {
+    stage_cols <- if(scaling == "scaled") stage_scaled_cols else stage_rpkm_cols
+    sapply(metrics, function(metric) {
+        message(paste0("  ", scaling, " ", metric))
+        umap2(
+            regions[overlapGroupI, ..stage_cols],
+            n_neighbors = env$UMAP_N_NEIGHBORS, 
+            metric      = metric,
+            nn_method   = "hnsw",
+            n_threads   = env$N_CPU - 1
+        )
+    }, simplify = FALSE, USE.NAMES = TRUE)
+}, simplify = FALSE, USE.NAMES = TRUE)
+
+message(paste("clustering region overlap groups with kmeans, k =", env$KMEANS_K))
+regions[, regionI := 1:.N]
+overlapGroups <- regions[overlapGroupI, .(regionI)]
+for (scaling in scalings){
+    message(paste0("  ", scaling))
+    stage_cols <- if(scaling == "scaled") stage_scaled_cols else stage_rpkm_cols
+    m <- as.matrix(regions[overlapGroupI, ..stage_cols])
+    nstart <- 10
+    iter.max <- 500
+    overlapGroups[[paste("k", scaling, sep = "_")]] <- tryCatch(kmeans(
+        m,
+        centers  = env$KMEANS_K,
+        nstart   = nstart,
+        iter.max = iter.max
+    )$cluster, error = function(e) {
+        message(paste0("kmeans error: ", e$message))
+        message("retrying with Lloyd algorithm")
+        tryCatch(kmeans(
+            m,
+            centers   = env$KMEANS_K,
+            nstart    = nstart,
+            iter.max  = iter.max,
+            algorithm = "Lloyd"
+        )$cluster, error = function(e) {
+            message(paste0("kmeans error: ", e$message))
+            message("returning NA for all regions.")
+            NA_integer_
+        })
+    })
+}
+regions <- merge(regions, overlapGroups, by = "regionI", all.x = TRUE)
+rm(overlapGroups)
+regions[, regionI := NULL] # remove the regionI column
+setkey(regions, chrom, start0, end1)
 
 message()
 message("saving data for app")
+obj <- list(
+    env = env[c(
+        'AB_INITIO_STAGES',
+        'UMAP_N_NEIGHBORS',
+        'KMEANS_K'
+    )],
+    stages            = stages,
+    stageTypes        = stageTypes,
+    reverseStageTypes = reverseStageTypes,
+    chroms            = chroms,
+    nInserts          = nInserts,
+    regions           = regions,
+    umap              = umap
+)
 saveRDS(
-    ab_initio, 
+    obj, 
     file = paste(env$DATA_FILE_PREFIX, "ab_initio.rds", sep = '.')
 )
-str(ab_initio)
+str(obj)
 #=====================================================================================

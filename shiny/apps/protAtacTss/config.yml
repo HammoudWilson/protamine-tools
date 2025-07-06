@@ -41,6 +41,8 @@ appSteps:
         module: sourceFileUpload
     vPlots:
         module: vPlots
+    dinucRegions:
+        module: dinucRegions
     browser:
         module: genomex-mdi-tools//trackBrowser
         options:
@@ -48,6 +50,7 @@ appSteps:
                 - paScoreMap
                 - atacFootprint
                 - tssFrags
+                - ctcfMotifs
             # presets:
             #     BruSeq_generic:
             #         TESTING:

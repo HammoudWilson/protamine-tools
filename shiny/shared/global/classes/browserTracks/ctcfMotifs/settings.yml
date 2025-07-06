@@ -1,0 +1,18 @@
+# template for settings relevant to the browserTrack type
+
+# uncomment this section to include standard settings from widgets/browserTrack/settings.yml
+# see: https://github.com/wilsontelab/genomex-mdi-tools
+# include:
+#     - height
+
+# uncomment this section to specify settings that are common to multiple tracks in an app or suite
+# shared:
+#     - ../shared_settings.yml # interpreted relative to the track's own settings.yml file
+
+# uncomment this section to specify track-specific settings, using the same format as for settingsServer
+# see: https://midataint.github.io/mdi-apps-framework/docs/settings/yaml-declarations.html
+settings:
+    CTCF_Motifs:
+        Max_CTCF_Window_Bp:
+            type:  numericInput
+            value: 100000

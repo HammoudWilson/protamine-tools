@@ -33,6 +33,92 @@ paTss_ab_initio <- function(sourceId){
     stopSpinner(session)
     persistentCache[[filePath]]$data
 }
+paTss_coordCols <- c("chrom", "start0", "end1")
+paTss_clusterCols <- c(paTss_coordCols, "k_scaled", "k_unscaled")
+paTss_appRPKMCols <- c("stage_mean", "min_RPKM", "max_RPKM", "delta_RPKM")
+paTss_profileCols <- c("mean_stage", "max_stage", "quantile", paTss_appRPKMCols)
+paTss_profile_ab_initio <- function(regions, stages){
+    nStages <- length(stages)
+    regions$min_RPKM   <- apply(regions[, ..stages], 1, min)
+    regions$max_RPKM   <- apply(regions[, ..stages], 1, max)
+    regions$delta_RPKM <- (regions$max_RPKM - regions$min_RPKM) %>% round(2)
+    regions$stage_mean <- apply(regions[, ..stages], 1, function(rpkm) weighted.mean(1:nStages, rpkm))
+    regions$max_stage  <- stages[apply(regions[, ..stages], 1, which.max)]
+    regions$mean_stage <- stages[round(regions$stage_mean)]
+    regions$quantile <- as.integer(cut(
+        regions$stage_mean, 
+        breaks = quantile(regions$stage_mean, probs = seq(0, 1, 0.05)), 
+        include.lowest = TRUE
+    ))
+    regions$stage_mean <- regions$stage_mean %>% round(2)
+    regions
+}
+paTss_dinuc_regions <- function(sourceId){
+    startSpinner(session, message = "loading dinuc regions")
+    x <- protaminerCache$get(
+        "paTss_dinuc_regions",
+        key = sourceId,
+        create = "asNeeded",
+        createFn = function(...) {
+            startSpinner(session, message = "processing dinuc regions")
+            fp <- paTss_footprint(sourceId)
+            ai <- paTss_ab_initio(sourceId)
+            rpkmCols <- paste(ai$stages, "rpkm", sep = '_')
+            coordCols <- c("chrom", "start0", "end1")
+            regions <- ai$regions[index_stage == "overlap_group", .SD, .SDcols = c(paTss_clusterCols, rpkmCols)]
+            setnames(regions, c(paTss_clusterCols, ai$stages))
+            regions <- paTss_profile_ab_initio(regions, ai$stages)
+            regions[, .SD, .SDcols = c(paTss_clusterCols, paTss_profileCols, ai$stages)]
+        }
+    )
+    stopSpinner(session)
+    x$value
+}
+
+# get collated lists of CTCF motifs for the reference genome
+ctcf_motif_sources <- list(
+    # AH104745 | mm39.JASPAR2022_CORE_vertebrates_non_redundant_v2.RData == CTCF sites detected using the all three CTCF PWMs
+    # AH104747 | mm39.MA0139.1.RData  == CTCF sites detected using the most popular MA0139.1 CTCF PWM
+    mm39 = list(
+        dataprovider = "JASPAR 2022",
+        database     = "AH104747" 
+    )
+)
+paTss_ctcf_motifs <- function(reference){
+    ctcf_motif_source <- ctcf_motif_sources[[reference$genome$genome]]
+    req(ctcf_motif_source)
+    startSpinner(session, message = "loading CTCF motifs")
+    x <- protaminerCache$get(
+        "paTss_ctcf_motifs",
+        keyObject = ctcf_motif_source,
+        create = "asNeeded",
+        createFn = function(...) {
+            # https://dozmorovlab.github.io/CTCF/
+            ctcf <- AnnotationHub::subset(
+                AnnotationHub::AnnotationHub(), 
+                preparerclass == "CTCF" & 
+                species == reference$genome$scientificName & 
+                genome  == reference$genome$genome & 
+                dataprovider == ctcf_motif_source$dataprovider
+            )
+            ctcf <- ctcf[[ctcf_motif_source$database]]
+            ctcf <- data.table(
+                chrom = as.character(seqnames(ctcf)),
+                start0 = start(ctcf) - 1,
+                end1 = end(ctcf),
+                strand = as.character(strand(ctcf))
+            )[, .(
+                chrom,
+                pos1 = start0 + (end1 - start0) / 2 + 1, # motifs are variable lengths e.g., 34 35 19 34 35 35 19,
+                strand # CTCF motifs are stranded
+            )]
+            setkey(ctcf, pos1)
+            ctcf
+        }
+    )
+    stopSpinner(session)
+    x$value
+}
 
 # add one group's data to a footprint track plot based on plot type
 paTSS_add_series <- function(inserts, yOffset, ylim_series, seriesRange, seriesName, metadata, config){
@@ -110,7 +196,7 @@ paTSS_add_series <- function(inserts, yOffset, ylim_series, seriesRange, seriesN
         # nucleosome bias is a simple XY plot
         nucleosome_bias = {
             abline(h = yOffset + 0.5, col = "grey")
-            axis(2, at = c(-0.9, 0, 0.9) + yOffset, labels = c("-1", "0", "1"), tick = FALSE, las = 1)
+            axis(2, at = (c(-0.9, 0, 0.9) + 1) / 2 + yOffset, labels = c("-1", "0", "1"), tick = FALSE, las = 1)
             # points(
             #     x = inserts$x,
             #     y = inserts$y / seriesRange + yOffset,
@@ -125,8 +211,90 @@ paTSS_add_series <- function(inserts, yOffset, ylim_series, seriesRange, seriesN
                 lty = 1,
                 lwd = 1.5
             )
+            # fd <- (inserts$y - 1) / 0.9
+            # window_fn <- get(config$FFT_Window_Function, envir = loadNamespace("signal"))
+            # fd <- fd * window_fn(length(fd)) # apply a window to the bias signal
+            # fd <- abs(Re(fft(fd)))
+            # # fd <- 1 / length(fd) * fd**2
+            # fd <- fd / max(fd, na.rm = TRUE) # normalize the Fourier transform to [0, 1]
+            # x <- config$coordStart1 + seq(0, length(fd) - 1) * config$Bias_Step_Size
+            # segments(
+            #     x0 = x, # * config$Bias_Step_Size,
+            #     x1 = x,
+            #     y0 = yOffset,
+            #     y1 = fd + yOffset,
+            #     col = sizedColor(FALSE),
+            #     lwd = 1
+            # )
         }
     )
+}
+
+# create an inserts plot, either in browser track or in a static plot
+paTss_add_inserts_plot <- function(
+    sourceId, coord, metadata, config, 
+    nSeries, seriesNames, ylim_series, seriesRange, 
+    inserts
+){
+    # overplot the called nucleosome chains as rectangles
+    if(config$Show_Nucleosome_Chains && config$Aggregate_By == "stage"){
+        regions <- paTss_ab_initio(sourceId)$regions[
+            chrom  == coord$chromosome & 
+            start0 <  coord$end & # wider than the plotted spans, includes the analysis flanks
+            end1   >= coord$start
+        ]
+        if(nrow(regions) > 0){
+
+            # overplot the called overlap groups across all stages
+            regions_group <- regions[index_stage == "overlap_group"]
+            nGroups <- nrow(regions_group)
+            if(nGroups > 0) rect(
+                regions_group$start0 + 1, 
+                rep(0, nGroups),
+                regions_group$end1, 
+                rep(nSeries, nGroups), 
+                border = CONSTANTS$plotlyColors$grey,
+                lwd = config$Overlay_Line_Width
+            )
+
+            # overplot the called nucleosome chains by stage
+            for(stageI in 1:nSeries){
+                yOffset <- nSeries - stageI
+                regions_stage <- regions[index_stage == seriesNames[stageI]]
+                nChains <- nrow(regions_stage)
+                if(nChains == 0) next
+                rect(
+                    regions_stage$start0 + 1, 
+                    rep(yOffset + 0.025, nChains),
+                    regions_stage$end1, 
+                    rep(yOffset + 0.975, nChains), 
+                    border = CONSTANTS$plotlyColors$red,
+                    lwd = config$Overlay_Line_Width
+                )
+                for(chainI in 1:nChains){
+                    nuc_starts0 <- as.integer(unlist(strsplit(regions_stage$nuc_starts0[chainI], ",")))
+                    nNucs <- length(nuc_starts0)
+                    rect(
+                        nuc_starts0 + 1, 
+                        rep(yOffset + 0.025, nNucs),
+                        nuc_starts0 + 147, 
+                        rep(yOffset + 0.975, nNucs),
+                        border = NA, #CONSTANTS$plotlyColors$red,
+                        col = CONSTANTS$plotlyColors$red %>% addAlphaToColor(0.1),
+                        lwd = config$Overlay_Line_Width + 0.5
+                    )
+                }
+            }
+        }
+    }
+
+    # plot the inserts
+    for(i in 1:nSeries){ 
+        yOffset <- (nSeries - i)
+        abline(h = yOffset, col = "black")
+        paTSS_add_series(inserts[[i]], yOffset, ylim_series, seriesRange, seriesNames[i], metadata, config)
+        text(coord$start, yOffset + 0.8, seriesNames[i], pos = 4, cex = 1.25)
+    }
 }
 
 # convert ATAC inserts into XY values based on plot type for a specific sample/stage/stageType group 
@@ -200,9 +368,6 @@ paTss_parse_inserts <- function(inserts, metadata, config, footprint){
 
         # nucleosome bias plot the relative signal for mononucleosomes vs. intervening nucleosome-free regions
         nucleosome_bias = {
-            windowSize <- 51
-            stepSize   <- 17
-            dstr(inserts)
             dt <- inserts[, {
                 size    <- end1 - start0
                 start1  <- start0 + 1
@@ -210,29 +375,43 @@ paTss_parse_inserts <- function(inserts, metadata, config, footprint){
                 is_mono_nuc <- size > 147 & size <= 320
                 is_di_nuc   <- size > 320 & size <= 485
                 is_sub_nuc  <- size < 147
-                weight <- pmax(startWeight, 5) + pmax(endWeight, 5)
-                m <- sapply(seq(config$coordStart1, config$coordEnd1 - windowSize, by = stepSize), function(windowStart1){
-                    windowEnd1 <- windowStart1 + windowSize - 1
+                if(config$Bias_Method == "centers_only" && config$Centers_Only_Weighting == "Tn5_weight"){
+                    weight <- pmax(startWeight, 5) + pmax(endWeight, 5)
+                }
+                m <- sapply(seq(config$coordStart1, config$coordEnd1 - config$Bias_Window_Size, by = config$Bias_Step_Size), function(windowStart1){
+                    windowEnd1 <- windowStart1 + config$Bias_Window_Size - 1
                     center_is_in_window <- between(center1, windowStart1, windowEnd1)
-
-                    # start_is_in_window  <- between(start1,  windowStart1, windowEnd1)
-                    # end_is_in_window    <- between(end1,    windowStart1, windowEnd1)
-                    # nuc <- sum(is_mono_nuc & center_is_in_window) * 2
-                    # nfr <- sum(is_di_nuc   & center_is_in_window) * 2 + sum(end_is_in_window)
-
-                    # nuc <- sum(is_mono_nuc & center_is_in_window)
-                    # nfr <- sum((is_sub_nuc | is_di_nuc) & center_is_in_window)
-
-                    nuc <- ifelse( is_mono_nuc             & center_is_in_window, weight, 0) %>% sum()
-                    nfr <- ifelse((is_sub_nuc | is_di_nuc) & center_is_in_window, weight, 0) %>% sum()
-
+                    switch(
+                        config$Bias_Method,
+                        centers_and_endpoints = {
+                            start_is_in_window  <- between(start1,  windowStart1, windowEnd1)
+                            end_is_in_window    <- between(end1,    windowStart1, windowEnd1)
+                            nuc <- sum(is_mono_nuc & center_is_in_window) * 2
+                            nfr <- sum(is_di_nuc   & center_is_in_window) * 2 + sum(start_is_in_window) + sum(end_is_in_window)
+                        },
+                        centers_only = {
+                            switch(
+                                config$Centers_Only_Weighting,
+                                count = {
+                                    nuc <- sum(is_mono_nuc & center_is_in_window)
+                                    nfr <- sum((is_sub_nuc | is_di_nuc) & center_is_in_window)
+                                },
+                                Tn5_weight = {
+                                    nuc <- ifelse( is_mono_nuc             & center_is_in_window, weight, 0) %>% sum()
+                                    nfr <- ifelse((is_sub_nuc | is_di_nuc) & center_is_in_window, weight, 0) %>% sum()
+                                }
+                            )
+                        }
+                    )
                     denom <- nuc + nfr
                     bias <- if(denom == 0) NA else (nuc - nfr) / denom
                     c(
-                        x = windowStart1 + stepSize / 2, # midpoint of the window
+                        x = windowStart1 + config$Bias_Window_Size / 2, # midpoint of the window
                         y = bias
                     )
                 })
+                if(config$Center_Bias_Plots) m[2, ] <- m[2, ] - median(m[2, ], na.rm = TRUE) # center the bias around zero
+                if(config$Scale_Bias_Plots)  m[2, ] <- m[2, ] / max(abs(m[2, ]), na.rm = TRUE) # scale the bias to [-1, 1]
                 .(
                     x = m[1, ],
                     y = m[2, ] * 0.9 + 1

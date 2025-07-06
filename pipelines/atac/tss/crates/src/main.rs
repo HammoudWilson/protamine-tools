@@ -40,12 +40,19 @@
 //! of overlapping nucleosomes, either by using a score-weighted average of the 
 //! position of an overlapping nucleosome, or by extending the chain to include  
 //! two addtional nucleosomes when the overlap occurs in the implied gap between 
-//! two adjacent dinucleosomes.
+//! two adjacent dinucleosomes. When merging, subsequent dinucleosomes added to
+//! a chain must contribute sufficient new scoring weight distinct from the
+//! nucleosomes already in the chain.
 //! 
-//! Finally, for each candidate nucleosome chain discovered for each stage, a score
+//! For each candidate nucleosome chain discovered for each stage, a score
 //! is calculated for the same span in all other stages for cross-comparison.
 //! These and other final scores are reported without gap extension penalties,
 //! which were only used to optimize the initial dinucleosome search.
+//! 
+//! Finally, nucleosome chains determined per-stage are merged into overlap groups
+//! across all stages to define a single span-of-interest of the reference genome 
+//! that is then again scored for all stages individually. Here, because the exact
+//! nucleosome pattern may differ between stages, simple endpoint counts are reported.
 
 use std::env;
 use std::collections::HashMap;
@@ -56,7 +63,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // read command line arguments
     let args: Vec<String> = env::args().collect();
-    if args.len() != 5 {
+    if args.len() != 6 {
         eprintln!("Usage: ab_initio <chrom> <chrom_length> <stages> <stage_insert_files>");
         std::process::exit(1);
     }
@@ -64,13 +71,24 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let chrom_length: usize = args[2].parse()?;
     let stages = &args[3];
     let stage_insert_files = &args[4];
+    let stage_n_inserts = &args[5]; 
 
-    // parse stages and stage insert file paths
+    // parse stages
     let stages: Vec<&str> = stages.split(',').collect();
+
+    // parese stage insert file paths
     let stage_insert_file_paths: Vec<&str> = stage_insert_files.split(',').collect();
     let mut stage_insert_files: HashMap<String, String> = HashMap::new();
     for (stage, path) in stages.iter().zip(stage_insert_file_paths.iter()) {
         stage_insert_files.insert(stage.to_string(), path.to_string());
+    }
+
+    // parse number of inserts per stage
+    // this is the number of inserts per stage over all chromosomes, not just chrom
+    let stage_n_inserts_vec: Vec<&str> = stage_n_inserts.split(',').collect();
+    let mut stage_n_inserts: HashMap<String, usize> = HashMap::new();
+    for (stage, n_inserts) in stages.iter().zip(stage_n_inserts_vec.iter()) {
+        stage_n_inserts.insert(stage.to_string(), n_inserts.parse()?);
     }
 
     // instantiate maps to hold insert endpoint counts
@@ -80,11 +98,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     insert_map.load_inserts_by_stage(&chrom, &stage_insert_files)?;
 
     // use insert counts to set stage-specific score thresholds
-    insert_map.set_min_scores();
+    insert_map.set_min_scores(stage_n_inserts);
 
     // find positioned dinucleosomes independently by stage
     // print overlapping nucleosome chains to STDOUT
-    insert_map.find_dinucs_by_stage(&chrom);
+    // print overlap groups of nucleosome chains to STDOUT in same format
+    insert_map.find_dinucs_by_stage(&chrom, chrom_length);
 
     Ok(())
 }
