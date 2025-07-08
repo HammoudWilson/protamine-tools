@@ -9,3 +9,4 @@ dependencies:
     - r-ggseqlogo
     - r-uwot
     - r-rcpphnsw
+    - r-matrixstats

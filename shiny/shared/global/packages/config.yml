@@ -5,6 +5,7 @@ packages:
   R:  
     - imager
     - signal
+    - matrixStats
   Bioconductor: 
     - AnnotationHub
     - CTCF

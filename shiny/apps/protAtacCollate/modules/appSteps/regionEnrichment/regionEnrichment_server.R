@@ -146,26 +146,31 @@ enrichmentPlot <- function(plot, columns, message){
     startSpinner(session, message = message)
     scoreType <- scoreTypes$sample[[input$enrichmentScoreType]]
     N_Downsample_Bins <- settings$get("Enrichment_Data","N_Downsample_Bins")
-    titleSuffix <- ""
-    I <- if(N_Downsample_Bins > 0){
-        titleSuffix <- paste0(" (", format(N_Downsample_Bins, big.mark = ",", scientific = FALSE), " total bins)")
-        sample(1:nrow(d), N_Downsample_Bins)
-    } else TRUE
+    titleSuffix <- if(N_Downsample_Bins > 0){
+        paste0(" (", format(N_Downsample_Bins, big.mark = ",", scientific = FALSE), " downsample bins)")
+    } else ""
 
     par(mar = c(4,4,2,4) + 0.1)
+    ylim <- as.numeric(strsplit(trimws(settings$get("Enrichment_Data","Y_Axis_Limits")), ",")[[1]])
+    if(is.na(ylim[2])) ylim <- c(-abs(ylim[1]), abs(ylim[1]))
     plot$initializeFrame(
         xlim = c(0.4, nColumns + 0.6),
-        ylim = scoreType$valueLim,
-        xlab = "", # if(isDelta) paste(label, "Delta") else label,
+        ylim = ylim,
+        xlab = "",
         ylab = scoreType$enrichmentLabel,
         title = paste(input$enrichmentScoreType, titleSuffix),
         xaxt = "n",
         xaxs = "i"
     )
+    colors <- c(
+        CONSTANTS$plotlyColors$grey,
+        CONSTANTS$plotlyColors$green,
+        CONSTANTS$plotlyColors$red
+    )
     plot$addMarginLegend(
-        nColumns + 0.7, scoreType$valueLim[2], lty = 1, lwd = 2, 
-        legend = c("In", "Out"), bty = "n",
-        col = c(CONSTANTS$plotlyColors$green, CONSTANTS$plotlyColors$red), cex = 0.9
+        nColumns + 0.7, ylim[2], lty = 1, lwd = 2, 
+        legend = c("All", "In", "Out"), bty = "n",
+        col = colors, cex = 0.9
     )
     axis(1, at = 1:nColumns, labels = FALSE)
     text(
@@ -178,41 +183,48 @@ enrichmentPlot <- function(plot, columns, message){
         cex = 0.9
     )
     abline(h = 0)
-    colors <- c(
-        CONSTANTS$plotlyColors$green,
-        CONSTANTS$plotlyColors$red
-    )
+
     colors_ <- addAlphaToColors(colors, 0.5)
-    offset <- 0.2
-    medians <- list(in_ = numeric(nColumns), out_ = numeric(nColumns))
-    for(i in 1:nColumns){
-        medians$in_[i]  <- median(d[[columns[i]]][d$hasOverlap == TRUE],  na.rm = TRUE)
-        medians$out_[i] <- median(d[[columns[i]]][d$hasOverlap == FALSE], na.rm = TRUE)
+    xOffset <- 0.3
+    xOffsets <- c(-xOffset, 0, xOffset) # offsets for violin pairs
+    medians <- list(
+        all_ = numeric(nColumns),
+        in_  = numeric(nColumns), 
+        out_ = numeric(nColumns)
+    )
+    downsampleBins <- function(d) {
+        n <- length(d)
+        if(N_Downsample_Bins > 0 && n > N_Downsample_Bins) d[sample(1:n, N_Downsample_Bins)] else d
+    }
+    for(columnI in 1:nColumns){
+        d_all <- d[[columns[columnI]]]
+        d_in  <- d_all[d$hasOverlap == TRUE]
+        d_out <- d_all[d$hasOverlap == FALSE]
+        medians$all_[columnI] <- median(d_all, na.rm = TRUE)
+        medians$in_[columnI]  <- median(d_in,  na.rm = TRUE)
+        medians$out_[columnI] <- median(d_out, na.rm = TRUE)
         vioplot::vioplot(
-            d[I][hasOverlap == TRUE][[columns[i]]], 
-            d[I][hasOverlap == FALSE][[columns[i]]], 
-            ylim = scoreType$valueLim, 
-            names = "in",  
+            downsampleBins(d_all), 
+            downsampleBins(d_in), 
+            downsampleBins(d_out), 
+            ylim = ylim, 
+            names = "", # not used
             col = colors_, 
             colMed = colors_, 
-            at = i + c(-offset, offset), # placement of pairs on the x-axis
+            at = columnI + xOffsets, # placement of pairs on the x-axis
             add = TRUE,
-            wex = 0.45, # width expansion factor of the violins
+            wex = 0.33, # width expansion factor of the violins
             h = 0.25 # kernel density in # of sd
         )
     }
-    lines(
-        1:nColumns - offset, 
-        medians$in_,
-        col = colors[1],
-        lwd = 2
-    )
-    lines(
-        1:nColumns + offset, 
-        medians$out_,
-        col = colors[2],
-        lwd = 2
-    )
+    for(series in 1:3){
+        lines(
+            1:nColumns + xOffsets[series], 
+            medians[[series]], 
+            col = colors[series],
+            lwd = 2
+        )
+    }
     stopSpinner(session)
 }
 bySamplePlot <- staticPlotBoxServer(

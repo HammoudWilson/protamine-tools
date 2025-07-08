@@ -2,7 +2,7 @@
 # ui
 #----------------------------------------------------------------------
 shortLabel:       "Dinuc Regions" # shown on dashboard menu 
-shortDescription: "Explore dinucleotide peaks discovered ab initio and merged into overlap regions across all stages." # shown on Overview page
+shortDescription: "Explore dinucleotide peaks discovered ab initio by stage and merged into overlap regions across all stages." # shown on Overview page
 longLabel:        "Explore ab initio dinucleotide peak regions" # shown at top of appStep page 
 
 #----------------------------------------------------------------------

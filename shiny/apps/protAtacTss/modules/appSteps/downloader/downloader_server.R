@@ -30,24 +30,38 @@ settings <- activateMdiHeaderLinks( # uncomment as needed
 #----------------------------------------------------------------------
 sourceId <- dataSourceTableServer("source", selection = "single")
 observeEvent(input$writeData, {
+
+    # parse share information
     outputDir <- trimws(input$outputDir)
     req(outputDir != "", dir.exists(outputDir))
     sourceId <- sourceId()
     req(sourceId)
-    startSpinner(session, message = "loading bins")
-    bins <- paScores_bins(sourceId)
-    startSpinner(session, message = "loading scores")
-    scores <- getSampleScores_all(sourceId, input$scoreType)
-    startSpinner(session, message = "creating output table")
-    d <- merge(
-        bins[, .(chrom, start0, end1, included, gc, gc_z, txn)],
-        scores,
-        by = c("chrom", "start0", "end1"),
-        all.x = TRUE,
-        sort = FALSE
-    )
-    rm(bins, scores)
+
+    # collect tss ab initio calls
+    if(input$scoreType == "dinuc_regions") {
+        d <- paTss_ab_initio(sourceId)$regions
+
+    # collect collate bin scores
+    } else {
+        startSpinner(session, message = "loading bins")
+        bins <- paScores_bins(sourceId)
+        startSpinner(session, message = "loading scores")
+        scores <- getSampleScores_all(sourceId, input$scoreType)
+        startSpinner(session, message = "creating output table")
+        d <- merge(
+            bins[, .(chrom, start0, end1, included, gc, gc_z, txn)],
+            scores,
+            by = c("chrom", "start0", "end1"),
+            all.x = TRUE,
+            sort = FALSE
+        )
+        rm(bins, scores)
+    }
+
+    # report the data structure to web server log
     str(d)
+
+    # write the output table
     startSpinner(session, message = "writing output table")
     if(input$fileFormat == "rds") {
         file <- file.path(outputDir, paste("protAtacTss", input$scoreType, "rds", sep = "."))

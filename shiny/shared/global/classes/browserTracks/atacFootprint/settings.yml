@@ -27,7 +27,7 @@ settings:
             value: correlation
         Table_Min_Max_RPKM:
             type: numericInput
-            value: 7.5
+            value: 5
         Table_Chromosome:
             type: textInput
             value: ""

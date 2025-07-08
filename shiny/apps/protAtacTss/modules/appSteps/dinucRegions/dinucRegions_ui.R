@@ -31,68 +31,92 @@ dinucRegionsUI <- function(id, options) {
             dataSourceTableUI(
                 ns("source"), 
                 "Data Source", 
-                width = 8, 
-                collapsible = TRUE,
+                width = 4, 
+                collapsible = FALSE,
                 inFluidRow = FALSE
+            ),
+            box(
+                width = 4,
+                solidHeader = FALSE,
+                collapsible = FALSE,
+                title = NULL,
+                selectInput(
+                    ns("index_stage"), 
+                    "Index Stage", 
+                    choices = c("overlap_group"),
+                    selected = "overlap_group",
+                    width = "100%"
+                ),
+                radioButtons(
+                    ns("rpkm_scaling"), 
+                    "RPKM Scaling", 
+                    choices = c("scaled", "unscaled"),
+                    selected = "scaled",
+                    inline = TRUE,
+                    width = "100%"
+                ),
+                radioButtons(
+                    ns("umap_metric"), 
+                    "UMAP Metric", 
+                    choices = c("euclidean", "correlation"),
+                    selected = "correlation",
+                    inline = TRUE,
+                    width = "100%"
+                ),
+                NULL
             ),
             NULL
         ),
         fluidRow(
-            column(
+            mdiInteractivePlotBoxUI(
+                ns("correlationPlotBox"), 
+                "Correlation Plot",
                 width = 4,
-                style = "margin: 0; padding: 0;",
-                mdiInteractivePlotBoxUI(
-                    ns("correlationPlotBox"), 
-                    "Correlation Plot",
-                    width = 12,
-                    status = "primary",
-                    collapsible = TRUE,
-                    solidHeader = TRUE,
-                    collapsed = TRUE
-                ),
-                mdiInteractivePlotBoxUI(
-                    ns("umapPlotBox"), 
-                    "UMAP Plot",
-                    width = 12,
-                    status = "primary",
-                    collapsible = TRUE,
-                    solidHeader = TRUE,
-                    collapsed = TRUE
-                ),
-                staticPlotBoxUI(
-                    ns("regionProfilePlot"), 
-                    "Selected Region Profile",
-                    width = 12,
-                    status = "primary",
-                    collapsible = TRUE,
-                    solidHeader = TRUE,
-                    collapsed = TRUE
-                ),
-                staticPlotBoxUI(
-                    ns("clusterProfilePlot"), 
-                    "Cluster Profiles",
-                    width = 12,
-                    status = "primary",
-                    collapsible = TRUE,
-                    solidHeader = TRUE,
-                    collapsed = FALSE
-                ),
-                NULL
+                status = "primary",
+                collapsible = TRUE,
+                collapsed = FALSE,
+                solidHeader = TRUE
             ),
-            column(
+            mdiInteractivePlotBoxUI(
+                ns("umapPlotBox"), 
+                "UMAP Plot",
+                width = 4,
+                status = "primary",
+                collapsible = TRUE,
+                collapsed = FALSE,
+                solidHeader = TRUE
+            ),
+            staticPlotBoxUI(
+                ns("clusterProfilePlot"), 
+                "Cluster Profiles",
+                width = 4,
+                status = "primary",
+                collapsible = TRUE,
+                collapsed = FALSE,
+                solidHeader = TRUE
+            ),
+            NULL
+        ),
+        fluidRow(
+            staticPlotBoxUI(
+                ns("regionProfilePlot"), 
+                "Selected Region Profile",
+                width = 4,
+                status = "primary",
+                collapsible = TRUE,
+                collapsed = FALSE,
+                solidHeader = TRUE
+            ),
+            mdiInteractivePlotBoxUI(
+                ns("regionPlotBox"), 
+                "Selected Region Footprint",
                 width = 8,
-                style = "margin: 0; padding: 0;",
-                mdiInteractivePlotBoxUI(
-                    ns("regionPlotBox"), 
-                    "Selected Region Footprint",
-                    width = 12,
-                    status = "primary",
-                    collapsible = TRUE,
-                    solidHeader = TRUE,
-                    collapsed = FALSE
-                ),
-                NULL
-            )
+                status = "primary",
+                collapsible = TRUE,
+                collapsed = FALSE,
+                solidHeader = TRUE
+            ),
+            NULL
         ),
         NULL
     )

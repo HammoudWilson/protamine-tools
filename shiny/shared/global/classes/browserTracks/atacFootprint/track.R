@@ -174,8 +174,7 @@ navigation.atacFootprintTrack <- function(track, session, id, browser){
         trackNavPlotData <- reactive({
             sourceId <- track$settings$items()[[1]]$Source_ID
             req(sourceId)
-            ai <- paTss_ab_initio(sourceId)
-            regions <- paTss_dinuc_regions(sourceId)
+            regions <- paTss_dinuc_regions(sourceId, "overlap_group")
             Plot_Nav_Type <- track$settings$get("Navigation", "Plot_Nav_Type")
             xy <- if(Plot_Nav_Type == "umap") {
                 plotArgs <- list(
@@ -183,7 +182,7 @@ navigation.atacFootprintTrack <- function(track, session, id, browser){
                     xlab = "UMAP 1",
                     ylab = "UMAP 2"
                 )
-                ai$umap$scaled$correlation[order(regions$stage_mean), ]
+                as.matrix(regions[order(stage_mean), .(scaled_correlation_umap1, scaled_correlation_umap2)])
             } else {
                 plotArgs <- list(
                     cex = 0.75,
@@ -236,16 +235,11 @@ navigation.atacFootprintTrack <- function(track, session, id, browser){
             sourceId <- track$settings$items()[[1]]$Source_ID
             req(sourceId)
             ai <- paTss_ab_initio(sourceId)
-            Nav_Type <- track$settings$get("Navigation", "Nav_Type")
             Min_Max_RPKM <- track$settings$get("Navigation", "Table_Min_Max_RPKM") # filter the table a bit for faster loading
             Chromosome   <- track$settings$get("Navigation", "Table_Chromosome") %>% trimws()
-            regions <- paTss_dinuc_regions(sourceId)[max_RPKM >= Min_Max_RPKM, .SD, .SDcols = c(
-                paTss_coordCols,
-                paTss_profileCols,
-                ai$stages
-            )]
+            regions <- paTss_dinuc_regions(sourceId, "overlap_group")[max_RPKM >= Min_Max_RPKM]
             if (Chromosome != "") regions <- regions[chrom == Chromosome]
-            regions
+            paTss_parseRegionsForTable(sourceId, regions)
         })
         tagList(
             trackNavTable(

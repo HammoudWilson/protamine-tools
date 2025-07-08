@@ -37,7 +37,9 @@ settings:
         Scores_Dir:
             type:   textInput
             value:  ""
-
+        Y_Axis_Limits:
+            type:   textInput
+            value:  "-3,3"
 #         <settingName>:
 #             type:   numericInput
 #             value:  1

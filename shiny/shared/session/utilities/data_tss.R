@@ -23,56 +23,78 @@ paTss_footprint <- function(sourceId){
 }
 
 # load ab_initio data
+# 'chrom', 'start0', 'end1', 
+# 'index_stage', 
+# 'nuc_starts0', 'merge_types', 'dinuc_scores',
+# 'index_nfr_score', 'index_nuc_score',
+# stage_score_cols,
+# stage_count_cols,
+# stage_rpkm_cols,
+# stage_scaled_cols,
+# 'min_RPKM', 'max_RPKM', 'delta_RPKM',
+# 'stage_mean','mean_stage', 'max_stage',
+# 'indexI', 'quantile'
+# 'unscaled_euclidean_umap1', 'unscaled_euclidean_umap2',
+# 'scaled_euclidean_umap1', 'scaled_euclidean_umap2',
+# 'scaled_correlation_umap1', 'scaled_correlation_umap2',
+# 'unscaled_cluster', 'scaled_cluster'
 paTss_ab_initio <- function(sourceId){
     startSpinner(session, message = "loading nuc chains")
     filePath <- loadPersistentFile(
         sourceId = sourceId, 
         contentFileType = "ab_initio", 
-        ttl = CONSTANTS$ttl$month
+        ttl = CONSTANTS$ttl$month,
+        postProcess = function(ai){ # remove unused columns for cache efficiency
+            ai$regions[, ":="(
+                merge_types     = NULL,
+                dinuc_scores    = NULL,
+                index_nfr_score = NULL,
+                index_nuc_score = NULL
+            )]
+            for(stage in ai$stages){
+                ai$regions[[paste(stage, "score", sep = "_")]] <- NULL
+                ai$regions[[paste(stage, "count", sep = "_")]] <- NULL
+            }
+            ai
+        }
     )
     stopSpinner(session)
     persistentCache[[filePath]]$data
 }
-paTss_coordCols <- c("chrom", "start0", "end1")
-paTss_clusterCols <- c(paTss_coordCols, "k_scaled", "k_unscaled")
 paTss_appRPKMCols <- c("stage_mean", "min_RPKM", "max_RPKM", "delta_RPKM")
-paTss_profileCols <- c("mean_stage", "max_stage", "quantile", paTss_appRPKMCols)
-paTss_profile_ab_initio <- function(regions, stages){
-    nStages <- length(stages)
-    regions$min_RPKM   <- apply(regions[, ..stages], 1, min)
-    regions$max_RPKM   <- apply(regions[, ..stages], 1, max)
-    regions$delta_RPKM <- (regions$max_RPKM - regions$min_RPKM) %>% round(2)
-    regions$stage_mean <- apply(regions[, ..stages], 1, function(rpkm) weighted.mean(1:nStages, rpkm))
-    regions$max_stage  <- stages[apply(regions[, ..stages], 1, which.max)]
-    regions$mean_stage <- stages[round(regions$stage_mean)]
-    regions$quantile <- as.integer(cut(
-        regions$stage_mean, 
-        breaks = quantile(regions$stage_mean, probs = seq(0, 1, 0.05)), 
-        include.lowest = TRUE
-    ))
-    regions$stage_mean <- regions$stage_mean %>% round(2)
-    regions
-}
-paTss_dinuc_regions <- function(sourceId){
-    startSpinner(session, message = "loading dinuc regions")
+paTss_dinuc_regions <- function(sourceId, index_stage_){
+    startSpinner(session, message = paste("loading", index_stage_, "regions"))
     x <- protaminerCache$get(
         "paTss_dinuc_regions",
-        key = sourceId,
+        keyObject = list(sourceId, index_stage_),
         create = "asNeeded",
         createFn = function(...) {
-            startSpinner(session, message = "processing dinuc regions")
-            fp <- paTss_footprint(sourceId)
+            startSpinner(session, message = paste("loading", index_stage_, "regions"))
             ai <- paTss_ab_initio(sourceId)
-            rpkmCols <- paste(ai$stages, "rpkm", sep = '_')
-            coordCols <- c("chrom", "start0", "end1")
-            regions <- ai$regions[index_stage == "overlap_group", .SD, .SDcols = c(paTss_clusterCols, rpkmCols)]
-            setnames(regions, c(paTss_clusterCols, ai$stages))
-            regions <- paTss_profile_ab_initio(regions, ai$stages)
-            regions[, .SD, .SDcols = c(paTss_clusterCols, paTss_profileCols, ai$stages)]
+            ai$regions[index_stage == index_stage_]
         }
     )
     stopSpinner(session)
     x$value
+}
+paTss_parseRegionsForTable <- function(sourceId, regions){
+    ai <- paTss_ab_initio(sourceId)
+    stage_rpkm_cols <- paste(ai$stages, "rpkm", sep = "_")
+    regions[, ":="(
+        mean_stage = ai$stages[mean_stage],
+        max_stage  = ai$stages[max_stage]
+    )]
+    stage_rpkm <- regions[, .SD, .SDcols = stage_rpkm_cols]
+    setnames(stage_rpkm, ai$stages)
+    cbind(
+        regions[, .SD, .SDcols = c(
+            "chrom", "start0", "end1",
+            "quantile", "scaled_cluster",
+            "max_stage",  "mean_stage",
+            "stage_mean", "max_RPKM", "delta_RPKM"
+        )],
+        stage_rpkm
+    )
 }
 
 # get collated lists of CTCF motifs for the reference genome
@@ -228,73 +250,6 @@ paTSS_add_series <- function(inserts, yOffset, ylim_series, seriesRange, seriesN
             # )
         }
     )
-}
-
-# create an inserts plot, either in browser track or in a static plot
-paTss_add_inserts_plot <- function(
-    sourceId, coord, metadata, config, 
-    nSeries, seriesNames, ylim_series, seriesRange, 
-    inserts
-){
-    # overplot the called nucleosome chains as rectangles
-    if(config$Show_Nucleosome_Chains && config$Aggregate_By == "stage"){
-        regions <- paTss_ab_initio(sourceId)$regions[
-            chrom  == coord$chromosome & 
-            start0 <  coord$end & # wider than the plotted spans, includes the analysis flanks
-            end1   >= coord$start
-        ]
-        if(nrow(regions) > 0){
-
-            # overplot the called overlap groups across all stages
-            regions_group <- regions[index_stage == "overlap_group"]
-            nGroups <- nrow(regions_group)
-            if(nGroups > 0) rect(
-                regions_group$start0 + 1, 
-                rep(0, nGroups),
-                regions_group$end1, 
-                rep(nSeries, nGroups), 
-                border = CONSTANTS$plotlyColors$grey,
-                lwd = config$Overlay_Line_Width
-            )
-
-            # overplot the called nucleosome chains by stage
-            for(stageI in 1:nSeries){
-                yOffset <- nSeries - stageI
-                regions_stage <- regions[index_stage == seriesNames[stageI]]
-                nChains <- nrow(regions_stage)
-                if(nChains == 0) next
-                rect(
-                    regions_stage$start0 + 1, 
-                    rep(yOffset + 0.025, nChains),
-                    regions_stage$end1, 
-                    rep(yOffset + 0.975, nChains), 
-                    border = CONSTANTS$plotlyColors$red,
-                    lwd = config$Overlay_Line_Width
-                )
-                for(chainI in 1:nChains){
-                    nuc_starts0 <- as.integer(unlist(strsplit(regions_stage$nuc_starts0[chainI], ",")))
-                    nNucs <- length(nuc_starts0)
-                    rect(
-                        nuc_starts0 + 1, 
-                        rep(yOffset + 0.025, nNucs),
-                        nuc_starts0 + 147, 
-                        rep(yOffset + 0.975, nNucs),
-                        border = NA, #CONSTANTS$plotlyColors$red,
-                        col = CONSTANTS$plotlyColors$red %>% addAlphaToColor(0.1),
-                        lwd = config$Overlay_Line_Width + 0.5
-                    )
-                }
-            }
-        }
-    }
-
-    # plot the inserts
-    for(i in 1:nSeries){ 
-        yOffset <- (nSeries - i)
-        abline(h = yOffset, col = "black")
-        paTSS_add_series(inserts[[i]], yOffset, ylim_series, seriesRange, seriesNames[i], metadata, config)
-        text(coord$start, yOffset + 0.8, seriesNames[i], pos = 4, cex = 1.25)
-    }
 }
 
 # convert ATAC inserts into XY values based on plot type for a specific sample/stage/stageType group 
