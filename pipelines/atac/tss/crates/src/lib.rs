@@ -29,7 +29,7 @@ const N_LANES:              usize = 8;         // number of lanes in the SIMD ve
 const NFR_WEIGHT:   i16 = 1; // weight of the NFR endpoints in scoring masks
 const NUC_WEIGHT:   i16 = 2; // weight of the nucleosome centers in scoring masks
 const DINUC_WEIGHT: i16 = 1; // weight of the dinucleosome centers in scoring masks
-const MIN_SCORE:  i16 = 200; // minimum score to report a positioned dinucleosome for the stage with the lowest number of inserts
+// const MIN_SCORE:  i16 = 200; // minimum score to report a positioned dinucleosome for the stage with the lowest number of inserts
 const MASKED_SCORE_SCALAR: i16 = 2; // length-adjusted masked scores must exceed MIN_SCORE / MASKED_SCORE_SCALAR
 const EARLY_REJECTION_SCORE: i16 = -999; // early rejection score for positions with too few endpoints that weren't subject to full mask processing
 const GAP_LEN_PENALTY_BASE:  f64 = 1.0; // penalty for extending the gap length by one base, used to disfavor longer gaps with few additional endpoints
@@ -229,7 +229,6 @@ impl InsertMap {
 
     // instantiate a new InsertMap
     pub fn new(chrom_length: usize, stages: Vec<&str>) -> Self {
-        // eprintln!("    instantiating insert map");
         let half_mask_widths: Vec<usize> = (0..=MAX_GAP_LEN).into_iter()
             .map(|gap_len| {
                 (FLANK_LEN + NUC_LEN + gap_len.saturating_sub(1) / 2) as usize
@@ -302,7 +301,6 @@ impl InsertMap {
     ) -> Result<(), Box<dyn std::error::Error>> {
         eprintln!("    loading inserts");
         for stage in self.stages.iter() {
-            // eprintln!("      stage {}", stage);
             let file_path = stage_insert_files.get(stage).unwrap();
             let stage_insert_map = self.data.get_mut(stage).unwrap();
             let mut cmd = Command::new("tabix")
@@ -339,16 +337,10 @@ impl InsertMap {
 
     // set the score thresholds for each stage based on the total number of inserts
     // samples with more inserts must have a higher threshold to be called a positioned dinucleosome
-    pub fn set_min_scores(&mut self, stage_n_inserts: HashMap<String, usize>) {
-        // eprintln!("    setting score thresholds");
-        // let min_n_inserts = self.data.values().map(|m| m.n_inserts).min().unwrap() as f64;
-        // for (stage, stage_insert_map) in self.data.iter_mut() {
-        //     let stage_min_score = (MIN_SCORE as f64 * stage_insert_map.n_inserts as f64 / min_n_inserts) as i16;
-        //     self.min_scores.insert(stage.clone(), stage_min_score);
-        // }
+    pub fn set_min_scores(&mut self, stage_n_inserts: HashMap<String, usize>, min_score: i16) {
         let min_n_inserts = stage_n_inserts.values().map(|n_inserts| *n_inserts).min().unwrap() as f64;
         for (stage, n_inserts) in stage_n_inserts.iter() {
-            let stage_min_score = (MIN_SCORE as f64 * *n_inserts as f64 / min_n_inserts) as i16;
+            let stage_min_score = (min_score as f64 * *n_inserts as f64 / min_n_inserts) as i16;
             self.min_scores.insert(stage.clone(), stage_min_score);
         }
     }
@@ -365,7 +357,6 @@ impl InsertMap {
         let mut writer = BufWriter::new(stdout.lock());
         let mut chains: Vec<(usize, usize)> = Vec::new(); // chain start0 and end1, used for stage overlap merging
         for stage in self.stages.iter() {
-            // eprintln!("      stage {}", stage);
             let stage_insert_map = self.data.get(stage).unwrap();
             let stage_min_score = *self.min_scores.get(stage).unwrap();
 

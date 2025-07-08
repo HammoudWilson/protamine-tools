@@ -5,31 +5,45 @@ options:
         short: A
         type: string
         required: false
-        default: early_RS,int_RS,late_RS,earliest_ES,early_ES,int_ES
+        default: early_RS,int_RS,late_RS,earliest_ES,early_ES,int_ES,late_ES
         description: "comma-separated list of stages to analyze for dinucleosome footprints"
-    min-max-RPKM: 
+    clustered-stages: 
         order: 2
+        short: null
+        type: string
+        required: false
+        default: early_RS,int_RS,late_RS,earliest_ES,early_ES,int_ES
+        description: "comma-separated list of stages to use for umap and kmeans analysis"
+    min-score: 
+        order: 3
+        short: null
+        type: integer
+        required: false
+        default: 42
+        description: "minimum dinucleosome score for the stage with the fewest inserts, scaled upward for other stages"
+    min-max-RPKM: 
+        order: 4
         short: null
         type: double
         required: false
         default: 2.0
         description: "minimum value of max region RPKM across stages to keep dinucleosome regions"
     min-delta-max-ratio: 
-        order: 3
+        order: 5
         short: null
         type: double
         required: false
         default: 0.75
         description: "minimum (max-min)/max RPKM ratio across stages to keep dinucleosome regions"
     n-clusters: 
-        order: 4
+        order: 6
         short: null
         type: integer
         required: false
         default: 20 # thus, quantiles are in steps of 5%
         description: "number of clusters and quantiles to find in dinucleosome overlap regions"
     umap-n-neighbors: 
-        order: 5
+        order: 7
         short: null
         type: integer
         required: false

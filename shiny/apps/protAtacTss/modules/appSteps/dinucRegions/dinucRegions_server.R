@@ -57,7 +57,12 @@ observeEvent(sourceId(), {
 regions <- reactive({
     sourceId <- sourceId()
     req(sourceId)
-    paTss_dinuc_regions(sourceId, input$index_stage)
+    paTss_dinuc_regions(sourceId, input$index_stage, input$include_unpassed_regions)
+})
+passedRegions <- reactive({
+    sourceId <- sourceId()
+    req(sourceId)
+    paTss_dinuc_regions(sourceId, input$index_stage, FALSE)
 })
 
 #----------------------------------------------------------------------
@@ -147,7 +152,7 @@ observeEvent(correlationPlotBox$plot$click(), {
 # interactive umap plot
 #----------------------------------------------------------------------
 umapPlotData <- reactive({
-    regions <- regions()
+    regions <- passedRegions()
     req(regions)
     startSpinner(session, message = "loading umap data")
     umap1_col <- paste(input$rpkm_scaling, input$umap_metric, "umap1", sep = "_")
@@ -215,33 +220,43 @@ clusterProfilePlotSettings <- list(
         )
     )
 )
+stageColMean <- function(d){ # drop region+stage where RPKM==0 led to scaled log2 fold-change of -Inf, ~always late_ES
+    if(input$rpkm_scaling == "scaled") d <- d[is.finite(d)]
+    if(length(d) == 0) NA_real_ else mean(d, na.rm = TRUE)
+}
 clusterAggregates <- reactive({
     sourceId <- sourceId()
     req(sourceId)
     ai <- paTss_ab_initio(sourceId)
-    regions <- regions()
-    req(ai, regions)
+    req(ai)
+    Cluster_By <- clusterProfilePlot$settings$get("Clustering", "Cluster_By")
+    regions <- if(Cluster_By == "quantile") {
+        if(input$include_unpassed_regions){
+            clusterCol <- "quantile_unfiltered"
+            regions()
+        } else {
+            clusterCol <- "quantile_filtered"
+            passedRegions()
+        }
+    } else {
+        clusterCol <- paste(input$rpkm_scaling, "cluster", sep = "_")
+        passedRegions() # kmeans clustering was not performed with unpassed regions
+    }
+    req(regions)
     startSpinner(session, message = "aggregating clusters")
     stage_rpkm_cols   <- paste(ai$stages, "rpkm",   sep = '_')
     stage_scaled_cols <- paste(ai$stages, "scaled", sep = '_')
     stage_cols <- if(input$rpkm_scaling == "scaled") stage_scaled_cols else stage_rpkm_cols
-    clusterCol <- if(clusterProfilePlot$settings$get("Clustering","Cluster_By") == "quantile") {
-        "quantile"
-    } else {
-        paste(input$rpkm_scaling, "cluster", sep = "_")
-    }
-    clusters <- sapply(stage_cols,      function(col) regions[, mean(regions[[col]][.I]), keyby = clusterCol][[2]])
-    weights  <- sapply(stage_rpkm_cols, function(col) regions[, mean(regions[[col]][.I]), keyby = clusterCol][[2]])
+    clusters <- sapply(stage_cols,      function(col) regions[, stageColMean(regions[[col]][.I]), keyby = clusterCol][[2]])
+    rpkms    <- sapply(stage_rpkm_cols, function(col) regions[, stageColMean(regions[[col]][.I]), keyby = clusterCol][[2]])
     clusterCounts <- regions[, .N, keyby = clusterCol]
     nClusters <- nrow(clusters)
     nStages   <- ncol(clusters)
-    stage_means <- sapply(1:nClusters, function(i) matrixStats::weightedMedian(1:nStages, weights[i,]))
-    if(clusterCol != "quantile") {
-        I <- order(stage_means)
-        clusters <- clusters[I, ]
-        stage_means <- stage_means[I]
-        clusterCounts <- clusterCounts[I]
-    }
+    stage_means <- sapply(1:nClusters, function(i) matrixStats::weightedMedian(1:nStages, rpkms[i,], interpolate = TRUE, na.rm = TRUE))
+    I <- order(stage_means)
+    clusters <- clusters[I, ]
+    stage_means <- stage_means[I]
+    clusterCounts <- clusterCounts[I]
     list(
         ai = ai,
         clusters = clusters,
@@ -257,7 +272,8 @@ addStageXAxis <- function(stages, ylim, side = 1) {
     text(1:length(stages), ylim[1] - diff(ylim) / 8, stages, xpd = TRUE, srt = 45, adj = 1)
 }
 plotClusterTraces <- function(d) {
-    ylim <- if(input$rpkm_scaling == "scaled") range(d$clusters) else c(0, max(d$clusters))
+    ylim <- if(input$rpkm_scaling == "scaled") range(d$clusters, na.rm = TRUE) 
+            else c(0, max(d$clusters, na.rm = TRUE))
     ylim <- ylim * 1.05
     par(mar = titledMar)
     clusterProfilePlot$initializeFrame(
@@ -358,7 +374,6 @@ regionProfilePlot <- staticPlotBoxServer(
         ai <- paTss_ab_initio(sourceId)
         d <- selectedRegion()
         req(ai, d)
-        dstr(d)
         startSpinner(session, message = "rendering profile")
         nStages <- length(ai$stages)
         stage_cols <- if(input$rpkm_scaling == "scaled") {

@@ -63,15 +63,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // read command line arguments
     let args: Vec<String> = env::args().collect();
-    if args.len() != 6 {
-        eprintln!("Usage: ab_initio <chrom> <chrom_length> <stages> <stage_insert_files>");
+    if args.len() != 7 {
+        eprintln!("Usage: ab_initio <chrom> <chrom_length> <stages> <stage_insert_files> <stage_n_inserts> <min_score>");
         std::process::exit(1);
     }
     let chrom = &args[1];
     let chrom_length: usize = args[2].parse()?;
     let stages = &args[3];
     let stage_insert_files = &args[4];
-    let stage_n_inserts = &args[5]; 
+    let stage_n_inserts = &args[5];
+    let min_score: i16 = args[6].parse()?;
 
     // parse stages
     let stages: Vec<&str> = stages.split(',').collect();
@@ -98,7 +99,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     insert_map.load_inserts_by_stage(&chrom, &stage_insert_files)?;
 
     // use insert counts to set stage-specific score thresholds
-    insert_map.set_min_scores(stage_n_inserts);
+    insert_map.set_min_scores(stage_n_inserts, min_score);
 
     // find positioned dinucleosomes independently by stage
     // print overlapping nucleosome chains to STDOUT

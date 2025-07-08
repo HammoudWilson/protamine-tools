@@ -31,6 +31,9 @@ settings:
         Table_Chromosome:
             type: textInput
             value: ""
+        Include_Unpassed_Regions:
+            type:  checkboxInput
+            value: false
     Footprint:
         Aggregate_By:
             type:   selectInput

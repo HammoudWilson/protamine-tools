@@ -32,8 +32,10 @@ paTss_footprint <- function(sourceId){
 # stage_rpkm_cols,
 # stage_scaled_cols,
 # 'min_RPKM', 'max_RPKM', 'delta_RPKM',
+# 'passed_rpkm_filters',
 # 'stage_mean','mean_stage', 'max_stage',
-# 'indexI', 'quantile'
+# 'indexI', 
+# 'quantile_unfiltered', 'quantile_filtered',
 # 'unscaled_euclidean_umap1', 'unscaled_euclidean_umap2',
 # 'scaled_euclidean_umap1', 'scaled_euclidean_umap2',
 # 'scaled_correlation_umap1', 'scaled_correlation_umap2',
@@ -62,33 +64,38 @@ paTss_ab_initio <- function(sourceId){
     persistentCache[[filePath]]$data
 }
 paTss_appRPKMCols <- c("stage_mean", "min_RPKM", "max_RPKM", "delta_RPKM")
-paTss_dinuc_regions <- function(sourceId, index_stage_){
+paTss_dinuc_regions <- function(sourceId, index_stage_, include_unpassed_regions){
     startSpinner(session, message = paste("loading", index_stage_, "regions"))
     x <- protaminerCache$get(
         "paTss_dinuc_regions",
-        keyObject = list(sourceId, index_stage_),
+        keyObject = list(sourceId, index_stage_, include_unpassed_regions),
         create = "asNeeded",
         createFn = function(...) {
             startSpinner(session, message = paste("loading", index_stage_, "regions"))
             ai <- paTss_ab_initio(sourceId)
-            ai$regions[index_stage == index_stage_]
+            passed_rpkm_filters_ <- if(include_unpassed_regions) TRUE else ai$regions$passed_rpkm_filters
+            ai$regions[passed_rpkm_filters_ & index_stage == index_stage_]
         }
     )
     stopSpinner(session)
     x$value
 }
-paTss_parseRegionsForTable <- function(sourceId, regions){
+paTss_parseRegionsForTable <- function(sourceId, regions, include_unpassed_regions){
     ai <- paTss_ab_initio(sourceId)
     stage_rpkm_cols <- paste(ai$stages, "rpkm", sep = "_")
+    if(!include_unpassed_regions) regions <- regions[passed_rpkm_filters == TRUE]
     regions[, ":="(
         mean_stage = ai$stages[mean_stage],
-        max_stage  = ai$stages[max_stage]
+        max_stage  = ai$stages[max_stage],
+        passed     = passed_rpkm_filters,
+        quantile   = if(include_unpassed_regions) quantile_unfiltered else quantile_filtered
     )]
     stage_rpkm <- regions[, .SD, .SDcols = stage_rpkm_cols]
     setnames(stage_rpkm, ai$stages)
     cbind(
         regions[, .SD, .SDcols = c(
             "chrom", "start0", "end1",
+            "passed",
             "quantile", "scaled_cluster",
             "max_stage",  "mean_stage",
             "stage_mean", "max_RPKM", "delta_RPKM"

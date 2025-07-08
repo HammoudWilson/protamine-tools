@@ -63,6 +63,11 @@ dinucRegionsUI <- function(id, options) {
                     inline = TRUE,
                     width = "100%"
                 ),
+                checkboxInput(
+                    ns("include_unpassed_regions"), 
+                    "Include Unpassed Regions", 
+                    value = FALSE
+                ),
                 NULL
             ),
             NULL

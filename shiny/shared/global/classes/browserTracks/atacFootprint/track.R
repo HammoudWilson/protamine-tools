@@ -174,8 +174,9 @@ navigation.atacFootprintTrack <- function(track, session, id, browser){
         trackNavPlotData <- reactive({
             sourceId <- track$settings$items()[[1]]$Source_ID
             req(sourceId)
-            regions <- paTss_dinuc_regions(sourceId, "overlap_group")
             Plot_Nav_Type <- track$settings$get("Navigation", "Plot_Nav_Type")
+            Include_Unpassed_Regions <- track$settings$get("Navigation", "Include_Unpassed_Regions")
+            regions <- paTss_dinuc_regions(sourceId, "overlap_group", Include_Unpassed_Regions)
             xy <- if(Plot_Nav_Type == "umap") {
                 plotArgs <- list(
                     cex = 0.5,
@@ -237,9 +238,10 @@ navigation.atacFootprintTrack <- function(track, session, id, browser){
             ai <- paTss_ab_initio(sourceId)
             Min_Max_RPKM <- track$settings$get("Navigation", "Table_Min_Max_RPKM") # filter the table a bit for faster loading
             Chromosome   <- track$settings$get("Navigation", "Table_Chromosome") %>% trimws()
-            regions <- paTss_dinuc_regions(sourceId, "overlap_group")[max_RPKM >= Min_Max_RPKM]
+            Include_Unpassed_Regions <- track$settings$get("Navigation", "Include_Unpassed_Regions")
+            regions <- paTss_dinuc_regions(sourceId, "overlap_group", Include_Unpassed_Regions)[max_RPKM >= Min_Max_RPKM]
             if (Chromosome != "") regions <- regions[chrom == Chromosome]
-            paTss_parseRegionsForTable(sourceId, regions)
+            paTss_parseRegionsForTable(sourceId, regions, Include_Unpassed_Regions)
         })
         tagList(
             trackNavTable(

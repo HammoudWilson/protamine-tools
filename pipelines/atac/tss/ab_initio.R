@@ -35,11 +35,13 @@ checkEnvVars(list(
         'PROTAMINE_STAGE',
         'STAGE_TYPES',
         'AB_INITIO_STAGES',
+        'CLUSTERED_STAGES',
         'TASK_DIR',
         'MDI_DIR'
     ),
     integer = c(
         'N_CPU',
+        'MIN_SCORE',
         'N_CLUSTERS',
         'UMAP_N_NEIGHBORS'
     ),
@@ -63,11 +65,15 @@ options(warn = 2)
 #-------------------------------------------------------------------------------------
 message("parsing stages")
 stages <- strsplit(env$AB_INITIO_STAGES, ',')[[1]]
+nStages <- length(stages)
 stage_score_cols  <- paste(stages, "score",  sep = '_')
 stage_count_cols  <- paste(stages, "count",  sep = '_')
 stage_rpkm_cols   <- paste(stages, "rpkm",   sep = '_')
 stage_scaled_cols <- paste(stages, "scaled", sep = '_')
-nStages <- length(stages)
+clusteredStages <- strsplit(env$CLUSTERED_STAGES, ',')[[1]]
+clustered_rpkm_cols   <- paste(clusteredStages, "rpkm",   sep = '_')
+clustered_scaled_cols <- paste(clusteredStages, "scaled", sep = '_')
+indexedStages <- c('overlap_group', clusteredStages)
 
 message("parsing stage types")
 stageTypes <- unpackStageTypes(env)
@@ -117,7 +123,8 @@ regions <- do.call(rbind, lapply(1:nrow(chroms), function(chromI) {
         chroms[chromI, length],
         paste(stages, collapse = ','),
         paste(stageInsertFiles, collapse = ','),
-        paste(unlist(nInserts), collapse = ',')
+        paste(unlist(nInserts), collapse = ','),
+        env$MIN_SCORE
     ))
     setnames(regions, c(
         'chrom', 'start0', 'end1', 
@@ -145,49 +152,49 @@ rm(r, k, m)
 message("scaling regions as log2 fold-change from the mean of all stages") # row-wise normalization
 scaled <- do.call(rbind, mclapply(1:nrow(regions), function(i) {
     rpkm <- unlist(regions[i, ..stage_rpkm_cols])
-    mean_rpkm <- mean(rpkm)
-    data.table(t(log2(rpkm / mean_rpkm)))
+    mean_rpkm <- mean(rpkm, na.rm = TRUE)
+    data.table(t(log2(rpkm / mean_rpkm))) # can yield -Inf if stage rpkm == 0 in a region; must be handled downstream; mean_rpkm cannot be 0
 }, mc.cores = env$N_CPU))
 setnames(scaled, stage_scaled_cols)
 regions <- cbind(regions, scaled)
 rm(scaled)
 
 message("filtering regions based on max and delta RPKM")
-regions$min_RPKM <- apply(regions[, ..stage_rpkm_cols], 1, min)
-regions$max_RPKM <- apply(regions[, ..stage_rpkm_cols], 1, max)
+regions$min_RPKM <- apply(regions[, ..stage_rpkm_cols], 1, min, na.rm = TRUE)
+regions$max_RPKM <- apply(regions[, ..stage_rpkm_cols], 1, max, na.rm = TRUE)
 regions$delta_RPKM <- (regions$max_RPKM - regions$min_RPKM)
 nRegionIn <- nrow(regions)
-regions <- regions[
-    max_RPKM >= env$MIN_MAX_RPKM &
+regions[, passed_rpkm_filters := 
+    max_RPKM >= env$MIN_MAX_RPKM & 
     delta_RPKM / max_RPKM >= env$MIN_DELTA_MAX_RATIO
 ]
-nRegionsOut <- nrow(regions)
+nRegionsOut <- regions[, sum(passed_rpkm_filters, na.rm = TRUE)]
 message(paste(
     "  filtered", nRegionIn, "regions to", nRegionsOut, 
     "regions with max RPKM >=", env$MIN_MAX_RPKM, 
     "and delta / max RPKM >=", env$MIN_DELTA_MAX_RATIO
 ))  
 
-message("profiling region signals across stages")
+message("profiling region signals across stages") # profiling is done for all regions, not just those passing filters
 regions$stage_mean <- apply(regions[, ..stage_rpkm_cols], 1, function(rpkm) {
-    weightedMedian(1:nStages, rpkm, interpolate = TRUE) # numeric value at the centroid of the stage RPKM weights
+    weightedMedian(1:nStages, rpkm, interpolate = TRUE, na.rm = TRUE) # numeric value at the centroid of the stage RPKM weights
 })
 regions$mean_stage <- as.integer(round(regions$stage_mean)) # the single stage closest to the weighted median
 regions$max_stage  <- apply(regions[, ..stage_rpkm_cols], 1, which.max) # the single stage at the profile peak
 
-message("calculating region RPKM quantiles by index stage")
-regions[, ":="(
-        indexI = 1:.N,
-        quantile = as.integer(cut(
-            stage_mean, 
-            breaks = quantile(stage_mean, probs = seq(0, 1, 1 / env$N_CLUSTERS)), 
-            include.lowest = TRUE
-        ))
-    ), 
-    by = .(index_stage)
-]
+message("calculating region RPKM quantiles by index stage and filters") # quantile determined once with, once without, RPKM filters
+getQuantiles <- function(stage_means){
+    as.integer(cut(
+        stage_means, 
+        breaks = quantile(stage_means, probs = seq(0, 1, 1 / env$N_CLUSTERS), na.rm = TRUE), 
+        include.lowest = TRUE
+    ))
+}
+regions[, indexI := 1:.N, by = .(index_stage)]
+regions[,                            quantile_unfiltered := getQuantiles(stage_mean), by = .(index_stage)]
+regions[passed_rpkm_filters == TRUE, quantile_filtered   := getQuantiles(stage_mean), by = .(index_stage)]
 
-message("solving region umaps by index stage")
+message("solving region umaps by index stage") # umap applied after applying RPKM filters; unpassed regions will be NA
 # unscaled considers RPKM magnitude in clustering, scaled focuses on relative differences
 # euclidean metric matches kmeans below, correlation focuses purely on rise and fall patterns
 umap_types <- c(
@@ -195,7 +202,11 @@ umap_types <- c(
     "scaled_euclidean",
     "scaled_correlation"
 )
-index_stages <- regions[, unique(index_stage)] # includes "overlap_group", but some stages may not have had any regions passing filters
+index_stages <- regions[ # includes "overlap_group", but some stages may not have had any regions passing filters
+    passed_rpkm_filters == TRUE & 
+    index_stage %in% indexedStages, 
+    unique(index_stage)
+]
 for(umap_type in umap_types) { # use for loops since umap is parallelized
     message(paste0("  ", umap_type))
     umap1_col <- paste0(umap_type, "_umap1")
@@ -203,10 +214,10 @@ for(umap_type in umap_types) { # use for loops since umap is parallelized
     regions[[umap1_col]] <- NA
     regions[[umap2_col]] <- NA
     umap_type_parts <- strsplit(umap_type, '_')[[1]]
-    stage_cols <- if(umap_type_parts[1] == "scaled") stage_scaled_cols else stage_rpkm_cols
+    stage_cols <- if(umap_type_parts[1] == "scaled") clustered_scaled_cols else clustered_rpkm_cols
     for(index_stage_ in index_stages) {
         message(paste0("    ", index_stage_))
-        indexI <- regions[, index_stage == index_stage_]
+        indexI <- regions[, passed_rpkm_filters & index_stage == index_stage_]
         umap <- umap2(
             regions[indexI, ..stage_cols],
             n_neighbors = env$UMAP_N_NEIGHBORS, 
@@ -219,7 +230,7 @@ for(umap_type in umap_types) { # use for loops since umap is parallelized
     }
 }
 
-message(paste("clustering regions by index stage, k =", env$N_CLUSTERS))
+message(paste("clustering regions by index stage, k =", env$N_CLUSTERS)) # kmeans applied after applying RPKM filters; unpassed regions will be NA
 scalings <- c(
     "unscaled", # kmeans is always euclidean
     "scaled"
@@ -230,10 +241,10 @@ for (scaling in scalings){
     message(paste0("  ", scaling))
     kmeans_col <- paste0(scaling, "_cluster")
     regions[[kmeans_col]] <- NA_integer_
-    stage_cols <- if(scaling == "scaled") stage_scaled_cols else stage_rpkm_cols
+    stage_cols <- if(scaling == "scaled") clustered_scaled_cols else clustered_rpkm_cols
     for(index_stage_ in index_stages) {
         message(paste0("    ", index_stage_))
-        indexI <- regions[, index_stage == index_stage_]
+        indexI <- regions[, passed_rpkm_filters & index_stage == index_stage_]
         m <- as.matrix(regions[indexI, ..stage_cols])
         regions[[kmeans_col]][indexI] <- tryCatch(kmeans(
             m,
@@ -279,6 +290,8 @@ obj <- list(
         'UMAP_N_NEIGHBORS'
     )],
     stages            = stages,
+    clusteredStages   = clusteredStages,
+    indexedStages     = indexedStages,
     stageTypes        = stageTypes,
     reverseStageTypes = reverseStageTypes,
     chroms            = chroms,
