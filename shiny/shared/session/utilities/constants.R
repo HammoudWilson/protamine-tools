@@ -9,7 +9,7 @@ meanDinucleosomeFragSize <- 375
 genome_metadata <- list(
     mm39 = list(
         total_bp = 2723431143,
-        included_bp = 2542245999
+        included_bp = 2542229700
     )
 )
 

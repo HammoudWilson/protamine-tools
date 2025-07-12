@@ -1,21 +1,16 @@
 #----------------------------------------------------------------------
-# UI components for the dinucRegionsSelectorBox widget module
+# UI components for the dinucChainsSelectorBox widget module
 #----------------------------------------------------------------------
 
 # module ui function
-dinucRegionsSelectorBoxUI <- function(id, width = 4, includeUmap = TRUE) {
-
-    # initialize namespace
+dinucChainsSelectorBoxUI <- function(id, width = 4, includeUmap = TRUE) {
     ns <- NS(id)
-
-    # widget UI elements, populate as needed
-    # e.g. textInput(ns("xxx"), "XXX")
-    # see mdi-apps-framework documentation for useful MDI elements
     box(
         width = width,
         status = "primary",
         collapsible = FALSE,
         title = NULL,
+        style = "padding-left: 10px; padding-right: 10px;",
         selectInput(
             ns("index_stage"), 
             "Index Stage", 
@@ -26,7 +21,7 @@ dinucRegionsSelectorBoxUI <- function(id, width = 4, includeUmap = TRUE) {
         div(style = "margin-top: 5px; margin-bottom: 5px;", textInput(
             ns("user_filter"),
             "Where",
-            placeholder = "Enter a region filter expression, e.g., early_RS > 5",
+            placeholder = "Enter a filter expression, e.g., early_RS > 5",
             width = "100%"
         )),
         radioButtons(
@@ -46,13 +41,8 @@ dinucRegionsSelectorBoxUI <- function(id, width = 4, includeUmap = TRUE) {
             width = "100%"
         )) else NULL,
         checkboxInput(
-            ns("include_unpassed_regions"), 
-            "Include Unpassed Regions", 
-            value = FALSE
-        ),
-        checkboxInput(
-            ns("allow_partial_overlap"), 
-            "Allow Partial Overlap", 
+            ns("include_unpassed"), 
+            "Include Unpassed Intervals", 
             value = FALSE
         ),
         NULL

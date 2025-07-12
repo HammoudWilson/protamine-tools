@@ -30,13 +30,6 @@ packages: # required R packages
 # module-level settings
 #----------------------------------------------------------------------
 # settings:
-#     Dinuc_Regions:
-#         Min_Max_RPKM:
-#             type: numericInput
-#             value: 7.5
-        # N_Region_Clusters:
-        #     type: numericInput
-        #     value: 25
 #         <settingName>:
 #             type:   numericInput
 #             value:  1

@@ -31,7 +31,7 @@ settings:
         Table_Chromosome:
             type: textInput
             value: ""
-        Include_Unpassed_Regions:
+        Include_Unpassed:
             type:  checkboxInput
             value: false
     Footprint:

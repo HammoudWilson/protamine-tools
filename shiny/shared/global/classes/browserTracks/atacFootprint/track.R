@@ -82,20 +82,20 @@ build.atacFootprintTrack <- function(track, reference, coord, layout){
 
         # overplot the called nucleosome chains as rectangles
         if(config$Show_Nucleosome_Chains && config$Aggregate_By == "stage"){
-            regions <- paTss_ab_initio(sourceId)$regions[
+            intervals <- paTss_ab_initio(sourceId)$intervals[
                 chrom  == coord$chrom & 
                 start0 <  coordEnd1 & # wider than the plotted spans, includes the analysis flanks
                 end1   >= coordStart1
             ]
-            if(nrow(regions) > 0){
+            if(nrow(intervals) > 0){
 
                 # overplot the called overlap groups across all stages
-                regions_group <- regions[index_stage == "overlap_group"]
-                nGroups <- nrow(regions_group)
+                overlap_group <- intervals[index_stage == "overlap_group"]
+                nGroups <- nrow(overlap_group)
                 if(nGroups > 0) rect(
-                    regions_group$start0 + 1, 
+                    overlap_group$start0 + 1, 
                     rep(0, nGroups),
-                    regions_group$end1, 
+                    overlap_group$end1, 
                     rep(nSeries, nGroups), 
                     border = CONSTANTS$plotlyColors$grey,
                     lwd = config$Overlay_Line_Width
@@ -104,19 +104,19 @@ build.atacFootprintTrack <- function(track, reference, coord, layout){
                 # overplot the called nucleosome chains by stage
                 for(stageI in 1:nSeries){
                     yOffset <- nSeries - stageI
-                    regions_stage <- regions[index_stage == seriesNames[stageI]]
-                    nChains <- nrow(regions_stage)
+                    intervals_stage <- intervals[index_stage == seriesNames[stageI]]
+                    nChains <- nrow(intervals_stage)
                     if(nChains == 0) next
                     rect(
-                        regions_stage$start0 + 1, 
+                        intervals_stage$start0 + 1, 
                         rep(yOffset + 0.025, nChains),
-                        regions_stage$end1, 
+                        intervals_stage$end1, 
                         rep(yOffset + 0.975, nChains), 
                         border = CONSTANTS$plotlyColors$red,
                         lwd = config$Overlay_Line_Width
                     )
                     for(chainI in 1:nChains){
-                        nuc_starts0 <- as.integer(unlist(strsplit(regions_stage$nuc_starts0[chainI], ",")))
+                        nuc_starts0 <- as.integer(unlist(strsplit(intervals_stage$nuc_starts0[chainI], ",")))
                         nNucs <- length(nuc_starts0)
                         rect(
                             nuc_starts0 + 1, 
@@ -161,7 +161,7 @@ navigation.atacFootprintTrack <- function(track, session, id, browser){
 
     # initialize the trackNavs, including input observers to handle user actions
     # initTrackNav will fail silenty if setting Track/Show_Navigation is not set or =="hide"
-    navName <- initTrackNav(track, session, "dinuc_regions") # table reactive functions are provided below
+    navName <- initTrackNav(track, session, "dinuc_chains") # table reactive functions are provided below
 
     # as needed, create a reactive with the data to enumerate in the trackNavs
     if(Nav_Type == "plot"){
@@ -175,28 +175,30 @@ navigation.atacFootprintTrack <- function(track, session, id, browser){
             sourceId <- track$settings$items()[[1]]$Source_ID
             req(sourceId)
             Plot_Nav_Type <- track$settings$get("Navigation", "Plot_Nav_Type")
-            Include_Unpassed_Regions <- track$settings$get("Navigation", "Include_Unpassed_Regions")
-            regions <- paTss_dinuc_regions(sourceId, "overlap_group", Include_Unpassed_Regions)
+            Include_Unpassed <- track$settings$get("Navigation", "Include_Unpassed")
+            intervals <- paTss_dinuc_chains(sourceId, "overlap_group", Include_Unpassed)
+            startSpinner(session, message = "loading nav data")
             xy <- if(Plot_Nav_Type == "umap") {
                 plotArgs <- list(
                     cex = 0.5,
                     xlab = "UMAP 1",
                     ylab = "UMAP 2"
                 )
-                as.matrix(regions[order(stage_mean), .(scaled_correlation_umap1, scaled_correlation_umap2)])
+                as.matrix(intervals[order(stage_mean), .(scaled_correlation_umap1, scaled_correlation_umap2)])
             } else {
                 plotArgs <- list(
                     cex = 0.75,
                     xlab = "stage_mean",
                     ylab = "delta_RPKM"
                 )
-                as.matrix(regions[order(stage_mean), .(stage_mean, delta_RPKM)])
+                as.matrix(intervals[order(stage_mean), .(stage_mean, delta_RPKM)])
             }
-            nRegions <- nrow(regions)
-            color <- rainbow(nRegions / 0.9)[1:nRegions]
+            nIntervals <- nrow(intervals)
+            color <- rainbow(nIntervals / 0.9)[1:nIntervals]
             xlim <- getNavPlotRange(xy[, 1])
             ylim <- getNavPlotRange(xy[, 2])
             I <- sample(1:nrow(xy))
+            stopSpinner(session)
             list(
                 plotArgs = c(list(
                     x = xy[I, ],
@@ -212,7 +214,7 @@ navigation.atacFootprintTrack <- function(track, session, id, browser){
                     xlim = xlim,
                     ylim = ylim
                 ),
-                regions = regions[order(stage_mean)][I, .(chrom, start0, end1)]
+                intervals = intervals[order(stage_mean)][I, .(chrom, start0, end1)]
             )
         })
         tagList(
@@ -226,8 +228,8 @@ navigation.atacFootprintTrack <- function(track, session, id, browser){
                     req(coord, d)
                     dists <- rowSums((d$plotArgs$x - matrix(c(coord$x, coord$y), nrow(d$plotArgs$x), 2, byrow=TRUE))^2)
                     rowI <- which.min(dists)
-                    region = d$regions[rowI]
-                    handleTrackNavPlotClick(1, track, region$chrom, region$start0 + 1, region$end1)
+                    intervals = d$intervals[rowI]
+                    handleTrackNavPlotClick(1, track, intervals$chrom, intervals$start0 + 1, intervals$end1)
                 }
             )
         )
@@ -238,10 +240,13 @@ navigation.atacFootprintTrack <- function(track, session, id, browser){
             ai <- paTss_ab_initio(sourceId)
             Min_Max_RPKM <- track$settings$get("Navigation", "Table_Min_Max_RPKM") # filter the table a bit for faster loading
             Chromosome   <- track$settings$get("Navigation", "Table_Chromosome") %>% trimws()
-            Include_Unpassed_Regions <- track$settings$get("Navigation", "Include_Unpassed_Regions")
-            regions <- paTss_dinuc_regions(sourceId, "overlap_group", Include_Unpassed_Regions)[max_RPKM >= Min_Max_RPKM]
-            if (Chromosome != "") regions <- regions[chrom == Chromosome]
-            paTss_parseRegionsForTable(sourceId, regions, Include_Unpassed_Regions)
+            Include_Unpassed <- track$settings$get("Navigation", "Include_Unpassed")
+            intervals <- paTss_dinuc_chains(sourceId, "overlap_group", Include_Unpassed)[max_RPKM >= Min_Max_RPKM]
+            startSpinner(session, message = "loading nav data")
+            if (Chromosome != "") intervals <- intervals[chrom == Chromosome]
+            d <- paTss_parsePeaksForTable(intervals, ai$stages, Include_Unpassed)
+            stopSpinner(session)
+            d
         })
         tagList(
             trackNavTable(

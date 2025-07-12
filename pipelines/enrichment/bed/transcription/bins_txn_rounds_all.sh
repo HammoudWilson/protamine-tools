@@ -1,6 +1,5 @@
 
-# shared script for parsing active nascent transcription spans at different RPKM thresholds
-# MIN_RPKM and TXED_FILTER are set in the calling script
+# set any constants/environment variables needed by the script
 LOG10_M=100 # multiplier when rounding log10 RPKM values
 
 # declare the input file(s) used to create the output BED file
@@ -12,27 +11,20 @@ INPUT_FILE=${TASK_DIR}/atac_060225_v6.nascent_transcriptome_unstranded.bed.gz
 echo "input file: ${INPUT_FILE}" 1>&2
 zcat ${INPUT_FILE} | head 1>&2
 
-# filter to actively transcribed bins, round log10 RPKM values, and merge to output BED file
-# RPKM averaging is imperfect since adjacent txn units with different txn levels will be averaged together in one span
+# keep all bins as is with no merging, round log10 RPKM values
+# this provides the most accurate local transcription level for a small query region at the expense of a large file
 zcat ${INPUT_FILE} |
 awk '$1 != "chrom"' | # remove the header
 awk '$1 ~ /-'${PRIMARY_GENOME}'/' | # filter to the primary genome and correct chrom names
 sed 's/-'${PRIMARY_GENOME}'//' |
-awk -v MIN_RPKM=${MIN_RPKM} 'BEGIN{
-    OFS = "\t";
-} {
-    txed = $4 >= MIN_RPKM ? 1 : 0;
-    print $1, $2, $3, txed, $4;
-}' |
-bedtools groupby -g 1,4, -c 2,3,5 -o min,max,mean |
-awk -v M=${LOG10_M} -v TXED_FILTER=${TXED_FILTER} 'BEGIN{
+awk -v M=${LOG10_M} 'BEGIN{
     OFS = "\t";
     print "chrom", "start0", "end1", "name", "Log10_RPKM";
-} $2 == TXED_FILTER {
-    if($5 < 0.001) {
+} {
+    if($4 < 0.001) {
         log10_rpkm = -3;
     } else {
-        log10_rpkm = int(log($5)/log(10) * M + 0.5) / M;
+        log10_rpkm = int(log($4)/log(10) * M + 0.5) / M;
     }
-    print $1, $3, $4, ".", log10_rpkm;
+    print $1, $2, $3, ".", log10_rpkm;
 }'

@@ -66,6 +66,8 @@ table <- bufferedTableServer(
     input,
     tableData,
     selection = "single",
+    filterable = TRUE,
+    rownames = FALSE,
     options = list()
 )
 
@@ -74,6 +76,7 @@ table <- bufferedTableServer(
 #----------------------------------------------------------------------
 bed3Cols <- c("chrom", "start0", "end1")
 bed4Cols <- c(bed3Cols, "name")
+bed5Cols <- c(bed4Cols, "IGNORE")
 selectedBed <- reactive({
     selectedRow <- table$rows_selected()
     req(selectedRow)
@@ -82,12 +85,14 @@ selectedBed <- reactive({
 selectedBedData <- reactive({
     selectedBed <- selectedBed()
     req(selectedBed)
-    data <- fread(selectedBed$path, sep = "\t", header = TRUE)
+    data <- fread(selectedBed$path, sep = "\t")
+    # pipeline-produced files always have 5 columns, but allow for other BED files too
     if(ncol(data) == 3) {
         setnames(data, bed3Cols)
-        data[, name := "."]
+        data[, ":="(name = ".", IGNORE = 0.0)]
     } else if(ncol(data) == 4) {
         setnames(data, bed4Cols)
+        data[, ":="(IGNORE = 0.0)]
     } else {
         data <- data[, 1:5]
         setnames(data, c(bed4Cols, names(data)[5]))
@@ -132,7 +137,8 @@ list(
     path = reactive({ selectedBed()$path }),
     name = reactive({ selectedBed()$name }),
     data = selectedBedData,
-    metadata = regionsSummary
+    metadata = regionsSummary,
+    input = input
 )
 
 #----------------------------------------------------------------------

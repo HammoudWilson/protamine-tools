@@ -123,9 +123,10 @@ getSampleScores <- function(metadata, config, coord, scoreTypeName, dataType){ #
     )
 }
 getSampleScores_regions <- function(metadata, config, scoreTypeName, dataType){ # returns a list of sample-level score objects based on GC normalization
+    startSpinner(session, message = "getting bin overlaps")
     paScores_getCached(
         "bed_region_scores",
-        keyObject = list(config$sourceId, config$bedFileName, scoreTypeName, dataType),
+        keyObject = list(config$sourceId, config$bedData, scoreTypeName, dataType), # using bedData ensure uniqueness if file is recreated
         from = 'disk',
         createFn = function(...) {
             scoresDir <- trimws(config$Scores_Dir)
@@ -135,8 +136,8 @@ getSampleScores_regions <- function(metadata, config, scoreTypeName, dataType){ 
             bgzFile <- file.path(scoresDir, bgzFileName)
             req(file.exists(bgzFile))
             bins <- paScores_bins(config$sourceId) # remember, score bins are primary genome only
-            I <- getIncludedAutosomeBins_scores(bins)
-            d <- fread(
+            included_I <- getIncludedAutosomeBins_scores(bins)
+            included_bin_scores <- fread(
                 bgzFile, 
                 header = FALSE, 
                 sep = "\t",
@@ -147,19 +148,20 @@ getSampleScores_regions <- function(metadata, config, scoreTypeName, dataType){ 
                     "integer",   # end1
                     rep("numeric", length(scoreTable$colNames) - 3)
                 )
-            )[I]
+            )[included_I]
             overlaps <- foverlaps(
-                d,                # larger table, smaller intervals
-                config$bedData,   # keyed, smaller table, larger intervals
-                type = "any",     # detect any overlap
-                mult = "first",   # we only need to know if there is at least one overlap
-                nomatch = NA,     # keep non-matching rows
-                which = TRUE      # return indices instead of joined data
+                x = included_bin_scores, # larger table, smaller intervals
+                y = config$bedData,      # keyed, smaller table, larger intervals
+                type = "any",            # detect any overlap
+                mult = "first",          # we only need to know if there is at least one overlap
+                nomatch = NA,            # keep non-matching rows from x, a.k.a, i, i.e., the first data.table
+                which = TRUE             # return indices instead of joined data
             )
-            d[, hasOverlap := !is.na(overlaps)] 
-            d
+            # return all included bins with scores and a flag wether the bin overlapped any query region in bedData
+            included_bin_scores[, hasOverlap := !is.na(overlaps)] 
+            included_bin_scores
         },
-        spinnerMessage = paste("parsing overlaps")
+        spinnerMessage = paste("parsing bin overlaps")
     )
 }
 getSeriesAggNames <- function(metadata, config){

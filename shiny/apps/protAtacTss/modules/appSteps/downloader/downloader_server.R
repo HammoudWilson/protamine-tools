@@ -38,8 +38,8 @@ observeEvent(input$writeData, {
     req(sourceId)
 
     # collect tss ab initio calls
-    if(input$scoreType == "dinuc_regions") {
-        d <- paTss_ab_initio(sourceId)$regions
+    if(input$scoreType == "dinuc_chains") {
+        d <- paTss_ab_initio(sourceId)$intervals
 
     # collect collate bin scores
     } else {

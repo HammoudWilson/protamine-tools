@@ -3,7 +3,7 @@
 #----------------------------------------------------------------------
 
 # module ui function
-regionsBedTableUI <- function(id, width = 4) {
+regionsBedTableUI <- function(id, width = 4, exposePartialOverlap = FALSE) {
     
     # initialize namespace
     ns <- NS(id)
@@ -12,6 +12,18 @@ regionsBedTableUI <- function(id, width = 4) {
     column(
         width = width,
         style = "margin: 0; padding: 0;",
+        if(exposePartialOverlap) box(
+            width = 12,
+            status = "primary",
+            solidHeader = FALSE,
+            collapsible = FALSE,
+            style = "padding-left: 10px; padding-right: 10px;",
+            checkboxInput(
+                ns("allow_partial_overlap"), 
+                "Allow Partial Overlap", 
+                value = TRUE
+            )
+        ) else NULL,
         bufferedTableUI(
             ns("table"),
             title = "Enrichment BED Files",
@@ -27,6 +39,7 @@ regionsBedTableUI <- function(id, width = 4) {
             solidHeader = FALSE,
             collapsible = TRUE,
             collapsed = FALSE,
+            style = "padding-left: 10px; padding-right: 10px;",
             uiOutput(ns("regionsSummary"))
         )
     )

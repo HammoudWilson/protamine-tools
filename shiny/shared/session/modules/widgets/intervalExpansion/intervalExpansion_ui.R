@@ -1,20 +1,14 @@
 #----------------------------------------------------------------------
-# UI components for the regionExpansion widget module
+# UI components for the intervalExpansion widget module
 #----------------------------------------------------------------------
 
 # module ui function
-regionExpansionUI <- function(id) {
-
-    # initialize namespace
+intervalExpansionUI <- function(id) {
     ns <- NS(id)
-
-    # widget UI elements, populate as needed
-    # e.g. textInput(ns("xxx"), "XXX")
-    # see mdi-apps-framework documentation for useful MDI elements
     fluidRow(
         staticPlotBoxUI(
-            ns("regionProfilePlotBox"), 
-            "Selected Region Profile",
+            ns("profilePlotBox"), 
+            "Selected Interval Profile",
             width = 4,
             status = "primary",
             collapsible = TRUE,
@@ -22,8 +16,8 @@ regionExpansionUI <- function(id) {
             solidHeader = TRUE
         ),
         mdiInteractivePlotBoxUI(
-            ns("regionPlotBox"), 
-            "Selected Region Footprint",
+            ns("browserPlotBox"), 
+            "Selected Interval Footprint",
             width = 8,
             status = "primary",
             collapsible = TRUE,

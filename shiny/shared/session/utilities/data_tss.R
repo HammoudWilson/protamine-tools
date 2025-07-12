@@ -22,7 +22,7 @@ paTss_footprint <- function(sourceId){
     persistentCache[[filePath]]$data
 }
 
-# load ab_initio data
+# load ab_initio data, i.e., dinucleotide chains
 # 'chrom', 'start0', 'end1', 
 # 'index_stage', 
 # 'nuc_starts0', 'merge_types', 'dinuc_scores',
@@ -41,21 +41,23 @@ paTss_footprint <- function(sourceId){
 # 'scaled_correlation_umap1', 'scaled_correlation_umap2',
 # 'unscaled_cluster', 'scaled_cluster'
 paTss_ab_initio <- function(sourceId){
-    startSpinner(session, message = "loading nuc chains")
+    startSpinner(session, message = "loading dinuc chains")
     filePath <- loadPersistentFile(
         sourceId = sourceId, 
         contentFileType = "ab_initio", 
         ttl = CONSTANTS$ttl$month,
+        # force = TRUE,
         postProcess = function(ai){ # remove unused columns for cache efficiency
-            ai$regions[, ":="(
+            names(ai)[names(ai) == "regions"] <- "intervals" # rename to intervals for clarity in app code
+            ai$intervals[, ":="(
                 merge_types     = NULL,
                 dinuc_scores    = NULL,
                 index_nfr_score = NULL,
                 index_nuc_score = NULL
             )]
             for(stage in ai$stages){
-                ai$regions[[paste(stage, "score", sep = "_")]] <- NULL
-                ai$regions[[paste(stage, "count", sep = "_")]] <- NULL
+                ai$intervals[[paste(stage, "score", sep = "_")]] <- NULL
+                ai$intervals[[paste(stage, "count", sep = "_")]] <- NULL
             }
             ai
         }
@@ -64,36 +66,86 @@ paTss_ab_initio <- function(sourceId){
     persistentCache[[filePath]]$data
 }
 paTss_appRPKMCols <- c("stage_mean", "min_RPKM", "max_RPKM", "delta_RPKM")
-paTss_dinuc_regions <- function(sourceId, index_stage_, include_unpassed_regions){
-    startSpinner(session, message = paste("loading", index_stage_, "regions"))
+paTss_dinuc_chains <- function(sourceId, index_stage_, include_unpassed){
+    startSpinner(session, message = paste("loading", index_stage_, "chains"))
     x <- protaminerCache$get(
-        "paTss_dinuc_regions",
-        keyObject = list(sourceId, index_stage_, include_unpassed_regions),
+        "paTss_dinuc_chains",
+        keyObject = list(sourceId, index_stage_, include_unpassed),
         create = "asNeeded",
         createFn = function(...) {
-            startSpinner(session, message = paste("loading", index_stage_, "regions"))
+            startSpinner(session, message = paste("loading", index_stage_, "chains"))
             ai <- paTss_ab_initio(sourceId)
-            passed_rpkm_filters_ <- if(include_unpassed_regions) TRUE else ai$regions$passed_rpkm_filters
-            ai$regions[passed_rpkm_filters_ & index_stage == index_stage_]
+            passed_rpkm_filters_ <- if(include_unpassed) TRUE else ai$intervals$passed_rpkm_filters
+            intervals <- ai$intervals[passed_rpkm_filters_ & index_stage == index_stage_]
+            intervals[, indexI := 1:.N]
+            intervals
         }
     )
-    stopSpinner(session)
     x$value
 }
-paTss_parseRegionsForTable <- function(sourceId, regions, include_unpassed_regions){
-    ai <- paTss_ab_initio(sourceId)
-    stage_rpkm_cols <- paste(ai$stages, "rpkm", sep = "_")
-    if(!include_unpassed_regions) regions <- regions[passed_rpkm_filters == TRUE]
-    regions[, ":="(
-        mean_stage = ai$stages[mean_stage],
-        max_stage  = ai$stages[max_stage],
+
+# parse unfiltered peak overlaps
+paTss_interval_overlaps <- function(peaks, bedData, intervals, overlapType){
+    startSpinner(session, message = paste("loading overlaps"))
+    x <- protaminerCache$get(
+        "paTss_interval_overlaps",
+        keyObject = list(
+            peaks$input$include_unpassed,
+            bedData,
+            intervals,
+            overlapType
+        ),
+        create = "asNeeded",
+        from = "disk",
+        createFn = function(...) {
+            startSpinner(session, message = "finding overlaps")
+            bed3Cols   <- c("chrom", "start0", "end1")
+            clusterCol <- if(peaks$input$include_unpassed) "quantile_unfiltered" else "quantile_filtered"
+            intervalCols <- c(bed3Cols, "stage_mean", clusterCol, "indexI")
+            scoreCol <- names(bedData)[5]
+            bedCols    <- c(bed3Cols, scoreCol)
+            scores <- foverlaps(
+                x = intervals[, ..intervalCols],
+                y = bedData[, ..bedCols],
+                type = overlapType,   # any or within, see above
+                mult = "all",         # multiple y matches aggregated to a single value below
+                nomatch = NA,         # keep non-matching rows (for now)
+                which = FALSE         # return left outer-join of x and y
+            )[, 
+                {
+                    hasOverlap <- !is.na(start0[1])
+                    .(
+                        score      = if(hasOverlap) max(.SD[[scoreCol]], na.rm = TRUE) else NA_real_,
+                        hasOverlap = hasOverlap,
+                        cluster    = .SD[[clusterCol]][1],
+                        stage_mean = stage_mean[1]
+                    )
+                }, 
+                keyby = .(chrom, i.start0, i.end1)
+            ]
+            list(
+                scoreCol = scoreCol,
+                scores = scores
+            )
+        }
+    )
+    x$value
+}
+
+# load called peaks into a table, either dinuc chains or other called peaks, e.g. MACS2
+paTss_parsePeaksForTable <- function(peaks, stages, include_unpassed){
+    stage_rpkm_cols <- paste(stages, "rpkm", sep = "_")
+    if(!include_unpassed) peaks <- peaks[passed_rpkm_filters == TRUE]
+    peaks[, ":="(
+        mean_stage = stages[mean_stage],
+        max_stage  = stages[max_stage],
         passed     = passed_rpkm_filters,
-        quantile   = if(include_unpassed_regions) quantile_unfiltered else quantile_filtered
+        quantile   = if(include_unpassed) quantile_unfiltered else quantile_filtered
     )]
-    stage_rpkm <- regions[, .SD, .SDcols = stage_rpkm_cols]
-    setnames(stage_rpkm, ai$stages)
+    stage_rpkm <- peaks[, .SD, .SDcols = stage_rpkm_cols]
+    setnames(stage_rpkm, stages)
     cbind(
-        regions[, .SD, .SDcols = c(
+        peaks[, .SD, .SDcols = c(
             "chrom", "start0", "end1",
             "passed",
             "quantile", "scaled_cluster",

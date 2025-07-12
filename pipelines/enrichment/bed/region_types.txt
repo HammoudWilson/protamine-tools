@@ -1,10 +1,43 @@
-transcription/tss_rounds_active
-transcription/tss_rounds_scored
+# naming convention for regions is:
+#   regionClass/regionType == regionClass/spanType_scoreType_filtering
+# where:
+#   'regionClass' is used to group region BED files into folders, e.g. 'histone'
+#   'regionType' == spanType_scoreType_filtering is standarized to reveal:
+#       'spanType'  = the kind of span defined by each BED row, e.g., 'bins', 'TSS', 'peaks', etc.
+#                     set spanType to 'spans' for spans that retain no inherent biological meaning or technical definition
+#       'scoreType' = the nature of the score carried in BED score column 5, e.g., 'txn_rounds' for Pro-seq, 'fraction_gc', etc.
+#       'filtering' = whether/how the spans of type spanType were filterd for inclusion in the BED file, e.g., 'active'
+#                     set filtering to 'all' for unfiltered spans representing the whole genome, as used for score (not overlap) plots
+# examples:
+#   'genome/bins_fraction_gc_all' lists:
+#        1kb genome bins
+#        scored by bin fraction GC
+#        unfiltered, i.,e. bins across the entire included genome are found in the regions BED file
+#   'annotation/tss_txn_rounds_active' in class 'transcription' lists:
+#        TSS regions
+#        scored by Pro-seq txn in rounds
+#        filtered to active TSS only
 
-transcription/txn_spans_rounds_active_0.1
-transcription/txn_spans_rounds_active_0.5
-transcription/txn_spans_rounds_inactive_0.1
-transcription/txn_spans_rounds_scored
+# inherent properties of the genome irrespective of measured data
+genome/bins_fraction_gc_all
 
-genes/genic_rounds_txn
-genes/intergenic_rounds_txn
+# transcription starts sites derived from the annotation, scored (and filtered) by Pro-seq transcription
+annotation/tss_txn_rounds_all
+annotation/tss_txn_rounds_active
+
+# gene-based annotation intervals are called 'spans' not 'genes' because overlapping genes may be collapsed in single BED rows
+annotation/spans_txn_rounds_genic
+annotation/spans_txn_rounds_intergenic
+
+# in the 'transcription' class, 'spans' are merged sets of adjacent 'bins'
+transcription/bins_txn_rounds_all
+transcription/spans_txn_rounds_all
+transcription/spans_txn_rounds_active_0.1
+transcription/spans_txn_rounds_active_0.5
+transcription/spans_txn_rounds_inactive_0.1
+
+# here are examples I might expect for the 'histone' class
+# in this entry, 'peaks' and 'all' means that all H3K27me3 called _peaks_ in sperm data are included (not that the whole genome is represented)
+# histone/peaks_H3K27me3_sperm_all
+# in this entry, 'spans' and 'all' means that the entire included genome is present with H3K27me3 scores NOT restricted to just peaks
+# histone/spans_H3K27me3_sperm_all

@@ -1,5 +1,5 @@
 ---
-title: dinucRegionsSelectorBox
+title: dinucChainsSelectorBox
 parent: Widgets
 has_children: false
 nav_order: 10

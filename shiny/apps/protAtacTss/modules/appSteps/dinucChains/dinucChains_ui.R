@@ -1,15 +1,15 @@
 #----------------------------------------------------------------------
-# UI components for the dinucRegions appStep module
+# UI components for the dinucChains appStep module
 #----------------------------------------------------------------------
 
 # module ui function
-dinucRegionsUI <- function(id, options) {
+dinucChainsUI <- function(id, options) {
 
     # initialize namespace
     ns <- NS(id)
     
     # override missing options to module defaults
-    options <- setDefaultOptions(options, stepModuleInfo$dinucRegions)
+    options <- setDefaultOptions(options, stepModuleInfo$dinucChains)
 
     # return the UI contents
     standardSequentialTabItem(
@@ -35,8 +35,8 @@ dinucRegionsUI <- function(id, options) {
                 collapsible = FALSE,
                 inFluidRow = FALSE
             ),
-            dinucRegionsSelectorBoxUI(
-                ns("dinucRegions")
+            dinucChainsSelectorBoxUI(
+                ns("dinucChains")
             ),
             NULL
         ),
@@ -65,8 +65,8 @@ dinucRegionsUI <- function(id, options) {
             ),
             NULL
         ),
-        regionExpansionUI(
-            ns("regionExpansion")
+        intervalExpansionUI(
+            ns("intervalExpansion")
         ),
         NULL
     )

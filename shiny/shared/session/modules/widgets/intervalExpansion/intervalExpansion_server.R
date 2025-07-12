@@ -1,18 +1,18 @@
 #----------------------------------------------------------------------
-# server components for the regionExpansion widget module
+# server components for the intervalExpansion widget module
 #----------------------------------------------------------------------
 
 #----------------------------------------------------------------------
 # BEGIN MODULE SERVER
 #----------------------------------------------------------------------
-regionExpansionServer <- function(id, sourceId, dinuc) { 
+intervalExpansionServer <- function(id, peaks) { 
     moduleServer(id, function(input, output, session) {    
 #----------------------------------------------------------------------
 
 #----------------------------------------------------------------------
 # initialize module
 #----------------------------------------------------------------------
-module <- 'regionExpansion'
+module <- 'intervalExpansion'
 # settings <- activateMdiHeaderLinks( # uncomment as needed
 #     session,
 #     url = getDocumentationUrl("path/to/docs/README", domain = "xxx"), # for documentation
@@ -24,49 +24,47 @@ module <- 'regionExpansion'
 # )
 
 #----------------------------------------------------------------------
-# selected region profile plot
+# selected interval profile plot
 #----------------------------------------------------------------------
-selectedRegion <- reactiveVal(NULL)
-setSelectedRegion <- function(coord, d) {
+selectedInterval <- reactiveVal(NULL)
+setSelectedInterval <- function(coord, d) {
     dists <- rowSums((d$xy - matrix(c(coord$x, coord$y), nrow(d$xy), 2, byrow=TRUE))^2)
     rowI <- which.min(dists)
-    selectedRegion(list(
-        region = d$regions[rowI],
-        color  = d$color[rowI]
+    selectedInterval(list(
+        interval = d$intervals[rowI],
+        color    = d$color[rowI]
     ))
 }
-regionProfilePlotBox <- staticPlotBoxServer(
-    "regionProfilePlotBox",
+profilePlotBox <- staticPlotBoxServer(
+    "profilePlotBox",
     title = TRUE,
     create = function() {
-        sourceId <- sourceId()
-        req(sourceId)
-        ai <- paTss_ab_initio(sourceId)
-        d <- selectedRegion()
-        req(ai, d)
+        d <- selectedInterval()
+        req(d)
         startSpinner(session, message = "rendering profile")
-        nStages <- length(ai$stages)
-        stage_cols <- if(dinuc$input$rpkm_scaling == "scaled") {
-            paste(ai$stages, "scaled", sep = '_')
+        stages <- peaks$stages()
+        nStages <- length(stages)
+        stage_cols <- if(peaks$input$rpkm_scaling == "scaled") {
+            paste(stages, "scaled", sep = '_')
         } else {
-            paste(ai$stages, "rpkm", sep = '_')
+            paste(stages, "rpkm", sep = '_')
         }
-        y <- unlist(d$region[, .SD, .SDcols = stage_cols])
-        ylim <- if(dinuc$input$rpkm_scaling == "scaled") range(y) else c(0, max(y))
+        y <- unlist(d$interval[, .SD, .SDcols = stage_cols])
+        ylim <- if(peaks$input$rpkm_scaling == "scaled") range(y) else c(0, max(y))
         ylim <- ylim * 1.05
         par(mar = titledMar)
-        regionProfilePlotBox$initializeFrame(
+        profilePlotBox$initializeFrame(
             xlim = c(1, nStages),
             ylim = ylim,
             xlab = "",
-            ylab = if(dinuc$input$rpkm_scaling == "scaled") "log2(stage RPKM / mean RPKM)" else "RPKM",
+            ylab = if(peaks$input$rpkm_scaling == "scaled") "log2(stage RPKM / mean RPKM)" else "RPKM",
             xaxt = "n",
-            title = paste0(d$region$chrom, ":", d$region$start0, "-", d$region$end1)
+            title = paste0(d$interval$chrom, ":", d$interval$start0, "-", d$interval$end1)
         )
-        addStageXAxis(ai$stages, ylim)
-        if(dinuc$input$rpkm_scaling == "scaled") abline(h = 0, col = CONSTANTS$plotlyColors$grey)
-        abline(v = d$region$stage_mean, col = d$color, lty = 1)
-        regionProfilePlotBox$addLines(
+        addStageXAxis(stages, ylim)
+        if(peaks$input$rpkm_scaling == "scaled") abline(h = 0, col = CONSTANTS$plotlyColors$grey)
+        abline(v = d$interval$stage_mean, col = d$color, lty = 1)
+        profilePlotBox$addLines(
             x = 1:nStages,
             y = y,
             col = d$color,
@@ -77,14 +75,25 @@ regionProfilePlotBox <- staticPlotBoxServer(
 )
 
 #----------------------------------------------------------------------
-# selected region insert footprint plot
+# selected interval insert footprint plot
 #----------------------------------------------------------------------
-createRegionPlot <- function(settings, plotBox) {
-    region <- selectedRegion()$region
-    req(region)
-    startSpinner(session, message = "rendering region footprint")
-    padding_bp <- 250
-    coord <- list(chromosome = region$chrom, start = region$start0 + 1 - padding_bp, end = region$end1 + padding_bp)
+browserPlotSettings <- list(
+    Expansion = list(
+        Padding_bp = list(
+            type = "numericInput",
+            value = 1000,
+            min = 0,
+            max = 10000,
+            step = 100
+        )
+    )
+)
+createBrowserPlot <- function(settings, plotBox) {
+    interval <- selectedInterval()$interval
+    req(interval)
+    startSpinner(session, message = "rendering embedded browser")
+    padding_bp <- browserPlotBox$settings$get("Expansion", "Padding_bp")
+    coord <- list(chromosome = interval$chrom, start = interval$start0 + 1 - padding_bp, end = interval$end1 + padding_bp)
     coord$range <- c(coord$start, coord$end)
     coord$width <- coord$end - coord$start + 1
     app$browser$createBrowserPlot(
@@ -93,24 +102,25 @@ createRegionPlot <- function(settings, plotBox) {
         externalCoord = coord
     )$layout
 }
-regionPlotBox <- mdiInteractivePlotBoxServer(
-    "regionPlotBox",
+browserPlotBox <- mdiInteractivePlotBoxServer(
+    "browserPlotBox",
+    settings = browserPlotSettings,
     defaults = list(
         Plot_Frame = list(
-            Width_Inches = 8,
+            Width_Inches = 10,
             Height_Inches = 4
         )
     ),
-    create = function(...) createRegionPlot(..., regionPlotBox) # a function or reactive that creates the plot as a png file using settings and helpers
+    create = function(...) createBrowserPlot(..., browserPlotBox) # a function or reactive that creates the plot as a png file using settings and helpers
 )
 
 #----------------------------------------------------------------------
 # set return value, typically NULL or a list of reactives
 #----------------------------------------------------------------------
 list(
-    setSelectedRegion = setSelectedRegion,
-    regionProfilePlotBox = regionProfilePlotBox,
-    regionPlotBox = regionPlotBox
+    setSelectedInterval = setSelectedInterval,
+    profilePlotBox = profilePlotBox,
+    browserPlotBox = browserPlotBox
 )
 
 #----------------------------------------------------------------------

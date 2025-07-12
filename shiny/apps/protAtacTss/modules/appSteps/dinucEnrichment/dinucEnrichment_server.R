@@ -29,10 +29,72 @@ settings <- activateMdiHeaderLinks( # uncomment as needed
 # data package sources and source-level data objects derived from pipeline
 #----------------------------------------------------------------------
 sourceId <- dataSourceTableServer("source", selection = "single")
-dinuc <- dinucRegionsSelectorBoxServer("dinucRegions", sourceId)
-regionsBedTable <- regionsBedTableServer("regionsBedTable", sourceId)
-clusterProfilePlotBox <- clusterProfilePlotBoxServer("clusterProfilePlotBox", sourceId, dinuc)
-regionExpansion <- regionExpansionServer("regionExpansion", sourceId, dinuc)
+chains   <- dinucChainsSelectorBoxServer("dinucChains", sourceId)
+regionsBedTable       <- regionsBedTableServer("regionsBedTable", sourceId)
+clusterProfilePlotBox <- clusterProfilePlotBoxServer("clusterProfilePlotBox", chains)
+intervalExpansion     <- intervalExpansionServer("intervalExpansion", chains)
+
+#----------------------------------------------------------------------
+# overlap assessment of x (dinuc chains) vs. y (BED regions)
+#----------------------------------------------------------------------
+overlapType <- reactive({
+    # when allow_partial_overlap is FALSE, x must be completely contained within y
+    # i.e., dinuc chains must be completely contained within a single BED region
+    if(regionsBedTable$input$allow_partial_overlap) "any"
+    else "within"
+})
+unfilteredOverlaps <- reactive({
+    intervals <- chains$unfilteredIntervals()
+    bedData <- regionsBedTable$data()
+    req(intervals, bedData)
+    paTss_interval_overlaps(chains, bedData, intervals, overlapType())
+
+    # startSpinner(session, message = "finding overlaps")
+    # bed3Cols   <- c("chrom", "start0", "end1")
+    # clusterCol <- if(chains$input$include_unpassed) "quantile_unfiltered" else "quantile_filtered"
+    # intervalCols <- c(bed3Cols, "stage_mean", clusterCol, "indexI")
+    # scoreCol <- names(bedData)[5]
+    # bedCols    <- c(bed3Cols, scoreCol)
+    # scores <- foverlaps(
+    #     x = intervals[, ..intervalCols],
+    #     y = bedData[, ..bedCols],
+    #     type = overlapType(), # any or within, see above
+    #     mult = "all",         # multiple y matches aggregated to a single value below
+    #     nomatch = NA,         # keep non-matching rows (for now)
+    #     which = FALSE         # return left outer-join of x and y
+    # )[, 
+    #     {
+    #         hasOverlap <- !is.na(start0[1])
+    #         .(
+    #             score      = if(hasOverlap) max(.SD[[scoreCol]], na.rm = TRUE) else NA_real_,
+    #             hasOverlap = hasOverlap,
+    #             cluster    = .SD[[clusterCol]][1],
+    #             stage_mean = stage_mean[1]
+    #         )
+    #     }, 
+    #     keyby = .(chrom, i.start0, i.end1)
+    # ]
+    # list(
+    #     scoreCol = scoreCol,
+    #     scores = scores
+    # )
+})
+overlaps <- reactive({
+    d <- c(
+        clusterProfilePlotBox$data(),
+        unfilteredOverlaps()
+    )
+    req(d)
+    startSpinner(session, message = "filtering overlaps")
+    d$scores <- d$scores[chains$intervals()[, indexI]]
+    d$overlapSummary <- paste(
+        format(sum(d$scores$hasOverlap), big.mark = ","), 
+        "of", 
+        format(nrow(d$scores), big.mark = ","),
+        "peaks with BED overlap"
+    )
+    d
+})
 
 #----------------------------------------------------------------------
 # overlap (fraction) enrichment plot
@@ -41,29 +103,26 @@ overlapPlotSettings <- list(
     Enrichment = list(
         Enrichment_X_Axis = list(
             type = "selectInput",
-            choices = c("quantile", "stage_mean"),
+            choices = c("stage_mean", "quantile"),
             value = "stage_mean"
         )
     )
 )
 overlapPlotData <- reactive({
-    d <- clusterProfilePlotBox$data()
-    bedData <- regionsBedTable$data()
-    req(d, bedData)
-    startSpinner(session, message = "getting overlaps")
-    overlaps <- foverlaps(
-        d$regions,        # larger table, smaller intervals
-        bedData,          # keyed, smaller table, larger intervals
-        type = "any",     # detect any overlap
-        mult = "first",   # we only need to know if there is at least one overlap
-        nomatch = NA,     # keep non-matching rows
-        which = TRUE      # return indices instead of joined data
-    )
-    d$regions[, hasOverlap := !is.na(overlaps)] 
-    d$fractions <- d$regions[, .(
-        frac = sum(hasOverlap) / .N,
-        stage_mean = mean(stage_mean, na.rm = TRUE)
-    ), keyby = c(d$clusterCol)]
+    d <- overlaps()
+    clusters <- d$scores[, .(
+        stage_mean   = mean(stage_mean, na.rm = TRUE),
+        frac_overlap = sum(hasOverlap) / .N
+    ), keyby = .(cluster)]
+    if(overlapPlotBox$settings$get("Enrichment", "Enrichment_X_Axis") == "quantile") {
+        d$xy   <- as.matrix(clusters[, .(cluster,    frac_overlap)])
+        d$xlim <- c(0.5, d$nClusters + 0.5)
+        d$xlab <- d$clusterType
+    } else {
+        d$xy   <- as.matrix(clusters[, .(stage_mean, frac_overlap)])
+        d$xlim <- c(1, d$nStages)
+        d$xlab <- "Stage Mean"
+    }
     d
 })
 overlapPlotBox <- staticPlotBoxServer(
@@ -73,26 +132,24 @@ overlapPlotBox <- staticPlotBoxServer(
         d <- overlapPlotData()
         bedMetadata <- regionsBedTable$metadata()
         req(d, bedMetadata)
-        startSpinner(session, message = "rendering overlap")
-        isQuantile <- overlapPlotBox$settings$get("Enrichment", "Enrichment_X_Axis") == "quantile"
+        startSpinner(session, message = "rendering fractions")
         par(mar = titledMar)
         overlapPlotBox$initializeFrame(
-            xlim = if(isQuantile) c(0.5, d$nClusters + 0.5) else c(1, d$nStages),
-            ylim = c(0, max(d$fractions$frac, na.rm = TRUE) * 1.05),
-            xlab = if(isQuantile) d$clusterType else "Stage Mean",
-            ylab = "Fraction Overlapping BED"
+            xlim = d$xlim,
+            ylim = c(0, max(d$xy[, 2], bedMetadata$fraction_of_genome, na.rm = TRUE) * 1.05),
+            xlab = d$xlab,
+            ylab = "Fraction Overlapping BED",
+            title = d$overlapSummary
         )
         abline(h = bedMetadata$fraction_of_genome, col = CONSTANTS$plotlyColors$grey, lty = 2)
-        x <- if(isQuantile) 1:d$nClusters else d$fractions$stage_mean
-        y <- d$fractions$frac
         overlapPlotBox$addLines(
-            x = x,
-            y = y,
+            x = d$xy[, 1],
+            y = d$xy[, 2],
             col = CONSTANTS$plotlyColors$grey
         )
         overlapPlotBox$addPoints(
-            x = x,
-            y = y,
+            x = d$xy[, 1],
+            y = d$xy[, 2],
             col = d$colors,
             pch = 19,
             cex = 1.5
@@ -106,11 +163,6 @@ overlapPlotBox <- staticPlotBoxServer(
 #----------------------------------------------------------------------
 scorePlotSettings <- list(
     Enrichment = list(
-        Missing_Overlap_Score = list(
-            type = "selectInput",
-            choices = c("zero", "omit"),
-            value = "omit"
-        ),
         Invert_Overlaps = list(
             type = "checkboxInput",
             value = FALSE
@@ -118,50 +170,19 @@ scorePlotSettings <- list(
     )
 )
 scorePlotData <- reactive({
-    d <- clusterProfilePlotBox$data()
-    bedData <- regionsBedTable$data()
-    req(d, bedData, ncol(bedData) >= 5)
-    startSpinner(session, message = "getting scores")
-    regionCols <- c("chrom", "start0", "end1", "stage_mean", d$clusterCol)
-    d$scoreCol <- names(bedData)[5]
-    overlaps <- foverlaps(
-        d$regions[, ..regionCols], # larger table, smaller intervals
-        bedData[, c(1:3, 5)],      # keyed, smaller table, larger intervals
-        type = "any",  # detect any overlap
-        mult = "all",  # multiple span matches aggregated to a single value below
-        nomatch = NA,  # keep non-matching rows (for now)
-        which = FALSE  # return a joined data frame
-    )
-    naScore <- if(scorePlotBox$settings$get("Enrichment", "Missing_Overlap_Score") == "zero") 0.0 else NA_real_
-    d$scores <- overlaps[, {
-        hasOverlap <- !is.na(start0[1]) && (
-            dinuc$input$allow_partial_overlap ||
-            any(i.start0 >= start0 & i.end1 <= end1)
-        )
-        .(
-            score = if(hasOverlap) {
-                ss <- if(dinuc$input$allow_partial_overlap) .SD[[d$scoreCol]] else mapply(function(s0, e1, s) {
-                    if(i.start0 >= s0 & i.end1 <= e1) s else NA_real_
-                }, start0, end1, .SD[[d$scoreCol]])
-                max(ss, na.rm = TRUE) 
-            } else naScore,
-            hasOverlap = hasOverlap,
-            cluster    = .SD[[d$clusterCol]][1],
-            stage_mean = stage_mean[1]
-        )
-    }, keyby = .(chrom, i.start0, i.end1)]
-    if(scorePlotBox$settings$get("Enrichment", "Invert_Overlaps")){
+    d <- overlaps()
+    d$scores    <- d$scores[order(stage_mean)]
+    d$intervals <- d$intervals[order(stage_mean)]
+    if(scorePlotBox$settings$get("Enrichment", "Invert_Overlaps")) {
         d$scores[, score := ifelse(hasOverlap, NA_real_, runif(.N, 0, 1))]
+        d$scoreCol <- "Random Score"
     }
-    d$regions <- d$regions[order(stage_mean)]
-    d$scores  <- d$scores[ order(stage_mean)]
-    d$scores[, color := paRainbow(.N, 0.5)]
+    d$xy <- as.matrix(d$scores[, .(stage_mean, score)])
+    d$color <- paRainbow(nrow(d$scores), 0.5)
     d$medians <- d$scores[, .(
         stage_mean = median(stage_mean, na.rm = TRUE),
         score      = median(score, na.rm = TRUE)
-    ), keyby = cluster]
-    d$xy <- as.matrix(d$scores[, .(stage_mean, score)])
-    d$color <- d$scores$color
+    ), keyby = .(cluster)]
     d
 })
 scorePlotBox <- mdiInteractivePlotBoxServer(
@@ -185,20 +206,16 @@ scorePlotBox <- mdiInteractivePlotBoxServer(
             mar = titledMar
         ) %>% scorePlotBox$initializeFrame(
             xlim = c(1, d$nStages),
-            ylim = range(d$scores$score, na.rm = TRUE) * 1.05,
+            ylim = range(d$xy[, 2], na.rm = TRUE) * 1.05,
             xlab = "Stage Mean",
             ylab = gsub("_", " ", d$scoreCol),
-            title = paste(
-                format(sum(d$scores$hasOverlap), big.mark = ","), 
-                "of", 
-                format(nrow(d$scores), big.mark = ","),
-                "dinucs"
-            )
+            title = d$overlapSummary
         )
+        randomOrder <- sample(1:nrow(d$xy))
         scorePlotBox$addPoints(
-            x   = d$scores$stage_mean,
-            y   = d$scores$score,
-            col = d$scores$color
+            x   = d$xy[randomOrder, 1],
+            y   = d$xy[randomOrder, 2],
+            col = d$color[randomOrder]
         )
         scorePlotBox$addLines(
             x   = d$medians$stage_mean,
@@ -210,7 +227,7 @@ scorePlotBox <- mdiInteractivePlotBoxServer(
     }
 )
 observeEvent(scorePlotBox$plot$click(), {
-    regionExpansion$setSelectedRegion(scorePlotBox$plot$click()$coord, scorePlotData())
+    intervalExpansion$setSelectedInterval(scorePlotBox$plot$click()$coord, scorePlotData())
 })
 
 #----------------------------------------------------------------------
@@ -223,8 +240,8 @@ bookmarkObserver <- observe({
     if(!is.null(bm$outcomes)){
         clusterProfilePlotBox$settings$replace(bm$outcomes$clusterProfilePlotBoxSettings)
         scorePlotBox$settings$replace(bm$outcomes$scorePlotBoxSettings)
-        regionExpansion$regionProfilePlotBox$settings$replace(bm$outcomes$regionProfilePlotBoxSettings)
-        regionExpansion$regionPlotBox$settings$replace(bm$outcomes$regionPlotBoxSettings)
+        intervalExpansion$profilePlotBox$settings$replace(bm$outcomes$profilePlotBoxSettings)
+        intervalExpansion$browserPlotBox$settings$replace(bm$outcomes$browserPlotBoxSettings)
     }
     # updateTextInput(session, 'xxx', value = bm$outcomes$xxx)
     # xxx <- bm$outcomes$xxx
@@ -240,8 +257,8 @@ list(
     outcomes = list(
         clusterProfilePlotBoxSettings = clusterProfilePlotBox$settings$all_,
         scorePlotBoxSettings = scorePlotBox$settings$all_,
-        regionProfilePlotBoxSettings = regionExpansion$regionProfilePlotBox$settings$all_,
-        regionPlotBoxSettings = regionExpansion$regionPlotBox$settings$all_
+        profilePlotBoxSettings = intervalExpansion$profilePlotBox$settings$all_,
+        browserPlotBoxSettings = intervalExpansion$browserPlotBox$settings$all_
     ),
     # isReady = reactive({ getStepReadiness(options$source, ...) }),
     NULL

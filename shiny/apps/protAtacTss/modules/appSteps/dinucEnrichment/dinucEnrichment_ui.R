@@ -38,8 +38,8 @@ dinucEnrichmentUI <- function(id, options) {
                     collapsible = FALSE,
                     inFluidRow = FALSE
                 ),
-                dinucRegionsSelectorBoxUI(
-                    ns("dinucRegions"), 
+                dinucChainsSelectorBoxUI(
+                    ns("dinucChains"), 
                     width = 6, 
                     includeUmap = FALSE
                 ),
@@ -68,7 +68,8 @@ dinucEnrichmentUI <- function(id, options) {
                 style = "margin: 0; padding: 0;",
                 regionsBedTableUI(
                     ns("regionsBedTable"),
-                    width = 12
+                    width = 12,
+                    exposePartialOverlap = TRUE
                 ),
                 clusterProfilePlotBoxUI(
                     ns("clusterProfilePlotBox"), 
@@ -78,8 +79,8 @@ dinucEnrichmentUI <- function(id, options) {
             ),
             NULL
         ),
-        regionExpansionUI(
-            ns("regionExpansion")
+        intervalExpansionUI(
+            ns("intervalExpansion")
         ),
         NULL
     )

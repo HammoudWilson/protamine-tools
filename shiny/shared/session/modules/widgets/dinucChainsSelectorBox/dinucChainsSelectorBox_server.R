@@ -1,18 +1,18 @@
 #----------------------------------------------------------------------
-# server components for the dinucRegionsSelectorBox widget module
+# server components for the dinucChainsSelectorBox widget module
 #----------------------------------------------------------------------
 
 #----------------------------------------------------------------------
 # BEGIN MODULE SERVER
 #----------------------------------------------------------------------
-dinucRegionsSelectorBoxServer <- function(id, sourceId) { 
+dinucChainsSelectorBoxServer <- function(id, sourceId) { 
     moduleServer(id, function(input, output, session) {    
 #----------------------------------------------------------------------
 
 #----------------------------------------------------------------------
 # initialize module
 #----------------------------------------------------------------------
-module <- 'dinucRegionsSelectorBox'
+module <- 'dinucChainsSelectorBox'
 # settings <- activateMdiHeaderLinks( # uncomment as needed
 #     session,
 #     url = getDocumentationUrl("path/to/docs/README", domain = "xxx"), # for documentation
@@ -24,7 +24,7 @@ module <- 'dinucRegionsSelectorBox'
 # )
 
 #----------------------------------------------------------------------
-# data source to region parsing
+# data source parsing
 #----------------------------------------------------------------------
 stages <- reactive({
     sourceId <- sourceId()
@@ -42,7 +42,7 @@ observeEvent(stages(), {
         selected = "overlap_group"
     )
 })
-applyUserRegionFilter <- function(regions) {
+applyUserFilter <- function(intervals) {
     stages <- stages()
     req(stages)
     code <- trimws(input$user_filter)
@@ -50,31 +50,36 @@ applyUserRegionFilter <- function(regions) {
         for(stage in stages) code <- gsub(stage, paste0(stage, "_rpkm"), code)
         code <- gsub("delta_rpkm", "delta_RPKM", code)
         code <- gsub("max_rpkm", "max_RPKM", code)
-        tryCatch(regions[eval(parse(text = code))], error = function(e) NULL)
+        tryCatch(intervals[eval(parse(text = code))], error = function(e) NULL)
     } else {
-        regions
+        intervals
     }
 }
-regions <- reactive({
+unfilteredIntervals <- reactive({
     sourceId <- sourceId()
     req(sourceId)
-    paTss_dinuc_regions(sourceId, input$index_stage, input$include_unpassed_regions) %>%
-    applyUserRegionFilter()
+    paTss_dinuc_chains(sourceId, input$index_stage, input$include_unpassed)
 })
-passedRegions <- reactive({ # for things only available for passed regions
+intervals <- reactive({
+    unfilteredIntervals() %>%
+    applyUserFilter()
+})
+passedIntervals <- reactive({ # for things only available when RPKM passed
     sourceId <- sourceId()
     req(sourceId)
-    paTss_dinuc_regions(sourceId, input$index_stage, FALSE) %>%
-    applyUserRegionFilter()
+    paTss_dinuc_chains(sourceId, input$index_stage, FALSE) %>%
+    applyUserFilter()
 })
 
 #----------------------------------------------------------------------
 # set return value, typically NULL or a list of reactives
 #----------------------------------------------------------------------
 list(
-    stages  = stages,
-    regions = regions,
-    passedRegions = passedRegions,
+    stages    = stages,
+    unfilteredIntervals = unfilteredIntervals,
+    intervals = intervals,
+    passedIntervals = passedIntervals,
+    applyUserFilter = applyUserFilter,
     input = input
 )
 

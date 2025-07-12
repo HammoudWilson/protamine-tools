@@ -57,6 +57,7 @@ regionEnrichmentUI <- function(id, options) {
                     solidHeader = FALSE,
                     collapsible = FALSE,
                     width = 12,
+                    style = "padding-left: 10px; padding-right: 10px;",
                     radioButtons(
                         ns("enrichmentScoreType"),
                         "Enrichment Score Type",

@@ -3,7 +3,7 @@
 # app metadata
 #----------------------------------------------------------------------
 name: protAtacTss
-description: "Visualize protamine ATAC-seq data over multiple samples in TSS regions and footprints"
+description: "Visualize protamine ATAC-seq data over multiple samples in TSS and footprints"
 version: v0.0.0
 # suiteVersions:
 #     suiteName: v0.0.0
@@ -41,8 +41,8 @@ appSteps:
         module: sourceFileUpload
     vPlots:
         module: vPlots
-    dinucRegions:
-        module: dinucRegions
+    dinucChains:
+        module: dinucChains
     dinucEnrichment:
         module: dinucEnrichment
     browser:

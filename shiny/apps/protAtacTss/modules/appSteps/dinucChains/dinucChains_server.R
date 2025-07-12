@@ -1,18 +1,18 @@
 #----------------------------------------------------------------------
-# server components for the dinucRegions appStep module
+# server components for the dinucChains appStep module
 #----------------------------------------------------------------------
 
 #----------------------------------------------------------------------
 # BEGIN MODULE SERVER
 #----------------------------------------------------------------------
-dinucRegionsServer <- function(id, options, bookmark, locks) { 
+dinucChainsServer <- function(id, options, bookmark, locks) { 
     moduleServer(id, function(input, output, session) {    
 #----------------------------------------------------------------------
 
 #----------------------------------------------------------------------
 # initialize module
 #----------------------------------------------------------------------
-module <- 'dinucRegions'
+module <- 'dinucChains'
 appStepDir <- getAppStepDir(module)
 options <- setDefaultOptions(options, stepModuleInfo[[module]])
 settings <- activateMdiHeaderLinks( # uncomment as needed
@@ -29,9 +29,9 @@ settings <- activateMdiHeaderLinks( # uncomment as needed
 # data package sources and source-level data objects derived from pipeline
 #----------------------------------------------------------------------
 sourceId <- dataSourceTableServer("source", selection = "single")
-dinuc <- dinucRegionsSelectorBoxServer("dinucRegions", sourceId)
-clusterProfilePlotBox <- clusterProfilePlotBoxServer("clusterProfilePlotBox", sourceId, dinuc)
-regionExpansion <- regionExpansionServer("regionExpansion", sourceId, dinuc)
+chains   <- dinucChainsSelectorBoxServer("dinucChains", sourceId)
+clusterProfilePlotBox <- clusterProfilePlotBoxServer("clusterProfilePlotBox", chains)
+intervalExpansion     <- intervalExpansionServer("intervalExpansion", chains)
 
 #----------------------------------------------------------------------
 # interactive correlation plot
@@ -51,19 +51,19 @@ correlationPlotSettings <- list(
     )
 )
 correlationPlotData <- reactive({
-    stages <- dinuc$stages()
-    regions <- dinuc$regions()
-    req(stages, regions)
+    intervals <- chains$intervals()
+    stages    <- chains$stages()
+    req(intervals, stages)
     startSpinner(session, message = "loading correlation")
-    regions <- regions[order(stage_mean)]
+    intervals <- intervals[order(stage_mean)]
     x_axis <- correlationPlotBox$settings$get("Correlation", "X_Axis")
     y_axis <- correlationPlotBox$settings$get("Correlation", "Y_Axis")
     list(
         x_axis = x_axis,
         y_axis = y_axis,
-        xy = as.matrix(regions[, .SD, .SDcols = c(x_axis, y_axis)]),
-        regions = regions,
-        color = paRainbow(nrow(regions)), 
+        xy = as.matrix(intervals[, .SD, .SDcols = c(x_axis, y_axis)]),
+        intervals = intervals,
+        color = paRainbow(nrow(intervals)),
         stages = stages
     )
 })
@@ -87,14 +87,14 @@ createCorrelationPlot <- function(settings, plotBox){
         ylab = d$y_axis,
         xaxs = "i",
         yaxs = "i",
-        title = paste0(dinuc$input$index_stage, " (", format(nrow(d$xy), big.mark = ","), ")"),
+        title = paste0(chains$input$index_stage, " (", format(nrow(d$xy), big.mark = ","), ")"),
         cex.main = 1.05
     )
-    I <- sample(1:nrow(d$xy))
+    randomOrder <- sample(1:nrow(d$xy))
     plotBox$addPoints(
-        x = d$xy[I, 1],
-        y = d$xy[I, 2],
-        col = d$color[I]
+        x = d$xy[randomOrder, 1],
+        y = d$xy[randomOrder, 2],
+        col = d$color[randomOrder]
     )
     stopSpinner(session)
     plotBox$finishPng(layout)
@@ -113,23 +113,23 @@ correlationPlotBox <- mdiInteractivePlotBoxServer(
     create = function(...) createCorrelationPlot(..., correlationPlotBox)
 )
 observeEvent(correlationPlotBox$plot$click(), {
-    regionExpansion$setSelectedRegion(correlationPlotBox$plot$click()$coord, correlationPlotData())
+    intervalExpansion$setSelectedInterval(correlationPlotBox$plot$click()$coord, correlationPlotData())
 })
 
 #----------------------------------------------------------------------
 # interactive umap plot
 #----------------------------------------------------------------------
 umapPlotData <- reactive({
-    regions <- dinuc$passedRegions()
-    req(regions)
+    intervals <- chains$passedIntervals()
+    req(intervals)
     startSpinner(session, message = "loading umap data")
-    umap1_col <- paste(dinuc$input$rpkm_scaling, dinuc$input$umap_metric, "umap1", sep = "_")
-    umap2_col <- paste(dinuc$input$rpkm_scaling, dinuc$input$umap_metric, "umap2", sep = "_")
-    regions <- regions[order(stage_mean)]
+    umap1_col <- paste(chains$input$rpkm_scaling, chains$input$umap_metric, "umap1", sep = "_")
+    umap2_col <- paste(chains$input$rpkm_scaling, chains$input$umap_metric, "umap2", sep = "_")
+    intervals <- intervals[order(stage_mean)]
     list(
-        xy      = regions[, .SD, .SDcols = c(umap1_col, umap2_col)],
-        regions = regions,
-        color   = paRainbow(nrow(regions))
+        xy        = as.matrix(intervals[, .SD, .SDcols = c(umap1_col, umap2_col)]),
+        intervals = intervals,
+        color     = paRainbow(nrow(intervals))
     )
 })
 createUmapPlot <- function(settings, plotBox){
@@ -143,14 +143,18 @@ createUmapPlot <- function(settings, plotBox){
         ylim = range(d$xy[, 2]),
         xlab = "UMAP 1",
         ylab = "UMAP 2",
-        title = paste0(paste(dinuc$input$index_stage, dinuc$input$rpkm_scaling, dinuc$input$umap_metric), " (", format(nrow(d$xy), big.mark = ","), ")"),
+        title = paste0(paste(
+            chains$input$index_stage, 
+            chains$input$rpkm_scaling, 
+            chains$input$umap_metric
+        ), " (", format(nrow(d$xy), big.mark = ","), ")"),
         cex.main = 1.05
     )
-    I <- sample(1:nrow(d$xy))
+    randomOrder <- sample(1:nrow(d$xy))
     plotBox$addPoints(
-        x = d$xy[I][[1]],
-        y = d$xy[I][[2]],
-        col = d$color[I]
+        x = d$xy[randomOrder, 1],
+        y = d$xy[randomOrder, 2],
+        col = d$color[randomOrder]
     )
     stopSpinner(session)
     plotBox$finishPng(layout)
@@ -168,7 +172,7 @@ umapPlotBox <- mdiInteractivePlotBoxServer(
     create = function(...) createUmapPlot(..., umapPlotBox) # a function or reactive that creates the plot as a png file using settings and helpers
 )
 observeEvent(umapPlotBox$plot$click(), {
-    regionExpansion$setSelectedRegion(umapPlotBox$plot$click()$coord, umapPlotData())
+    intervalExpansion$setSelectedInterval(umapPlotBox$plot$click()$coord, umapPlotData())
 })
 
 #----------------------------------------------------------------------
@@ -182,8 +186,8 @@ bookmarkObserver <- observe({
         correlationPlotBox$settings$replace(bm$outcomes$correlationPlotBoxSettings)
         umapPlotBox$settings$replace(bm$outcomes$umapPlotBoxSettings)
         clusterProfilePlotBox$settings$replace(bm$outcomes$clusterProfilePlotBoxSettings)
-        regionExpansion$regionProfilePlotBox$settings$replace(bm$outcomes$regionProfilePlotBoxSettings)
-        regionExpansion$regionPlotBox$settings$replace(bm$outcomes$regionPlotBoxSettings)
+        intervalExpansion$profilePlotBox$settings$replace(bm$outcomes$profilePlotBoxSettings)
+        intervalExpansion$browserPlotBox$settings$replace(bm$outcomes$browserPlotBoxSettings)
     }
     # updateTextInput(session, 'xxx', value = bm$outcomes$xxx)
     # xxx <- bm$outcomes$xxx
@@ -200,8 +204,8 @@ list(
         correlationPlotBoxSettings = correlationPlotBox$settings$all_,
         umapPlotBoxSettings = umapPlotBox$settings$all_,
         clusterProfilePlotBoxSettings = clusterProfilePlotBox$settings$all_,
-        regionProfilePlotBoxSettings = regionExpansion$regionProfilePlotBox$settings$all_,
-        regionPlotBoxSettings = regionExpansion$regionPlotBox$settings$all_
+        profilePlotBoxSettings = intervalExpansion$profilePlotBox$settings$all_,
+        browserPlotBoxSettings = intervalExpansion$browserPlotBox$settings$all_
     ),
     # isReady = reactive({ getStepReadiness(options$source, ...) }),
     NULL

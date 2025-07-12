@@ -5,7 +5,7 @@
 #----------------------------------------------------------------------
 # BEGIN MODULE SERVER
 #----------------------------------------------------------------------
-clusterProfilePlotBoxServer <- function(id, sourceId, dinuc) { 
+clusterProfilePlotBoxServer <- function(id, peaks) { 
     moduleServer(id, function(input, output, session) {    
 #----------------------------------------------------------------------
 
@@ -40,36 +40,33 @@ clusterProfilePlotSettings <- list(
         )
     )
 )
-stageColMean <- function(d){ # drop region+stage where RPKM==0 led to scaled log2 fold-change of -Inf, ~always late_ES
-    if(dinuc$input$rpkm_scaling == "scaled") d <- d[is.finite(d)]
+stageColMean <- function(d){ # drop interval+stage where RPKM==0 led to scaled log2 fold-change of -Inf, ~always late_ES
+    if(peaks$input$rpkm_scaling == "scaled") d <- d[is.finite(d)]
     if(length(d) == 0) NA_real_ else mean(d, na.rm = TRUE)
 }
 clusterAggregates <- reactive({
-    sourceId <- sourceId()
-    req(sourceId)
-    ai <- paTss_ab_initio(sourceId)
-    req(ai)
     Cluster_By <- "quantile" # plot$settings$get("Clustering", "Cluster_By")
-    regions <- if(Cluster_By == "quantile") {
-        if(dinuc$input$include_unpassed_regions){
+    intervals <- if(Cluster_By == "quantile") {
+        if(peaks$input$include_unpassed){
             clusterCol <- "quantile_unfiltered"
-            dinuc$regions()
+            peaks$intervals()
         } else {
             clusterCol <- "quantile_filtered"
-            dinuc$passedRegions()
+            peaks$passedIntervals()
         }
     } else {
-        clusterCol <- paste(dinuc$input$rpkm_scaling, "cluster", sep = "_")
-        dinuc$passedRegions() # kmeans clustering was not performed with unpassed regions
+        clusterCol <- paste(peaks$input$rpkm_scaling, "cluster", sep = "_")
+        peaks$passedIntervals() # kmeans clustering was not performed when RPKM did not pass
     }
-    req(regions)
+    req(intervals)
     startSpinner(session, message = "aggregating clusters")
-    stage_rpkm_cols   <- paste(ai$stages, "rpkm",   sep = '_')
-    stage_scaled_cols <- paste(ai$stages, "scaled", sep = '_')
-    stage_cols <- if(dinuc$input$rpkm_scaling == "scaled") stage_scaled_cols else stage_rpkm_cols
-    clusters <- sapply(stage_cols,      function(col) regions[, stageColMean(regions[[col]][.I]), keyby = clusterCol][[2]])
-    rpkms    <- sapply(stage_rpkm_cols, function(col) regions[, stageColMean(regions[[col]][.I]), keyby = clusterCol][[2]])
-    clusterCounts <- regions[, .N, keyby = clusterCol]
+    stages <- peaks$stages()
+    stage_rpkm_cols   <- paste(stages, "rpkm",   sep = '_')
+    stage_scaled_cols <- paste(stages, "scaled", sep = '_')
+    stage_cols <- if(peaks$input$rpkm_scaling == "scaled") stage_scaled_cols else stage_rpkm_cols
+    clusters <- sapply(stage_cols,      function(col) intervals[, stageColMean(intervals[[col]][.I]), keyby = clusterCol][[2]])
+    rpkms    <- sapply(stage_rpkm_cols, function(col) intervals[, stageColMean(intervals[[col]][.I]), keyby = clusterCol][[2]])
+    clusterCounts <- intervals[, .N, keyby = clusterCol]
     nClusters <- nrow(clusters)
     nStages   <- ncol(clusters)
     stage_means <- sapply(1:nClusters, function(i) matrixStats::weightedMedian(1:nStages, rpkms[i,], interpolate = TRUE, na.rm = TRUE))
@@ -78,20 +75,20 @@ clusterAggregates <- reactive({
     stage_means <- stage_means[I]
     clusterCounts <- clusterCounts[I]
     list(
-        ai = ai,
         clusters = clusters,
         clusterCounts = clusterCounts,
         stage_means = stage_means,
         nClusters = nClusters,
         nStages = nStages,
+        stages = stages,
         colors = paRainbow(nClusters),
-        regions = regions,
+        intervals = intervals,
         clusterCol = clusterCol,
-        clusterType = if(Cluster_By == "quantile") "Quantile (5%)" else "K-means Cluster"
+        clusterType = if(Cluster_By == "quantile") "Stage Mean Quantile (5%)" else "K-means Cluster"
     )
 })
 plotClusterTraces <- function(d) {
-    ylim <- if(dinuc$input$rpkm_scaling == "scaled") range(d$clusters, na.rm = TRUE) 
+    ylim <- if(peaks$input$rpkm_scaling == "scaled") range(d$clusters, na.rm = TRUE) 
             else c(0, max(d$clusters, na.rm = TRUE))
     ylim <- ylim * 1.05
     par(mar = titledMar)
@@ -99,12 +96,12 @@ plotClusterTraces <- function(d) {
         xlim = c(1, d$nStages),
         ylim = ylim,
         xlab = "",
-        ylab = if(dinuc$input$rpkm_scaling == "scaled") "log2(stage RPKM / mean RPKM)" else "RPKM",
+        ylab = if(peaks$input$rpkm_scaling == "scaled") "log2(stage RPKM / mean RPKM)" else "RPKM",
         xaxt = "n",
-        title = paste0(dinuc$input$index_stage, " " , dinuc$input$rpkm_scaling, " (", format(sum(d$clusterCounts), big.mark = ","), ")")
+        title = paste0(peaks$input$index_stage, " " , peaks$input$rpkm_scaling, " (", format(sum(d$clusterCounts), big.mark = ","), ")")
     )
-    addStageXAxis(d$ai$stages, ylim)
-    if(dinuc$input$rpkm_scaling == "scaled") abline(h = 0, col = CONSTANTS$plotlyColors$grey)
+    addStageXAxis(d$stages, ylim)
+    if(peaks$input$rpkm_scaling == "scaled") abline(h = 0, col = CONSTANTS$plotlyColors$grey)
     for(i in 1:d$nClusters) abline(v = d$stage_means[i], col = d$colors[i])
     for(i in 1:d$nClusters){
         plot$addLines(
@@ -128,17 +125,17 @@ plotClusterHeatmap <- function(d) {
         yaxt = "n",
         xaxs = "i",
         yaxs = "i",
-        title = paste0(dinuc$input$index_stage, " " , dinuc$input$rpkm_scaling, " (", format(nrow(d$clusters), big.mark = ","), ")")
+        title = paste0(peaks$input$index_stage, " " , peaks$input$rpkm_scaling, " (", format(nrow(d$clusters), big.mark = ","), ")")
     )
-    addStageXAxis(d$ai$stages, ylim)
+    addStageXAxis(d$stages, ylim)
     I <- d$nClusters:1 # invert so earliest is at the top
     dt <- as.data.table(d$clusters[I,])
-    setnames(dt, d$ai$stages)
+    setnames(dt, d$stages)
     dt[, cluster := 1:nrow(dt)]
     dt <- melt(
         dt, 
         id.vars = "cluster", 
-        measure.vars = d$ai$stages, 
+        measure.vars = d$stages, 
         variable.name = "stage"
     )
     dt$stage <- as.integer(dt$stage)

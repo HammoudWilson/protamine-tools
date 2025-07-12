@@ -59,10 +59,7 @@ env <- reactive({
 #----------------------------------------------------------------------
 # BED file selection
 #----------------------------------------------------------------------
-regionsBedTable <- regionsBedTableServer(
-    "regionsBedTable",
-    sourceId
-)
+regionsBedTable <- regionsBedTableServer("regionsBedTable", sourceId)
 
 #----------------------------------------------------------------------
 # plot outputs
@@ -74,12 +71,10 @@ enrichmentPlotData <- reactive({
     startSpinner(session, message = "getting score data")
     metadata <- paScores_metadata(sourceId)
     config <- list(
-        sourceId = sourceId,
-        bedFileName = regionsBedTable$name(),
-        bedData = bedData,
-        Scores_Dir = settings$get("Enrichment_Data","Scores_Dir")
+        sourceId    = sourceId,
+        bedData     = bedData,
+        Scores_Dir  = settings$get("Enrichment_Data","Scores_Dir")
     )
-    dstr(config)
     getSampleScores_regions(metadata, config, input$enrichmentScoreType, "score")
 })
 enrichmentPlot <- function(plot, columns, message){
@@ -210,7 +205,11 @@ bookmarkObserver <- observe({
     req(bm)
     # settings$replace(bm$settings)
     # updateTextInput(session, 'xxx', value = bm$outcomes$xxx)
-    # xxx <- bm$outcomes$xxx
+    if(!is.null(bm$outcomes)){
+        bySamplePlot$settings$replace(bm$outcomes$bySamplePlotSettings)
+        byStagePlot$settings$replace(bm$outcomes$byStagePlotSettings)
+        byStageTypePlot$settings$replace(bm$outcomes$byStageTypePlotSettings)
+    }
     bookmarkObserver$destroy()
 })
 
@@ -220,7 +219,11 @@ bookmarkObserver <- observe({
 list(
     input = input,
     # settings = settings$all_,
-    outcomes = list(),
+    outcomes = list(
+        bySamplePlotSettings = bySamplePlot$settings$all_,
+        byStagePlotSettings = byStagePlot$settings$all_,
+        byStageTypePlotSettings = byStageTypePlot$settings$all_
+    ),
     # isReady = reactive({ getStepReadiness(options$source, ...) }),
     NULL
 )
