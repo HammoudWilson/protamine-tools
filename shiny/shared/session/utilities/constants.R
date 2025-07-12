@@ -5,6 +5,14 @@ gcLimits <- c(0.25, 0.6) # optimal for mm39 genome; for normalization plots only
 meanNucleosomeFragSize   <- 205
 meanDinucleosomeFragSize <- 375
 
+# fixed genome values
+genome_metadata <- list(
+    mm39 = list(
+        total_bp = 2723431143,
+        included_bp = 2542245999
+    )
+)
+
 # data types
 refTypes <- c('genome', 'spike_in')
 insertTypes <- c('all_inserts', 'intermediate')

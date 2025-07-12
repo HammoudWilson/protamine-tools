@@ -43,6 +43,8 @@ appSteps:
         module: vPlots
     dinucRegions:
         module: dinucRegions
+    dinucEnrichment:
+        module: dinucEnrichment
     browser:
         module: genomex-mdi-tools//trackBrowser
         options:

@@ -35,40 +35,8 @@ dinucRegionsUI <- function(id, options) {
                 collapsible = FALSE,
                 inFluidRow = FALSE
             ),
-            box(
-                width = 4,
-                solidHeader = FALSE,
-                collapsible = FALSE,
-                title = NULL,
-                selectInput(
-                    ns("index_stage"), 
-                    "Index Stage", 
-                    choices = c("overlap_group"),
-                    selected = "overlap_group",
-                    width = "100%"
-                ),
-                radioButtons(
-                    ns("rpkm_scaling"), 
-                    "RPKM Scaling", 
-                    choices = c("scaled", "unscaled"),
-                    selected = "scaled",
-                    inline = TRUE,
-                    width = "100%"
-                ),
-                radioButtons(
-                    ns("umap_metric"), 
-                    "UMAP Metric", 
-                    choices = c("euclidean", "correlation"),
-                    selected = "correlation",
-                    inline = TRUE,
-                    width = "100%"
-                ),
-                checkboxInput(
-                    ns("include_unpassed_regions"), 
-                    "Include Unpassed Regions", 
-                    value = FALSE
-                ),
-                NULL
+            dinucRegionsSelectorBoxUI(
+                ns("dinucRegions")
             ),
             NULL
         ),
@@ -91,37 +59,14 @@ dinucRegionsUI <- function(id, options) {
                 collapsed = FALSE,
                 solidHeader = TRUE
             ),
-            staticPlotBoxUI(
-                ns("clusterProfilePlot"), 
-                "Cluster Profiles",
-                width = 4,
-                status = "primary",
-                collapsible = TRUE,
-                collapsed = FALSE,
-                solidHeader = TRUE
+            clusterProfilePlotBoxUI(
+                ns("clusterProfilePlotBox"), 
+                width = 4
             ),
             NULL
         ),
-        fluidRow(
-            staticPlotBoxUI(
-                ns("regionProfilePlot"), 
-                "Selected Region Profile",
-                width = 4,
-                status = "primary",
-                collapsible = TRUE,
-                collapsed = FALSE,
-                solidHeader = TRUE
-            ),
-            mdiInteractivePlotBoxUI(
-                ns("regionPlotBox"), 
-                "Selected Region Footprint",
-                width = 8,
-                status = "primary",
-                collapsible = TRUE,
-                collapsed = FALSE,
-                solidHeader = TRUE
-            ),
-            NULL
+        regionExpansionUI(
+            ns("regionExpansion")
         ),
         NULL
     )

@@ -57,86 +57,29 @@ env <- reactive({
 })  
 
 #----------------------------------------------------------------------
-# BED file upload and display
+# BED file selection
 #----------------------------------------------------------------------
-inactivateBedFilesList <- reactiveVal(0)
-bedFilesDir <- "uploaded_bed_files"
-sourceBedFilesDir <- reactive({
-    sourceId <- sourceId()
-    req(sourceId)
-    expandSourceFilePath(sourceId, bedFilesDir)
-})
-observeEvent(input$bedFileUpload, {
-    sourceId <- tryCatch({
-        sourceId()
-    }, error = function(e){
-        showUserDialog(
-            "Data Source Required",
-            tags$p("Please select a source data package before uploading BED files."),
-            tags$p("BED files are specific to a data package and must be uploaded for each source."),
-            callback = function(parentInput) NULL,
-            size = "s", 
-            type = 'okOnly', 
-            easyClose = FALSE, 
-            fade = TRUE
-        )
-        req(FALSE)
-    })
-    bedFile <- input$bedFileUpload
-    bedDir <- sourceBedFilesDir()
-    req(bedFile, bedDir)
-    bedPath <- file.path(bedDir, bedFile$name)
-    file.copy(bedFile$datapath, bedPath, overwrite = TRUE)
-    inactivateBedFilesList(inactivateBedFilesList() + 1)
-})
-bedFileTableData <- reactive({
-    inactivateBedFilesList()
-    bedDir <- sourceBedFilesDir()
-    req(bedDir)
-    if(!dir.exists(bedDir)) dir.create(bedDir, recursive = FALSE)
-    data.table(
-        file = list.files(bedDir, full.names = FALSE)
-    )
-})
-bedFileTable <- bufferedTableServer(
-    "bedFileTable",
-    id,
-    input,  
-    bedFileTableData,
-    selection = 'single'
+regionsBedTable <- regionsBedTableServer(
+    "regionsBedTable",
+    sourceId
 )
-bedFileName <- reactive({
-    row <- bedFileTable$rows_selected()
-    req(row)
-    bedFileTableData()[row, file]
-})
-bedData <- reactive({
-    row <- bedFileTable$rows_selected()
-    bedDir <- sourceBedFilesDir()
-    req(row, bedDir)
-    bedFile <- file.path(bedDir, bedFileTableData()[row, file])
-    bedData <- fread(bedFile, sep = "\t")[, 1:3]
-    bed3Cols <- c("chrom", "start0", "end1")
-    setnames(bedData, bed3Cols)
-    setkeyv(bedData, bed3Cols)
-    bedData
-})
 
 #----------------------------------------------------------------------
 # plot outputs
 #----------------------------------------------------------------------
 enrichmentPlotData <- reactive({
     sourceId <- sourceId()
-    bedData <- bedData()
+    bedData <- regionsBedTable$data()
     req(sourceId, bedData)
     startSpinner(session, message = "getting score data")
     metadata <- paScores_metadata(sourceId)
     config <- list(
         sourceId = sourceId,
-        bedFileName = bedFileName(),
+        bedFileName = regionsBedTable$name(),
         bedData = bedData,
         Scores_Dir = settings$get("Enrichment_Data","Scores_Dir")
     )
+    dstr(config)
     getSampleScores_regions(metadata, config, input$enrichmentScoreType, "score")
 })
 enrichmentPlot <- function(plot, columns, message){

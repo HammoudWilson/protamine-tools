@@ -1,0 +1,44 @@
+---
+pipeline:
+    name: enrichment
+    description: "assemble BED files of genome regions for ATAC-seq enrichment analysis"
+    # version: v0.0.1
+# suiteVersions:
+#     suiteName: v0.0.0
+actions: 
+    _global:
+        environment: protamine-tools
+        condaFamilies:
+            - base
+            - protaminer
+            - r-4.4
+    bed:
+        order: 1
+        optionFamilies:
+            - composite
+            - genome
+            - regions-bed
+        resources:
+            required:
+                total-ram: 8G
+            recommended: 
+                n-cpu: 1
+                ram-per-cpu: 8G
+        job-manager:
+            recommended:
+                time-limit: 4:00:00
+        description: "assemble missing, one, or all genome regions BED files for ATAC-seq enrichment analysis"
+package:
+    bed: # the pipeline action after which a data package should assembled
+        uploadType: protamine-regions-bed # a signal to the Stage 2 framework regarding the package contents
+        # files:
+        #     samples-metadata-file:
+        #         type: csv
+        #         file: $METADATA_FILE
+        extraPushFiles: # files pushed to remote server in addition to the data package but not included in the package
+            - $TASK_DIR/regions_bed
+container:
+    supported: false
+    registry:  ghcr.io  # domain name of your OCI-compatible, oras-accessible, container registry [ghcr.io]
+    owner:     xxxxxxxx # the name of the owner, e.g., user or organization, at 'registry'
+    installer: apt-get  # the installer program used by the container OS, typically apt-get or yum [apt-get]

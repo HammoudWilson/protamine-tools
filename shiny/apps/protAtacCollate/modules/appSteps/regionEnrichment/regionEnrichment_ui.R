@@ -46,28 +46,10 @@ regionEnrichmentUI <- function(id, options) {
             # BED file upload
             column(
                 width = 6,
-                box(
-                    title = NULL,
-                    status = "primary",
-                    solidHeader = FALSE,
-                    collapsible = FALSE,
-                    width = 12,
-                    fileInput(
-                        ns("bedFileUpload"),
-                        "Upload a new BED file",
-                        accept = c(".bed", ".bed.gz"),
-                        width = "100%",
-                        buttonLabel = "Browse...",
-                        placeholder = "Select a BED file..."
-                    )
-                ),
-                bufferedTableUI(
-                    ns("bedFileTable"),
-                    "Selected BED File",
-                    width = 12,
-                    solidHeader = TRUE,
-                    status = "primary",
-                    collapsible = TRUE
+                style = "margin: 0; padding: 0;",
+                regionsBedTableUI(
+                    ns("regionsBedTable"),
+                    width = 12
                 ),
                 box(
                     title = NULL,

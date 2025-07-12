@@ -1,0 +1,16 @@
+---
+options:
+    force-bed: 
+        order: 1
+        short: b
+        type: string
+        required: false
+        default: NA
+        description: "use -b to force one specific BED file class/type to be (re)created, even if it exists"
+    force-all-bed: 
+        order: 2
+        short: B
+        type: boolean
+        required: false
+        default: false
+        description: "set -B to force all regions BED files to be (re)created, even if they exist"

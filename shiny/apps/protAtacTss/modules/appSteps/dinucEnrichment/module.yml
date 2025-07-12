@@ -1,0 +1,71 @@
+#----------------------------------------------------------------------
+# ui
+#----------------------------------------------------------------------
+shortLabel:       "Dinuc Enrichment" # shown on dashboard menu 
+shortDescription: "Explore enrichment of dinucleotide peaks for regions defined in a BED file." # shown on Overview page
+longLabel:        "Explore ab initio dinucleotide peak enrichment" # shown at top of appStep page 
+
+#----------------------------------------------------------------------
+# server
+#----------------------------------------------------------------------
+types: # names of the type(s) of this module ...
+    - dinucEnrichment
+sourceTypes: null # ... and of the module(s) on which it depends
+
+#----------------------------------------------------------------------
+# dependencies
+#----------------------------------------------------------------------
+packages: # required R packages
+    R:  null
+    Bioconductor: null
+
+## optional data classes and UI modules this module will use
+## e.g., might expect to find shared/optional/classes/<classType>/<className>/<className>_*.R
+#classes:
+#    classType:
+#        - className            
+#modules: null
+
+#----------------------------------------------------------------------
+# module-level settings
+#----------------------------------------------------------------------
+# settings:
+#     Dinuc_Regions:
+#         Min_Max_RPKM:
+#             type: numericInput
+#             value: 7.5
+        # N_Region_Clusters:
+        #     type: numericInput
+        #     value: 25
+#         <settingName>:
+#             type:   numericInput
+#             value:  1
+#             min:    1
+#             max:    100
+#             step:   1 
+#         <settingName>:
+#             type: selectInput
+#             choices:
+#                 - abc
+#                 - xyz
+#             value: abc    
+#         <settingName>:
+#             type: radioButtons
+#             choices:
+#                 - abc
+#                 - xyz
+#             value: abc    
+#         <settingName>:
+#             type: checkboxGroupInput
+#             choices:
+#                 - abc
+#                 - xyz
+#             value: abc 
+#         <settingName>:
+#             type: checkboxInput
+#             value: true 
+#         <settingName>:
+#             type:   fileInput
+#             accept: 
+#                 - ".csv"
+#                 - ".txt"

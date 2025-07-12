@@ -141,6 +141,7 @@ package:
         extraPushFiles: # files pushed to remote server in addition to the data package but not included in the package
             - $TASK_DIR/scores
             - $TASK_DIR/inserts_bgz
+            - $TASK_DIR/nfr_bgz
 container:
     supported: false
     registry:  ghcr.io  # domain name of your OCI-compatible, oras-accessible, container registry [ghcr.io]
