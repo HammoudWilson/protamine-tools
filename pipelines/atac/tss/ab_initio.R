@@ -111,8 +111,7 @@ nInserts <- sapply(stages, function(stage) fp_stage[[stage]]$nInserts, simplify 
 rm(fp_stage)
 
 message("finding positioned dinucleosomes by chromosome")
-# scoreAbInitio <- file.path(env$MDI_DIR, 'suites/definitive/protamine-tools/pipelines/atac/tss/crates/target/debug/ab_initio')
-scoreAbInitio <- file.path(env$MDI_DIR, 'suites/definitive/protamine-tools/pipelines/atac/tss/crates/target/release/ab_initio')
+scoreAbInitio <- file.path(env$MDI_DIR, 'suites/definitive/protamine-tools/resources/ab_initio') # compiled Rust binary
 # regions <- do.call(rbind, lapply(which(chroms$chrom == "chr8"), function(chromI) {
 # regions <- do.call(rbind, lapply(which(chroms$chrom %in% c("chr1","chr8","chr9")), function(chromI) {
 regions <- do.call(rbind, lapply(1:nrow(chroms), function(chromI) {

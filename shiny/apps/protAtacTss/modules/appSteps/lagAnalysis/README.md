@@ -1,5 +1,5 @@
 ---
-title: protAtac_segmentation
+title: dinucChains
 parent: App Steps
 has_children: false
 nav_order: 10
@@ -8,6 +8,6 @@ published: false # change to true or delete to add to your docs page
 
 ## {{page.title}}
 
-The **protAtac_segmentation** appStep allows users to:
+The **dinucChains** appStep allows users to:
 
 - continue documentation ...

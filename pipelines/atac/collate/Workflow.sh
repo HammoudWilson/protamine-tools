@@ -23,7 +23,7 @@ fi
 runWorkflowStep 1 collate collate.sh
 
 # calculate and analyze bin scores/metrics
-runWorkflowStep 2 score score.sh
+runWorkflowStep 2 score ${MODULES_DIR}/score/score.sh
 
 # DEV USE
 # # profile and establish corrections for in Tn5 site bias

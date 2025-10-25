@@ -269,17 +269,19 @@ obj <- list(
         'MAX_INSERT_SIZE',
         'BIN_SIZE'
     )],
-    samples    = samples,
+    samples = samples,
     references = refs,
     bins = bins[, .(
         chrom = chr, start0 = bs0, 
         included = included
     )],
+    # used by score.R
     n_obs_bin_smp = n_obs_bin_smp,
     n_wgt_bin_smp = n_wgt_bin_smp,
     mpp_bin_smp   = mpp_bin_smp,
     gc_bin_smp    = gc_bin_smp,
-    f_obs_ref_isl_smp   = f_obs_ref_isl_smp,
+    f_obs_ref_isl_smp = f_obs_ref_isl_smp, # primary only
+    # not used by score.R
     n_ref_wgt_is_gc_smp = n_ref_wgt_is_gc_smp,
     n_ins_wgt_smp = n_ins_wgt_smp
 )

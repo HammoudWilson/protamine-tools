@@ -90,7 +90,7 @@ build.paScoreMapTrack <- function(track, reference, coord, layout){
     pngFile <- file.path(sessionDirectory, paste("paScoreMapTrack", "png", sep = "."))
     imager::imappend(
         lapply(
-            c("gc_z","txn","gcrz_obs","gcrz_wgt","nrll"), 
+            c("gc_z","txn","hic","stgm","gcrz_obs","nrll"), # ,"gcrz_wgt"
             scoreMapGroupImage,
             sourceId, metadata, config, coord, binI, b
         ),

@@ -86,6 +86,46 @@ actions:
             recommended:
                 time-limit: 4:00:00
         description: "map ATAC fragments around (in)active TSSs at base-level resolution"
+    intersect:
+        order: 5
+        optionFamilies:
+            - samples
+            - composite
+            - genome
+            - quality
+            - bin
+            - stage
+            - score
+        resources:
+            required:
+                total-ram: 8G
+            recommended: 
+                n-cpu: 4
+                ram-per-cpu: 2G
+        job-manager:
+            recommended:
+                time-limit: 4:00:00
+        description: "intersect read data with genomic annotations"
+    recollate:
+        order: 6
+        optionFamilies:
+            - samples
+            - composite
+            - genome
+            - quality
+            - bin
+            - stage
+            - score
+        resources:
+            required:
+                total-ram: 8G
+            recommended: 
+                n-cpu: 14
+                ram-per-cpu: 2G
+        job-manager:
+            recommended:
+                time-limit: 12:00:00
+        description: "redo the collate action excluding bins that overlap high-accessibility peaks at/near TSSs"
 package:
     sites: # the pipeline action after which a data package should assembled
         uploadType: protamine-atac-sites # a signal to the Stage 2 framework regarding the package contents
@@ -138,10 +178,41 @@ package:
             ab_initio:
                 type: rds
                 file: $DATA_FILE_PREFIX.ab_initio.rds
+            lag_analysis:
+                type: rds
+                file: $DATA_FILE_PREFIX.lag_analysis.rds
         extraPushFiles: # files pushed to remote server in addition to the data package but not included in the package
             - $TASK_DIR/scores
             - $TASK_DIR/inserts_bgz
             - $TASK_DIR/nfr_bgz
+    recollate: # the pipeline action after which a data package should assembled
+        uploadType: protamine-atac-recollate # a signal to the Stage 2 framework regarding the package contents
+        files:
+            collate:
+                type: rds
+                file: $DATA_FILE_PREFIX.recollate.rds
+            gcBiasModels:
+                type: rds
+                file: $DATA_FILE_PREFIX.recollated.gcBiasModels.rds
+            scores: # no longer includes the bin-level score matrices, only score summaries
+                type: rds
+                file: $DATA_FILE_PREFIX.recollated.scores.rds
+            tssFrags:
+                type: rds
+                file: $DATA_FILE_PREFIX.tssFrags.rds
+            footprint:
+                type: rds
+                file: $DATA_FILE_PREFIX.footprint.rds
+            ab_initio:
+                type: rds
+                file: $DATA_FILE_PREFIX.ab_initio.rds
+            # lag_analysis:
+            #     type: rds
+            #     file: $DATA_FILE_PREFIX.lag_analysis.rds
+        # extraPushFiles: # files pushed to remote server in addition to the data package but not included in the package
+        #     - $TASK_DIR/scores
+        #     - $TASK_DIR/inserts_bgz
+        #     - $TASK_DIR/nfr_bgz
 container:
     supported: false
     registry:  ghcr.io  # domain name of your OCI-compatible, oras-accessible, container registry [ghcr.io]

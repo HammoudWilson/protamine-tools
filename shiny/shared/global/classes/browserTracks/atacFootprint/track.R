@@ -25,7 +25,6 @@ build.atacFootprintTrack <- function(track, reference, coord, layout){
     req(sourceId)
     metadata <- paTss_footprint(sourceId)
     req(metadata)
-    
     # calculate plot parameters and dimensions to establish rules for binning and rendering
     plotWidthPixels <- as.integer(layout$plotWidth * layout$dpi)
     basesPerPixel <- coord$width / plotWidthPixels

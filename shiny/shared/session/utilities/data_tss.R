@@ -132,6 +132,80 @@ paTss_interval_overlaps <- function(peaks, bedData, intervals, overlapType){
     x$value
 }
 
+# reciprocal of above, intersect BED regions to intervals
+paTss_bed_overlaps <- function(peaks, bedData, intervals, overlapType){
+    startSpinner(session, message = paste("loading BED overlaps"))
+    x <- protaminerCache$get(
+        "paTss_bed_overlaps",
+        keyObject = list(
+            peaks$input$include_unpassed,
+            bedData,
+            intervals,
+            overlapType
+        ),
+
+        create = "asNeeded",
+
+        from = "disk",
+        createFn = function(...) {
+            bed3Cols   <- c("chrom", "start0", "end1")
+            intervalQuantileCol <- if(peaks$input$include_unpassed) "quantile_unfiltered" else "quantile_filtered"
+            intervalCols <- c(bed3Cols, "stage_mean", intervalQuantileCol)
+            scoreCol <- names(bedData)[5]
+            bedCols    <- c(bed3Cols, "score", "score_quantile")
+
+            startSpinner(session, message = "calculating BED quantiles")
+            bedData <- bedData[!is.na(bedData[[scoreCol]])]
+            bedData[, score := bedData[[scoreCol]] + rnorm(.N, mean = 0, sd = 1e-6)] # jitter to break ties
+            bedData[, score_quantile := as.integer(cut(
+                score, 
+                breaks = quantile(score, probs = seq(0, 1, 1 / 20), na.rm = TRUE), 
+                include.lowest = TRUE
+            ))]
+
+            startSpinner(session, message = "finding BED overlaps")
+# Classes ‘data.table’ and 'data.frame':  160527 obs. of  9 variables:
+#  $ chrom            : chr  "chr1" "chr1" "chr1" "chr1" ...
+#  $ start0           : int  NA NA NA NA NA NA NA NA NA NA ...
+#  $ end1             : int  NA NA NA NA NA NA NA NA NA NA ...
+#  $ stage_mean       : num  NA NA NA NA NA NA NA NA NA NA ...
+#  $ quantile_filtered: int  NA NA NA NA NA NA NA NA NA NA ...
+#  $ i.start0         : int  3089000 3099000 3101000 3140000 3144000 3149000 31510
+# 00 3181000 3207000 3218000 ...
+#  $ i.end1           : int  3093000 3100000 3102000 3142000 3148000 3150000 31520
+# 00 3182000 3208000 3219000 ...
+#  $ Log10_RPKM       : num  -0.72 -0.83 -0.99 -0.2 -0.78 -0.97 -0.78 -0.88 -0.84 
+# -0.9 ...
+#  $ score_quantile   : int  14 10 1 19 12 1 12 7 9 6 ...
+            scores <- foverlaps(
+                x = bedData[, ..bedCols],
+                y = intervals[, ..intervalCols],
+                type = overlapType,   # any or within, see above
+                mult = "all",         # multiple y matches aggregated to a single value below
+                nomatch = NA,         # keep non-matching rows (for now)
+                which = FALSE         # return left outer-join of x and y
+            )[, 
+                {
+                    hasOverlap <- !is.na(start0[1])
+                    .(
+                        stage_mean = if(hasOverlap) max(.SD$stage_mean, na.rm = TRUE) else NA_real_,
+                        interval_quantile = if(hasOverlap) max(.SD[[intervalQuantileCol]], na.rm = TRUE) else NA_integer_,
+                        hasOverlap = hasOverlap,
+                        score = score[1],
+                        score_quantile = score_quantile[1]
+                    )
+                }, 
+                keyby = .(chrom, i.start0, i.end1)
+            ]
+            list(
+                scoreCol = scoreCol,
+                scores = scores
+            )
+        }
+    )
+    x$value
+}
+
 # load called peaks into a table, either dinuc chains or other called peaks, e.g. MACS2
 paTss_parsePeaksForTable <- function(peaks, stages, include_unpassed){
     stage_rpkm_cols <- paste(stages, "rpkm", sep = "_")
@@ -493,3 +567,15 @@ paTss_get_inserts <- function(metadata, coord, config){
         }
     )
 }
+
+# # lag analysis
+# paTss_labTable <- function(){
+#     startSpinner(session, message = "loading lags")
+#     filePath <- loadPersistentFile(
+#         sourceId = sourceId, 
+#         contentFileType = "tssFrags", 
+#         ttl = CONSTANTS$ttl$month
+#     )
+#     stopSpinner(session)
+#     persistentCache[[filePath]]$data
+# }

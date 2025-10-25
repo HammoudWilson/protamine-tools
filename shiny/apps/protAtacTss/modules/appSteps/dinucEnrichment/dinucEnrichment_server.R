@@ -95,6 +95,22 @@ overlaps <- reactive({
     )
     d
 })
+bedOverlaps <- reactive({
+    intervals <- chains$unfilteredIntervals()
+    bedData <- regionsBedTable$data()
+    req(intervals, bedData)
+    paTss_bed_overlaps(chains, bedData, intervals, overlapType())
+})
+quantiledBedOverlaps <- reactive({
+    d <- bedOverlaps()
+    d$quantiledScores <- d$scores[, .(
+        stage_mean           = mean(stage_mean, na.rm = TRUE),
+        interval_quantile    = mean(interval_quantile, na.rm = TRUE),
+        fraction_overlapping = sum(hasOverlap, na.rm = TRUE) / .N,
+        score                = mean(score, na.rm = TRUE)
+    ), keyby = .(score_quantile)]
+    d
+})
 
 #----------------------------------------------------------------------
 # overlap (fraction) enrichment plot
@@ -159,7 +175,7 @@ overlapPlotBox <- staticPlotBoxServer(
 )
 
 #----------------------------------------------------------------------
-# overlap (fraction) enrichment plot
+# score enrichment plot
 #----------------------------------------------------------------------
 scorePlotSettings <- list(
     Enrichment = list(
@@ -229,6 +245,55 @@ scorePlotBox <- mdiInteractivePlotBoxServer(
 observeEvent(scorePlotBox$plot$click(), {
     intervalExpansion$setSelectedInterval(scorePlotBox$plot$click()$coord, scorePlotData())
 })
+
+#----------------------------------------------------------------------
+# quantiled scores plot
+#----------------------------------------------------------------------
+quantiledScoresPlotSettings <- list(
+    Quantiled_Scores = list(
+        Y_Axis_Value = list(
+            type = "selectInput",
+            choices = c("stage_mean", "interval_quantile","fraction_overlapping","score"),
+            value = "stage_mean"
+        )
+    )
+)
+quantiledScoresPlotData <- reactive({
+    d <- quantiledBedOverlaps()
+    yCol <- quantiledScoresPlotBox$settings$get("Quantiled_Scores", "Y_Axis_Value")
+    d$xy <- d$quantiledScores[, .(x = score_quantile, y = get(yCol))]
+    d$xlim <- c(1, 20)
+    d$ylim <- range(d$xy$y, na.rm = TRUE) #c(0, max(d$xy$y, na.rm = TRUE) * 1.05)
+    d$xlab <- paste("Quantile", d$scoreCol)
+    d$ylab <- gsub("_", " ", yCol)
+    d
+})
+quantiledScoresPlotBox <- staticPlotBoxServer(
+    "quantiledScoresPlotBox",
+    settings = c(quantiledScoresPlotSettings),
+    create = function() {
+        d <- req(quantiledScoresPlotData())
+        # bedMetadata <- regionsBedTable$metadata()
+        # req(d, bedMetadata)
+        startSpinner(session, message = "rendering bed quantiles")
+        par(mar = titledMar)
+        quantiledScoresPlotBox$initializeFrame(
+            xlim = d$xlim,
+            ylim = d$ylim,
+            xlab = d$xlab,
+            ylab = d$ylab
+        )
+        # abline(h = bedMetadata$fraction_of_genome, col = CONSTANTS$plotlyColors$grey, lty = 2)
+        quantiledScoresPlotBox$addPoints(
+            x = d$xy$x,
+            y = d$xy$y,
+            # col = d$colors,
+            pch = 19,
+            cex = 1.5
+        )
+        stopSpinner(session)
+    }
+)
 
 #----------------------------------------------------------------------
 # define bookmarking actions

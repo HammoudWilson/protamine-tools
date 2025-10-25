@@ -14,3 +14,10 @@ options:
         required: false
         default: 0.25,0.6 # values optimized for mm39 primary genome; do not change them except for other species
         description: "comma-delimited lower and upper bin GC limits; bins outside these limits are excluded (defaults match mm39)"
+    hic-compartment-bed:
+        order: 3
+        short: null
+        type: character
+        required: false
+        default: NA # defaults in pipeline code to the output of the nascent/bin action
+        description: "path to a named BED5 with column compartment_score"

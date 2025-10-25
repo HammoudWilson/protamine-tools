@@ -84,12 +84,12 @@ download_gc5Base () {
         "gc5Base file" \
         LEAVE_ZIPPED
 }
-construct_gc5Base () { # for newer UCSC genomes that do not offer gc5Base.wigVarStep.gz
-    TO_FILE=${GENOME_GC5BASE_WIG}
-    if [ ! -f $TO_FILE ]; then
-        echo "  pending: gc5Base construction for genome $GENOME"
-    fi
-}
+# construct_gc5Base () { # for newer UCSC genomes that do not offer gc5Base.wigVarStep.gz
+#     TO_FILE=${GENOME_GC5BASE_WIG}
+#     if [ ! -f $TO_FILE ]; then
+#         echo "  pending: gc5Base construction for genome $GENOME"
+#     fi
+# }
 download_ENCODE_exclusions () {
     TO_FILE=${GENOME_EXCLUSIONS_BED}
     GZ_FILE=${TO_FILE}.gz
@@ -152,7 +152,7 @@ if [ "$GENOME" == "hs1" ]; then
     download_and_index_genome ""
     echo "  touching genome gaps (hs1/CHM13 has no gaps!)"
     touch ${GENOME_GAPS_FILE} # CHM13 has no gaps! create the empty file anyway for consistency
-    construct_gc5Base
+    # construct_gc5Base
     download_excluderegions T2T.excluderanges.bed
 
 elif [ "$GENOME" == "hg38" ]; then
@@ -167,15 +167,16 @@ elif [ "$GENOME" == "mm39" ]; then
     APPEND_EBV=""
     download_and_index_genome ""
     download_genome_gaps
-    construct_gc5Base
-    download_excluderegions mm39.excluderanges.bed
+    # construct_gc5Base
+    # download_excluderegions mm39.excluderanges.bed
+    cp ${MDI_DIR}/suites/definitive/protamine-tools/resources/mm39.excluderanges.bed ${GENOME_EXCLUSIONS_BED}
     download_gtf mouse ${GENCODE_RELEASE} # e.g., M36
 
 elif [ "$GENOME" == "dm6" ]; then
     APPEND_EBV=""
     download_and_index_genome ""
     download_genome_gaps
-    construct_gc5Base
+    # construct_gc5Base
     download_ENCODE_exclusions
     
 else

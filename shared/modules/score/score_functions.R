@@ -15,6 +15,18 @@ scoreTypes <- list(
             include = character(), # nascent transcription rate always handled on an absolute scale in app
             log10 = TRUE,
             minValue = 1e-3
+        ),
+        stgm = list(
+            name = "stgm",
+            distUnit = 0.1,
+            include = c("quantile"), 
+            log10 = FALSE
+        ),
+        hic = list(
+            name = "hic",
+            distUnit = 0.1 / 20,
+            include = c("quantile"), 
+            log10 = FALSE
         )
     ),
     sample = list(
@@ -156,7 +168,7 @@ get_gcrz_wgt <- function(sample_name_, ...){
 }
 get_nrll <- function(sample_name_, emissProbsFile){
     smp <- collate$samples[sample_name == sample_name_]
-    script <- paste('bash', file.path(env$ACTION_DIR, 'get_bin_NRLL.sh'))
+    script <- paste('bash', file.path(env$MODULES_DIR, 'score', 'get_bin_NRLL.sh'))
     fread(cmd = paste(script, smp$filename_prefix, emissProbsFile))[[1]] # one value per composite bin
 }
 

@@ -139,6 +139,7 @@ getSeriesSummaryColors <- function(scoreTypeName, scoreValues, config){ # used t
         # provided by scoreMapGroupImage as raw score values, used as is
         gc_z = z_score_color(  scoreValues, config), 
         txn  = cpm_score_color(scoreValues, config),
+        # stgm = fraction_score_color(scoreValues, config),
 
         # sample-level summary scores (deltas) use quantiles, i.e., assume non-parametric distributions
         # always provided as quantiles by scoreMapGroupImage

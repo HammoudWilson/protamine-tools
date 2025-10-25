@@ -24,7 +24,7 @@ cut -f 1-4 |
 
 # calculate log likelihoods for each bin for the histone- and protamine-associated states
 # output is tab-delimited: LL_histone, LL_protamine, nInserts
-perl ${ACTION_DIR}/get_bin_likelihoods.pl | 
+perl ${MODULES_DIR}/score/get_bin_likelihoods.pl | 
 
 # calculate NRLL value for each bin
 awk '{ print $3 == 0 ? "NA" : ($2 - $1) / $3 }'

@@ -24,3 +24,6 @@ runWorkflowStep 3 footprint footprint.sh
 
 # find positioned nucleosomes independently of TSSs (but score them based on proximity to TSSs)
 runWorkflowStep 4 ab_initio ab_initio.sh
+
+# explore the spatio-temporal relationship of positioned nucleosomes found ab initio
+runWorkflowStep 5 lag_analysis lag_analysis.sh

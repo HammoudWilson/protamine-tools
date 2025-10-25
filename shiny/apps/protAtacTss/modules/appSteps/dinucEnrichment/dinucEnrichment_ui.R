@@ -61,6 +61,15 @@ dinucEnrichmentUI <- function(id, options) {
                     collapsed = FALSE,
                     solidHeader = TRUE
                 ),
+                staticPlotBoxUI(
+                    ns("quantiledScoresPlotBox"), 
+                    "Quantiled BED Scores",
+                    width = 6,
+                    status = "primary",
+                    collapsible = TRUE,
+                    collapsed = FALSE,
+                    solidHeader = TRUE
+                ),
                 NULL
             ),
             column(

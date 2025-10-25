@@ -37,6 +37,7 @@ suppressPackageStartupMessages(suppressWarnings({
     library(data.table)
     library(parallel)
     library(MASS) # for glm.nb
+    library(matrixStats) # for weighted median
 }))
 #-------------------------------------------------------------------------------------
 # load, parse and save environment variables
@@ -61,6 +62,7 @@ checkEnvVars(list(
         'STAGE_TYPES',
         'GC_LIMITS',
         'TRANSCRIPTION_BED',
+        'HIC_COMPARTMENT_BED',
         'SHM_FILE_PREFIX',
         'TMP_FILE_PREFIX'
     ),
@@ -82,16 +84,44 @@ sourceScripts(rUtilDir, c('nbinomCountsGC_class', 'nbinomCountsGC_methods'))
 # set some options
 options(scipen = 999) # prevent 1+e6 in printed, which leads to read.table error when integer expected
 options(warn = 2) 
+#-------------------------------------------------------------------------------------
+getCollateFile <- function(){
+    type <- if(is.null(env$IS_RECOLLATE)){
+        "collate"
+    } else {
+        "recollate"
+    }  
+    paste(env$DATA_FILE_PREFIX, type, "rds", sep = '.')
+}
+getScoresOutputFile <- function(filename){
+    prefix <- if(is.null(env$IS_RECOLLATE)){
+        ""
+    } else {
+        "recollated."
+    }  
+    paste0(env$DATA_FILE_PREFIX, ".", prefix, filename)
+}
+getScoresDir <- function(){
+    suffix <- if(is.null(env$IS_RECOLLATE)){
+        ""
+    } else {
+        "_recollated"
+    }  
+    file.path(env$TASK_DIR, paste0("scores", suffix))
+}
 #=====================================================================================
 
 #=====================================================================================
 # loop through all BAM files to determine their coverage in each genome bin
 #-------------------------------------------------------------------------------------
 message("loading collate step output")
-collate <- readRDS(paste(env$DATA_FILE_PREFIX, "collate.rds", sep = '.'))
+collate <- readRDS(getCollateFile())
 
 message("parsing spermiogenic stage types and GC limits")
 stageTypes <- unpackStageTypes(env)
+allStages <- unique(collate$samples$stage)
+stageMeanStages <- allStages[!(allStages %in% c("mESC", "late_ES"))]
+nStageMeanStages <- length(stageMeanStages)
 gcLimits <- strsplit(env$GC_LIMITS, ",")[[1]]
 
 message("restricting attention to primary genome bins")
@@ -106,6 +136,7 @@ isIncluded     <- collate$bins[, included == 1]
 isAutosome     <- collate$bins[, !startsWith(chrom, c("chrX-", "chrY-"))]
 passesGcLimits <- collate$bins[, gc >= gcLimits[1] & gc <= gcLimits[2]]
 includedAutosomeBins <- isPrimaryGenome & isIncluded & isAutosome & passesGcLimits
+primaryIncludedBins <- isPrimaryGenome & isIncluded
 
 message("extracting histone- and protamine-associated insert size distributions for primary genome")
 emissProbsFile <- extractInsertSizeEps(collate$samples, collate$f_obs_ref_isl_smp$primary, env)
@@ -128,9 +159,54 @@ scores$genome$txn <- if(file.exists(env$TRANSCRIPTION_BED)) {
     collate$bins[isPrimaryGenome, txn := NA_real_]
     NULL
 }
+scores$genome$stgm <- {
+    message("  stgm (bin stage mean)")
+    cpm_smp <- sapply(colnames(collate$n_obs_bin_smp), function(sampleName) {
+        n_obs_bin <- collate$n_obs_bin_smp[, sampleName]
+        cpm <- rep(NA_real_, length(n_obs_bin))
+        cpm[primaryIncludedBins] <- n_obs_bin[primaryIncludedBins] / sum(n_obs_bin[primaryIncludedBins], na.rm = TRUE) * 1e6
+        cpm
+    })
+    cpm_stg <- sapply(stageMeanStages, function(stage_) {
+        sample_names <- collate$samples[stage == stage_, sample_name]
+        rowMeans(cpm_smp[, sample_names, drop = FALSE], na.rm = TRUE)
+    })
+    stage_mean <- apply(cpm_stg, 1, function(cpm) {
+        weightedMedian(1:nStageMeanStages, cpm, interpolate = TRUE, na.rm = TRUE) 
+    })
+    stgm <- analyzeScoreDist(stage_mean, scoreTypes$genome$stgm, scoreTypes$genome$stgm$name, return_scores = TRUE)
+    collate$bins[primaryIncludedBins, stgm := stgm$scores[primaryIncludedBins]]
+    stgm$scores <- NULL
+    stgm
+}
+scores$genome$hic <- if(file.exists(env$HIC_COMPARTMENT_BED)) {
+    message(paste("  hic:", env$HIC_COMPARTMENT_BED))
+    hic_bins <- collate$bins[, .(chrom, start0, end1 = start0 + env$BIN_SIZE)]
+    hic <- fread(env$HIC_COMPARTMENT_BED) # requires named BED with compartment_score column
+    hic[, chrom := paste0(chrom, "-", env$PRIMARY_GENOME)]
+    setkey(hic, chrom, start0, end1)
+    hic_compartment_score <- foverlaps(
+        hic_bins,
+        hic[, .(chrom, start0, end1, compartment_score)],
+        mult = "first",
+        nomatch = NA
+    )$compartment_score
+    hic_compartment_score <- hic_compartment_score + rnorm(length(hic_compartment_score), mean = 0, sd = 1e-6) # add tiny noise to avoid ties
+    hic <- analyzeScoreDist(hic_compartment_score, scoreTypes$genome$hic, scoreTypes$genome$hic$name, return_scores = TRUE)
+    collate$bins[isPrimaryGenome, hic := hic$scores[isPrimaryGenome]]
+    hic$scores <- NULL
+    hic
+} else {
+    message("  no HiC data")
+    collate$bins[isPrimaryGenome, hic := NA_real_]
+    NULL
+}
 
 message("analyzing sample-level scores")
 scores$sample <- sapply(names(scoreTypes$sample), function(scoreTypeName) {
+    if(scoreTypeName == "gcrz_wgt" && !is.null(env$SUPPRESS_GCRZ_WGT)){
+        return(NA)
+    }
     scoreType <- scoreTypes$sample[[scoreTypeName]]
     # if(scoreType$gcBiasDependent) return(NULL)
     message(paste(" ", scoreTypeName))
@@ -149,16 +225,16 @@ message("aggregating and saving GC regression fits for app")
 gcBiasModels <- sapply(c("gcrz_obs", "gcrz_wgt"), function(grcz_type) {
     sapply(collate$samples$sample_name, function(sample_name) {
         tmpFile <- paste(env$SHM_FILE_PREFIX, "gcBiasModel", grcz_type, sample_name, "rds", sep = '.')
-        readRDS(tmpFile)
+        if(file.exists(tmpFile)) readRDS(tmpFile) else NA
     }, simplify = FALSE, USE.NAMES = TRUE)
 }, simplify = FALSE, USE.NAMES = TRUE)
 saveRDS(
     gcBiasModels, 
-    file = paste(env$DATA_FILE_PREFIX, "gcBiasModels.rds", sep = '.')
+    file = getScoresOutputFile("gcBiasModels.rds")
 )
 
 message("refactoring bin-level score data for tabixed retrieval in app")
-env$SCORES_DIR <- file.path(env$TASK_DIR, "scores")
+env$SCORES_DIR <- getScoresDir()
 scoresPrefix <- file.path(env$SCORES_DIR, env$DATA_NAME)
 if(!dir.exists(env$SCORES_DIR)) dir.create(env$SCORES_DIR)
 templateDt <- collate$bins[isPrimaryGenome, .(
@@ -169,6 +245,9 @@ templateDt <- collate$bins[isPrimaryGenome, .(
 scoreTables <- list()
 for(scoreTypeName in names(scoreTypes$sample)){
     scoreType <- scoreTypes$sample[[scoreTypeName]]
+    if(!is.list(scores$sample[[scoreTypeName]])){
+        next
+    }
     # if(scoreType$gcBiasDependent) return(NULL)
     message(paste(" ", scoreTypeName))
     scoreTables[[scoreTypeName]] <- list()
@@ -226,12 +305,14 @@ obj <- list(
         included = included,
         gc       = gc,
         gc_z     = gc_z,
-        txn      = txn
+        txn      = txn,
+        stgm     = stgm,
+        hic      = hic
     )]
 )
 saveRDS(
     obj, 
-    file = paste(env$DATA_FILE_PREFIX, "scores.rds", sep = '.')
+    file = getScoresOutputFile("scores.rds")
 )
 str(obj)
 #=====================================================================================

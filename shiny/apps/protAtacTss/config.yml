@@ -23,6 +23,8 @@ uploadTypes:
                 required: true
             ab_initio:
                 required: false
+            lag_analysis:
+                required: false
 
 #----------------------------------------------------------------------
 # labels and definitions for all sequential analysis steps shown in sidebar
@@ -45,6 +47,8 @@ appSteps:
         module: dinucChains
     dinucEnrichment:
         module: dinucEnrichment
+    lagAnalysis:
+        module: lagAnalysis
     browser:
         module: genomex-mdi-tools//trackBrowser
         options:

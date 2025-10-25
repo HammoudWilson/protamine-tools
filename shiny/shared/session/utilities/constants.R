@@ -35,7 +35,23 @@ scoreTypes <- list(
             trackHeaderLabel = "Round Spermatid PRO-seq",
             trackSummaryLabel = "log10 CPM",
             class = "transcription",
-            valueLim = log10(c(1e-3, 1e3))
+            valueLim = log10(c(1e-3, 1e1))
+        ),
+        stgm = list(
+            label = "Bin Stage Mean",
+            unit = "",
+            trackHeaderLabel = "Bin Stage Mean",
+            trackSummaryLabel = "quantile",
+            class = "timecourse",
+            valueLim = c(1.5, 5)
+        ),
+        hic = list(
+            label = "HiC Compartment Score",
+            unit = "",
+            trackHeaderLabel = "HiC Compartment Score",
+            trackSummaryLabel = "quantile",
+            class = "compartment",
+            valueLim = c(-0.1, 0.1)
         )
     ),
     sample = list(
@@ -67,14 +83,14 @@ scoreTypes <- list(
         ),
         nrll = list(
             distUnit = 0.1,
-            label = "Protamine Transition Enrichment",
+            label = "Insert Size", # "Protamine Transition Enrichment",
             unit = "NRLL",
             enrichmentLabel = "Protamine Transition (NRLL)",
             trackHeaderLabel = "Protamine Transition Enrichment",
             trackScoreLabel = "NRLL",
             class = "insertSize",
             valueLim = c(-1.5, 1.5),
-            deltaLim = c(-1.5, 0.5)
+            deltaLim = c(-1.1, 0.1)
         )
     )
 )

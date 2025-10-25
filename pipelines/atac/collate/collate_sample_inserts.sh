@@ -25,9 +25,6 @@ export FILENAME_PREFIX=$1
 # inserts are pre-filtered for all quality, inclusion, and mappability criteria
 zcat ${INSERT_SPANS_DIR}/${FILENAME_PREFIX}.ins_dedup_mpp.bed.gz | 
 
-#################################
-# head -n 100000 |
-
 # get the fraction GC of the insert span on reference
 bedtools nuc -fi ${GENOME_FASTA_SHM} -bed - |
 tail -n +2 | # remove the bedtools nuc header

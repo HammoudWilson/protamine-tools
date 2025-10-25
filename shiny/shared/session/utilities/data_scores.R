@@ -99,8 +99,27 @@ getStageTypeDeltaMetadata <- function(sourceId, scoreTypeName, cleanDist = FALSE
 #----------------------------------------------------------------------
 # score retrieval in a genome window
 #----------------------------------------------------------------------
-getGenomeScores <- function(sourceId, scoreTypeName, binI){ # returns a single genome-level score object
-    paScores_bins(sourceId)[binI][[scoreTypeName]]
+stgm_ecdf <- list()
+hic_ecdf <- list()
+getGenomeScores <- function(sourceId, scoreTypeName, binI, stgmQuantile = TRUE, hicQuantile = TRUE){ # returns a single genome-level score object
+    bins <- paScores_bins(sourceId)
+    scores <- bins[[scoreTypeName]]
+    if(scoreTypeName == "stgm" && stgmQuantile) {
+        if(is.null(stgm_ecdf[[sourceId]])) {
+            scores_wrk <- scores[bins$included == 1 & !is.na(scores)]
+            stgm_ecdf[[sourceId]] <<- ecdf(scores_wrk)
+        }
+        1 - stgm_ecdf[[sourceId]](scores[binI])
+        # stgm_ecdf[[sourceId]](scores[binI])
+    } else if(scoreTypeName == "hic" && hicQuantile) {
+        if(is.null(hic_ecdf[[sourceId]])) {
+            scores_wrk <- scores[bins$included == 1 & !is.na(scores)]
+            hic_ecdf[[sourceId]] <<- ecdf(scores_wrk)
+        }
+        hic_ecdf[[sourceId]](scores[binI])
+    } else {
+        scores[binI]
+    }
 }
 getSampleScores <- function(metadata, config, coord, scoreTypeName, dataType){ # returns a list of sample-level score objects based on GC normalization
     scoresDir <- trimws(config$Scores_Dir)
@@ -196,6 +215,18 @@ getSampleScores_all <- function(sourceId, scoreTypeName){ # returns a list of sa
         )
     )
 }
+getStageTypeDelta_allBins <- function(sourceId, scoreTypeName){
+    paScores_getCached(
+        "getStageTypeDelta_allBins",
+        keyObject = list(sourceId, scoreTypeName),
+        from = 'ram',
+        createFn = function(...) {
+            getSampleScores_all(sourceId, scoreTypeName)$stageType
+        },
+        spinnerMessage = paste("loading score delta")
+    )
+}
+
 
 
     # env = env[c(
