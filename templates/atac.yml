@@ -1,0 +1,74 @@
+---
+# this job file executes pipeline actions that analyze spermatid ATAC-seq data
+# update variables PROJECT_NAME, OUTPUT_DIR, RESOURCE_DIR, FASTQ_INPUT_DIR as needed
+pipeline: protamine-tools/atac:latest
+variables:
+    TIMESTAMP:       102525
+    VERSION:         v6
+    PROJECT_NAME:    atac_${TIMESTAMP}_${VERSION}
+    OUTPUT_DIR:      ${PWD}
+    RESOURCE_DIR:    ${PWD}
+    FASTQ_INPUT_DIR: ${PWD}/${VERSION}
+    BAM_DIR:         ${OUTPUT_DIR}/${PROJECT_NAME}/bam # fixed, unless reads aligned externally
+shared:
+    samples:
+        metadata-file:  ${RESOURCE_DIR}/ATAC_sample_file_${VERSION}.csv
+    stage:
+        histone-stage:   early_RS # the defaults, repeated here for clarity
+        protamine-stage: int_ES
+        stage-types:     round:early_RS,int_RS,late_RS;elong:early_ES,int_ES
+    output:
+        output-dir:     ${OUTPUT_DIR}
+        data-name:      ${PROJECT_NAME}
+# alignment is handled in batches defined in --metadata-file
+# alternatively, reads can be aligned externally and BAM files provided in --input-dir to later actions
+align:
+    samples: 
+        input-dir: ${FASTQ_INPUT_DIR}
+    alignment:
+        alignment-batch:
+            - 23734
+            - 24290R
+            - 26104R
+        bam-output-dir: ${BAM_DIR}
+    output:
+        output-dir: ${OUTPUT_DIR}/${PROJECT_NAME}/atac-align
+        data-name:
+            - 23734
+            - 24290R
+            - 26104R
+sites:
+    samples: 
+        input-dir: ${BAM_DIR}
+    resources:
+        n-cpu: 14 # half the number of samples in --metadata-file
+        ram-per-cpu: 3G
+collate:
+    samples: 
+        input-dir: ${BAM_DIR}
+    resources:
+        n-cpu: 14
+        ram-per-cpu: 5G
+tss:
+    resources:
+        n-cpu: 14
+        ram-per-cpu: 3G
+recollate:
+    samples: 
+        input-dir: ${BAM_DIR}
+    score:
+        hic-compartment-bed: ${OUTPUT_DIR}/${PROJECT_NAME}/regions_bed/genome/spans_compartments_combined_hic.bed
+    resources:
+        n-cpu: 14
+        ram-per-cpu: 5G 
+execute:
+    # dependent action, run after genome/composite
+    - align
+    # dependent action, run after genome/mappability
+    - sites
+    # dependent action, run after genome/bin and nascent/bin
+    - collate
+    # dependent action, run after nascent/tss
+    - tss
+    # dependent action, run after genome/bin and nascent/tss
+    - recollate

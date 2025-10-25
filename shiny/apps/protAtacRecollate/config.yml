@@ -1,0 +1,63 @@
+---
+#----------------------------------------------------------------------
+# app metadata
+#----------------------------------------------------------------------
+name: protAtacRecollate
+description: "Examine spermatid ATAC-seq insert size and GC distributions after excluding peak regions"
+version: v0.0.0
+# suiteVersions:
+#     suiteName: v0.0.0
+
+#----------------------------------------------------------------------
+# project data file type(s) associated with this app
+# the keys in uploadTypes are matched to key uploadType in incoming package.yml
+#----------------------------------------------------------------------
+uploadTypes:
+    protamine-atac-recollate: 
+        contentFileTypes: # anything not listed will not be available to the app
+            collate:  
+                required: true
+            gcBiasModels:  
+                required: true
+            scores:
+                required: true
+            tssFrags:  
+                required: true
+            footprint:
+                required: true
+            ab_initio:
+                required: true
+
+#----------------------------------------------------------------------
+# labels and definitions for all sequential analysis steps shown in sidebar
+#----------------------------------------------------------------------
+# module = the appSteps module used for a sequential step
+#    the keyed name of a step becomes its namespace in the 'app' object
+# shortLabel = as shown on dashboard menu (required if not provided as module default)
+# shortDescription = as shown on the Overview page (required if not provided as module default)
+# options = passed to both <module>UI and <module>Server functions
+#    longLabel = the title for the appStep tabbed page
+#    alwaysVisible = declares that step is NOT sequential and thus always available
+#    other options are module specific; see module definitions
+#----------------------------------------------------------------------
+appSteps:
+    upload: # nearly always the 1st step of every app
+        module: sourceFileUpload
+    insertSizes:
+        module: insertSizes
+    normalization:
+        module: normalization
+    scoreSummary:
+        module: scoreSummary
+    scoreCorrelation:
+        module: scoreCorrelation
+    browser:
+        module: genomex-mdi-tools//trackBrowser
+        options:
+            tracks:
+                - paScoreMap
+                - atacFootprint
+                - tssFrags
+                - ctcfMotifs
+    regionEnrichment:
+        module: regionEnrichment

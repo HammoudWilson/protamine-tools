@@ -1,0 +1,30 @@
+---
+# this job file executes pipeline actions required to prepare composite genome files
+# genome output files are placed into folder ${MDI_DIR}/resources/genomes
+# job log files are placed into folder ${PWD}/logs/mm39_dm6
+pipeline: protamine-tools/genome:latest
+variables:
+    PRIMARY_GENOME:     mm39
+    SPIKE_IN_GENOME:    dm6
+    COMPOSITE_GENOME:   ${PRIMARY_GENOME}_${SPIKE_IN_GENOME}
+shared:
+    output:
+        output-dir: ${PWD}
+        data-name:  ${COMPOSITE_GENOME} 
+download:
+    output:
+        data-name:
+            - ${PRIMARY_GENOME} 
+            - ${SPIKE_IN_GENOME}
+    download-genome:
+        genome:
+            - ${PRIMARY_GENOME} 
+            - ${SPIKE_IN_GENOME}
+composite:
+mappability:
+bin:
+execute:
+    - download
+    - composite
+    - mappability
+    - bin

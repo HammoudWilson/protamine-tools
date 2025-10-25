@@ -1,0 +1,80 @@
+#----------------------------------------------------------------------
+# ui
+#----------------------------------------------------------------------
+shortLabel:       "Score Correlation" # shown on dashboard menu 
+shortDescription: "Plot correlations of genome-level bin scores." # shown on Overview page
+longLabel:        "Plot genome-level score correlations" # shown at top of appStep page 
+
+#----------------------------------------------------------------------
+# server
+#----------------------------------------------------------------------
+types: # names of the type(s) of this module ...
+    - scoreCorrelation
+sourceTypes: upload # ... and of the module(s) on which it depends
+
+#----------------------------------------------------------------------
+# dependencies
+#----------------------------------------------------------------------
+packages: # required R packages
+    R:  null
+    Bioconductor: null
+
+## optional data classes and UI modules this module will use
+## e.g., might expect to find shared/optional/classes/<classType>/<className>/<className>_*.R
+#classes:
+#    classType:
+#        - className            
+#modules: null
+
+#----------------------------------------------------------------------
+# module-level settings
+#----------------------------------------------------------------------
+settings:
+    Score_Correlation:
+        Random_Bin_Count:
+            type:   numericInput
+            value:  50000
+            min:    10000
+            max:    200000
+            step:   10000 
+#         Aggregate_Samples_By_Stage:
+#             type: checkboxInput
+#             value: false 
+#         Normalize_To_Spike_In:
+#             type: checkboxInput
+#             value: false 
+#         <settingName>:
+#             type:   textInput
+#             value:  abc  
+#         <settingName>:
+#             type:   numericInput
+#             value:  1
+#             min:    1
+#             max:    100
+#             step:   1 
+#         <settingName>:
+#             type: selectInput
+#             choices:
+#                 - abc
+#                 - xyz
+#             value: abc    
+#         <settingName>:
+#             type: radioButtons
+#             choices:
+#                 - abc
+#                 - xyz
+#             value: abc    
+#         <settingName>:
+#             type: checkboxGroupInput
+#             choices:
+#                 - abc
+#                 - xyz
+#             value: abc 
+#         <settingName>:
+#             type: checkboxInput
+#             value: true 
+#         <settingName>:
+#             type:   fileInput
+#             accept: 
+#                 - ".csv"
+#                 - ".txt"

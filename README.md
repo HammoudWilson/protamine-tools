@@ -2,8 +2,9 @@
 
 Protamine Tools provides code used in portions of the analysis of spermatid
 ATAC-seq data and its relationship with other transcription and
-chromatin data sets, as reported in Rabbani et al., a collaboration
-between the 
+chromatin data sets, as reported in 
+Rabbani et al. (in preparation), 
+a collaboration between the 
 [Sue Hammoud](https://hammoud.lab.medicine.umich.edu/)
 and 
 [Tom Wilson](https://wilsonte-umich.github.io/)
@@ -93,7 +94,7 @@ mdi install # re-install to obtain the new tool suite
 ### Build the required Conda environments
 
 Protamine Tools pipelines use version-controlled 3rd-party software built 
-into conda environments. Build those environment in your MDI installation as follows:
+into conda environments. Build those environments in your MDI installation as follows:
 
 ```sh
 mdi nascent conda --create # for preparing round spermatid Pro-seq data
@@ -104,6 +105,25 @@ You must have `conda` available in your server environment. If you need to run
 a command to make conda available, follow the instructions in
 `.../mdi/config/stage1-pipelines.yml`, which is pre-configured to work on
 the University of Michigan Great Lakes cluster.
+
+### Obtain additional external resources and data sets
+
+The following external resources and data sets are required to execute Protamine Tools pipelines.
+
+Round spermatid Pro-seq nascent transcription data from
+[Kaye et al. 2024](https://pubmed.ncbi.nlm.nih.gov/38287033/)
+must be [downloaded from NIH GEO](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE228452), specifically files:
+- GSE228452_mm10_rs_proseq_n3spike_F.bw
+- GSE228452_mm10_rs_proseq_n3spike_R.bw
+
+Because the Pro-seq data are in mm10 genome coordinates, you must also
+download the 
+[mm10 to mm39 liftover chain from UCSC](https://hgdownload.soe.ucsc.edu/goldenPath/mm10/liftOver/mm10ToMm39.over.chain.gz).
+
+Paths to the above files are passed to pipelines using options
+`--bigwig-file-forward`, 
+`--bigwig-file-reverse`, and 
+`--liftOver-chain`.
 
 ## Execute pipelines using the CLI
 
@@ -116,8 +136,8 @@ There are four named pipelines in the Protamine Tools suite, used in this order:
 - `atac` = analyze spermatid ATAC-seq data, prepare packages for use in interactive apps
 - `enrichment` = assemble BED files of genome regions for ATAC-seq enrichment analysis
 
-Each pipeline has a series of named actions executed in the order,
-and with the dependencies, in the following diagram:
+Each pipeline has a series of named actions executed in the order
+and with the dependencies in the following diagram:
 
 ![Protamine Tools Workflow](https://github.com/HammoudWilson/protamine-tools/blob/main/protaminer_workflow.png)
 
@@ -130,6 +150,15 @@ mdi genome template --all-options # output a job file template for all pipeline 
 # etc.
 ```
 
+Details of the work done by each pipeline and action are found in the scripts
+organized into sub-folders of the top-level `pipelines` folder, 
+of the same names as the pipelines and actions themselves. 
+Each pipeline's `pipeline.yml` file describes its actions,
+and each action's `Workflow.sh` script coordinates the work it accomplishes.
+
+Note that Protamine Tools requires specifically configured genome resource files,
+which you must obtain and assemble using `genome download`, etc.
+
 ### Universally required options
 
 Options `--output-dir/-O` and `--data-name/-N` are required by all pipeline actions.
@@ -137,6 +166,14 @@ Options `--output-dir/-O` and `--data-name/-N` are required by all pipeline acti
 Several of the pipelines create data package files to be loaded into the
 R Shiny interactive visualization apps, in addition to various BAM, BED and
 other formatted files, all placed into directory `<--output-dir>/<--data-name>`.
+
+### Sample metadata file
+
+You must provide a path to an ATAC-seq sample metadata file as option 
+`--metadata-file`. The sample file we used is included in the downloaded repository
+as file `mdi/suites/definitive/protamine-tools/resources/ATAC_sample_file_v6.csv`.
+It included various names and spermatid stage descriptions. If you create your 
+own file, it must follow the same column format.
 
 ### Job files
 

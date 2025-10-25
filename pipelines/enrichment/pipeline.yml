@@ -28,15 +28,15 @@ actions:
             recommended:
                 time-limit: 4:00:00
         description: "assemble missing, one, or all genome regions BED files for ATAC-seq enrichment analysis"
-package:
-    bed: # the pipeline action after which a data package should assembled
-        uploadType: protamine-regions-bed # a signal to the Stage 2 framework regarding the package contents
-        # files:
-        #     samples-metadata-file:
-        #         type: csv
-        #         file: $METADATA_FILE
-        extraPushFiles: # files pushed to remote server in addition to the data package but not included in the package
-            - $TASK_DIR/regions_bed
+# package:
+#     bed: # the pipeline action after which a data package should assembled
+#         uploadType: protamine-regions-bed # a signal to the Stage 2 framework regarding the package contents
+#         # files:
+#         #     samples-metadata-file:
+#         #         type: csv
+#         #         file: $METADATA_FILE
+#         extraPushFiles: # files pushed to remote server in addition to the data package but not included in the package
+#             - $TASK_DIR/regions_bed
 container:
     supported: false
     registry:  ghcr.io  # domain name of your OCI-compatible, oras-accessible, container registry [ghcr.io]

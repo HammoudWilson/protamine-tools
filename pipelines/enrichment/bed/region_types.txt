@@ -20,6 +20,7 @@
 
 # inherent properties of the genome irrespective of measured data
 genome/bins_fraction_gc_all
+genome/spans_hic_compartments_merged_rs
 
 # transcription starts sites derived from the annotation, scored (and filtered) by Pro-seq transcription
 annotation/tss_txn_rounds_all
@@ -35,6 +36,7 @@ transcription/spans_txn_rounds_all
 transcription/spans_txn_rounds_active_0.1
 transcription/spans_txn_rounds_active_0.5
 transcription/spans_txn_rounds_inactive_0.1
+transcription/tss_txn_early_es_high_scrna
 
 # here are examples I might expect for the 'histone' class
 # in this entry, 'peaks' and 'all' means that all H3K27me3 called _peaks_ in sperm data are included (not that the whole genome is represented)

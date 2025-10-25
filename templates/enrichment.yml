@@ -1,0 +1,16 @@
+---
+# this job file executes pipeline actions to assemble BED files for enrichment analysis in apps
+# update variables PROJECT_NAME and OUTPUT_DIR as needed
+pipeline: protamine-tools/enrichment:latest
+variables:
+    TIMESTAMP:    102525
+    VERSION:      v6
+    PROJECT_NAME: atac_${TIMESTAMP}_${VERSION}
+    OUTPUT_DIR:   ${PWD}
+shared:
+    output:
+        output-dir:     ${OUTPUT_DIR}
+        data-name:      ${PROJECT_NAME}
+bed:
+execute:
+    - bed
