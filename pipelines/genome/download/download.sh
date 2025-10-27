@@ -11,7 +11,7 @@ download_and_unzip_file () {
             echo "  downloading $FILE_DESCRIPTION"
             echo "    from: $URL"
             echo "    to:   $GZ_FILE"
-            wget -O $GZ_FILE $URL
+            wget --no-verbose -O $GZ_FILE $URL
         fi
         if [ "$LEAVE_ZIPPED" == "" ]; then
             echo "  unzipping $FILE_DESCRIPTION"
@@ -127,7 +127,7 @@ download_gtf () {
         echo "  downloading GTF file"
         echo "    from: ${GENCODE_URL}"
         echo "    to:   ${GENOME_GTF}"
-        wget -O ${GENOME_GTF} ${GENCODE_URL}
+        wget --no-verbose -O ${GENOME_GTF} ${GENCODE_URL}
     else 
         echo "  already exists: genome GTF"
     fi

@@ -24,6 +24,7 @@ if [[ ! -d $GENOME_DIR && "$CREATING_COMPOSITE" == "" ]]; then
     exit 1
 fi
 export GENOME_PREFIX=${GENOME_DIR}/${GENOME}
+export GENOMES_DIR=$(dirname ${GENOME_DIR})
 
 # fasta file and index
 export GENOME_FASTA=${GENOME_PREFIX}.fa

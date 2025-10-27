@@ -3,9 +3,10 @@
 ROUND_M=10000 # multiplier when rounding percent GC values
 
 # declare the input file(s) used to create the output BED file
-# this is the baseline genome 1kb bins file created by genome/bin
+# this is the baseline genome 1kb bins file created by previous genome/bin with single bin GC value
 #    chrom   start0  end1    excluded        pct_gc
-INPUT_FILE=${GENOMES_DIR}/${PRIMARY_GENOME}/bins/${PRIMARY_GENOME}.bin_1000.bed.gz
+EXT_GENOMES_DIR=/nfs/turbo/path-wilsonte-turbo/mdi/wilsontelab/greatlakes/mdi/resources/genomes
+INPUT_FILE=${EXT_GENOMES_DIR}/${PRIMARY_GENOME}/bins/${PRIMARY_GENOME}.bin_1000.bed.gz
 
 # name and excerpt the input file(s) to the job log
 # be sure to include the redirection to STDERR (1>&2) on all log file lines!

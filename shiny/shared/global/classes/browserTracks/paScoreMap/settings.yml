@@ -51,6 +51,23 @@ settings:
         GCRZ_As_Quantiles:
             type:   checkboxInput
             value:  true
+        # Spacer:
+        #     type:   spacer 
+        Show_Tracks:
+            type:   checkboxGroupInput
+            choices:
+                - gc_z
+                - txn
+                - hic
+                - stgm
+                - gcrz_obs
+                - nrll
+            value:
+                - gc_z
+                - txn
+                - hic
+                - stgm
+                - gcrz_obs
     Data_Path:
         Scores_Dir:
             type:   textInput

@@ -58,6 +58,8 @@ scoreSummaryUI <- function(id, options) {
                         choiceNames  = c(
                             "Bin GC", 
                             "Pro-seq Txn", 
+                            "Stage Mean", 
+                            "HiC Compartment",
                             "GC Resid Z Obs",
                             "GC Resid Z Wgt", 
                             "Protamine NRLL"
@@ -65,6 +67,8 @@ scoreSummaryUI <- function(id, options) {
                         choiceValues = c(
                             "gc", 
                             "txn", 
+                            "stgm", 
+                            "hic",
                             "gcrz_obs", 
                             "gcrz_wgt", 
                             "nrll"

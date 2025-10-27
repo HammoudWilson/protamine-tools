@@ -6,7 +6,7 @@ LOG10_M=100 # multiplier when rounding log10 RPKM values
 # declare the input file(s) used to create the output BED file
 # this BED file was created by nascent/bin and carries 1kb bins with Pro-seq RPKM values for the unstranded composite genome
 #  chrom   start   end   cpm==rpkm
-INPUT_FILE=${TASK_DIR}/atac_060225_v6.nascent_transcriptome_unstranded.bed.gz
+INPUT_FILE=${TASK_DIR}/${DATA_NAME}.nascent_transcriptome_unstranded.bed.gz
 
 # name and excerpt the input file(s) to the job log
 echo "input file: ${INPUT_FILE}" 1>&2

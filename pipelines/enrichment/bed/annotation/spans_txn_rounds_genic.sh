@@ -6,7 +6,7 @@ LOG10_M=100 # multiplier when rounding log10 RPKM values
 INPUT_FILE_1=${GENOMES_DIR}/${PRIMARY_GENOME}/annotations/${PRIMARY_GENOME}.gencode.M36.genes.bed.gz
 # the second BED file was created by nascent/bin and carries 1kb bins with Pro-seq RPKM values for the unstranded composite genome
 #  chrom   start   end   cpm==rpkm
-INPUT_FILE_2=${TASK_DIR}/atac_060225_v6.nascent_transcriptome_unstranded.bed.gz
+INPUT_FILE_2=${TASK_DIR}/${DATA_NAME}.nascent_transcriptome_unstranded.bed.gz
 
 # name and excerpt the input file(s) to the job log
 # be sure to include the redirection to STDERR (1>&2) on all log file lines!

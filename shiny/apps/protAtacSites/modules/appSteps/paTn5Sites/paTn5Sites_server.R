@@ -97,6 +97,13 @@ tn5CdfPlot <- staticPlotBoxServer(
             y = c(0, 1),
             col = CONSTANTS$plotlyColors$grey
         )
+        legend(
+            "bottomright",
+            legend = c("Sample CDF", "Expected CDF"),
+            col = c(CONSTANTS$plotlyColors$blue, CONSTANTS$plotlyColors$green),
+            bty = "n",
+            lwd = 2
+        )
         stopSpinner(session)
     }
 )
