@@ -1,0 +1,263 @@
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+pipline: nascent
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+protaminer status
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+updating /path/to/jobFiles/.nascent.yml.data/nascent.yml.status
+updated	10/27/2025 12:40:20
+qType	slurm
+submitted	10/26/2025 13:19:14	XXXXX
+job_name                              array  job_ID     exit_status  start_time  wall_time  maxvmem
+nascent_bin_atac_102525_v6 -------------     34852450   0    Sun 10/26/25 13:19  00:01:12   5.114G 
+nascent_tss_atac_102525_v6 -------------     34852451   0    Sun 10/26/25 13:21  00:01:17   5.528G 
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+protaminer report
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+====================================================================================================
+job: 34852450
+----------------------------------------------------------------------------------------------------
+/path/to/jobFiles/.nascent.yml.data/log/slurm/nascent_bin_atac_102525_v6.o34852450
+----------------------------------------------------------------------------------------------------
+
+---
+job-manager:
+    host: gl3023.arc-ts.umich.edu
+    started: Sun 10/26/25 13:19
+---
+pipeline: protamine-tools/nascent:main
+description: "prepare round spermatid nascent RNA-seq data for pipeline analysis"
+execute: bin
+thread: default
+nTasks: 1
+bin:
+    nascent:
+        bigwig-file-forward: /path/to/jobFiles/GSE228452_mm10_rs_proseq_n3spike_F.bw
+        bigwig-file-reverse: /path/to/jobFiles/GSE228452_mm10_rs_proseq_n3spike_R.bw
+        liftOver-chain: /path/to/jobFiles/mm10ToMm39.over.chain
+    composite:
+        primary-genome: mm39
+        primary-genome-dir: null
+        spike-in-genome: dm6
+        spike-in-genome-dir: null
+    genome:
+        genome:         mm39_dm6
+        genome-dir:     null
+    bin:
+        bin-size:       1000
+    output:
+        output-dir:     /path/to/output
+        data-name:      atac_102525_v6
+    push:
+        push-server:    null
+        push-dir:       /srv/data
+        push-user:      ubuntu
+        push-key:       ~/.ssh/mdi-push-key.pem
+    version:
+        version:        latest
+    resources:
+        runtime:        auto
+        n-cpu:          2
+        n-gpu:          0
+        ram-per-cpu:    8G
+        tmp-dir:        /tmp
+        tmp-dir-large:  /tmp
+    job-manager:
+        email:          nobody@nowhere.edu
+        account:        XXXXX
+        time-limit:     2:00:00
+        partition:      standard
+        exclusive:      false
+    workflow:
+        force:          false
+        rollback:       null
+        quiet:          false
+    help:
+        help:           false
+        dry-run:        true
+    conda:
+        prefix: /path/to/mdi/environments/protamine-nascent 
+        channels:
+            - conda-forge
+            - bioconda
+            - defaults
+        dependencies:
+            - pigz=2.8
+            - bioconductor-rtracklayer
+            - r-essentials
+            - r-r.utils
+...
+
+executing: nascent bin, step 1 = bin
+initializing
+importing (and lifting over) bigwig files
+  importing /path/to/jobFiles/GSE228452_mm10_rs_proseq_n3spike_F.bw
+  importing /path/to/jobFiles/GSE228452_mm10_rs_proseq_n3spike_R.bw
+  lifting with  /path/to/jobFiles/mm10ToMm39.over.chain
+  lifting with  /path/to/jobFiles/mm10ToMm39.over.chain
+creating unstranded transcription map by counting read 3' endpoints per bin
+loading genome bins
+adjusting chrom names to match composite genome
+merging into genome bins, including empty bins
+coverting counts to CPM
+writing nascent transcriptome output file
+
+Classes ‘data.table’ and 'data.frame':	2860977 obs. of  4 variables:
+ $ chrom : chr  "chr1-mm39" "chr1-mm39" "chr1-mm39" "chr1-mm39" ...
+ $ start0: int  0 1000 2000 3000 4000 5000 6000 7000 8000 9000 ...
+ $ end1  : int  1000 2000 3000 4000 5000 6000 7000 8000 9000 10000 ...
+ $ cpm   : num  0 0 0 0 0 0 0 0 0 0 ...
+ - attr(*, ".internal.selfref")=<externalptr> 
+
+---
+job-manager:
+    exit_status: 0
+    walltime: 1:12.72
+    seconds: 72.72
+    maxvmem: 5114008K
+    swaps: 0
+---
+job-manager:
+    ended: Sun 10/26/25 13:20
+...
+====================================================================================================
+job: 34852451
+----------------------------------------------------------------------------------------------------
+/path/to/jobFiles/.nascent.yml.data/log/slurm/nascent_tss_atac_102525_v6.o34852451
+----------------------------------------------------------------------------------------------------
+
+---
+job-manager:
+    host: gl3019.arc-ts.umich.edu
+    started: Sun 10/26/25 13:21
+---
+pipeline: protamine-tools/nascent:main
+description: "prepare round spermatid nascent RNA-seq data for pipeline analysis"
+execute: tss
+thread: default
+nTasks: 1
+tss:
+    nascent:
+        bigwig-file-forward: /path/to/jobFiles/GSE228452_mm10_rs_proseq_n3spike_F.bw
+        bigwig-file-reverse: /path/to/jobFiles/GSE228452_mm10_rs_proseq_n3spike_R.bw
+        liftOver-chain: /path/to/jobFiles/mm10ToMm39.over.chain
+    composite:
+        primary-genome: mm39
+        primary-genome-dir: null
+        spike-in-genome: dm6
+        spike-in-genome-dir: null
+    genome:
+        genome:         mm39_dm6
+        genome-dir:     null
+    annotation:
+        gencode-release: M36
+    output:
+        output-dir:     /path/to/output
+        data-name:      atac_102525_v6
+    push:
+        push-server:    null
+        push-dir:       /srv/data
+        push-user:      ubuntu
+        push-key:       ~/.ssh/mdi-push-key.pem
+    version:
+        version:        latest
+    resources:
+        runtime:        auto
+        n-cpu:          12
+        n-gpu:          0
+        ram-per-cpu:    2G
+        tmp-dir:        /tmp
+        tmp-dir-large:  /tmp
+    job-manager:
+        email:          nobody@nowhere.edu
+        account:        XXXXX
+        time-limit:     4:00:00
+        partition:      standard
+        exclusive:      false
+    workflow:
+        force:          false
+        rollback:       null
+        quiet:          false
+    help:
+        help:           false
+        dry-run:        true
+    conda:
+        prefix: /path/to/mdi/environments/protamine-nascent 
+        channels:
+            - conda-forge
+            - bioconda
+            - defaults
+        dependencies:
+            - pigz=2.8
+            - bioconductor-rtracklayer
+            - r-essentials
+            - r-r.utils
+...
+ACTION	STEP#	STEP	DATE
+bin	1	bin	Sun Oct 26 13:20:50 EDT 2025
+
+
+executing: nascent tss, step 1 = tss
+initializing
+importing (and lifting over) bigwig files
+  importing /path/to/jobFiles/GSE228452_mm10_rs_proseq_n3spike_F.bw
+  importing /path/to/jobFiles/GSE228452_mm10_rs_proseq_n3spike_R.bw
+  lifting with  /path/to/jobFiles/mm10ToMm39.over.chain
+  lifting with  /path/to/jobFiles/mm10ToMm39.over.chain
+calculating total counts
+  total counts (M): 102.46713379436
+loading canonical-chromosome genes >= 1000bp
+  total usable genes: 56413
+parsing 1kb upstream and downstream of gene TSSs
+adjusting chrom names to match composite genome
+calculating cpm of TSS upstream and downstream regions
+  processing chr1-mm39
+  processing chr10-mm39
+  processing chr11-mm39
+  processing chr12-mm39
+  processing chr13-mm39
+  processing chr14-mm39
+  processing chr15-mm39
+  processing chr16-mm39
+  processing chr17-mm39
+  processing chr18-mm39
+  processing chr19-mm39
+  processing chr2-mm39
+  processing chr4-mm39
+  processing chr9-mm39
+  processing chr6-mm39
+  processing chrY-mm39
+  processing chr8-mm39
+  processing chrX-mm39
+  processing chr7-mm39
+  processing chr3-mm39
+  processing chr5-mm39
+plotting TSS parameters
+null device 
+          1 
+writing TSS output file
+
+Classes ‘data.table’ and 'data.frame':	51260 obs. of  9 variables:
+ $ chrom            : chr  "chr1-mm39" "chr1-mm39" "chr1-mm39" "chr1-mm39" ...
+ $ start            : int  3142476 3536508 3583730 3665126 3728127 3740721 3749378 3942429 4025747 4055438 ...
+ $ end              : int  3144476 3538508 3585730 3667126 3730127 3742721 3751378 3944429 4027747 4057438 ...
+ $ name             : chr  "ENSMUSG00000102693.2/4933401J01Rik" "ENSMUSG00000103025.2/Gm37686" "ENSMUSG00000103201.2/Gm37329" "ENSMUSG00000103161.2/Gm38148" ...
+ $ gene_size        : int  1070 2309 2057 3012 11596 465598 1634 75199 2942 80477 ...
+ $ strand           : chr  "+" "-" "-" "-" ...
+ $ upstream_rpkm    : num  0.073 0 0 0 0.0527 ...
+ $ gene_start_rpkm  : num  0.10672 0.00741 0.00715 0.00741 0.03199 ...
+ $ tss_fold_increase: num  1.461 Inf Inf Inf 0.607 ...
+ - attr(*, ".internal.selfref")=<externalptr> 
+
+---
+job-manager:
+    exit_status: 0
+    walltime: 1:17.93
+    seconds: 77.93
+    maxvmem: 5527648K
+    swaps: 0
+---
+job-manager:
+    ended: Sun 10/26/25 13:22
+...
+====================================================================================================
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

@@ -28,7 +28,7 @@ for single-suite installations), which is accomplished by:
 Change into a folder of your choosing and run the following commands to
 obtain and install the MDI framework. To start, choose installation
 option 1 to only install the Stage 1 HPC pipelines framework - you can return
-to install the R Shiny apps interface later, which takes considerably longer (see below).
+to install the R Shiny apps interface later, which takes longer (see below).
 
 ```bash
 git clone https://github.com/MiDataInt/mdi.git
@@ -38,20 +38,20 @@ cd mdi
 
 ### OPTIONAL: Add an mdi alias to .bashrc
 
-These commands will create a permanent named alias to the `mdi`
-target script in your new installation.
+The following commands will create a permanent named alias, called `protaminer`, 
+to the `mdi` target script in your new installation.
 
 ```bash
 ./mdi alias --help
-./mdi alias --alias mdi # change the alias name if you'd like 
+./mdi alias --alias protaminer # change the alias name if you'd like
 ```
 
 You will need to open a new shell for the alias to become active.
 
 If you prefer not to use an alias, 
 you can add the installation directory to your PATH variable,
-or `cd` into the directory prior to calling `./mdi`, instead of just
-`mdi` in commands below.
+or `cd` into the directory prior to calling `./mdi`, instead of
+`protaminer` as in commands below.
 
 ### Test the command line interface (CLI)
 
@@ -59,10 +59,10 @@ For top-level help, call the CLI or one of its commands with no arguments
 or with the `--help` option. 
 
 ```bash
-mdi # or ./mdi if you didn't create an alias
-mdi --help
-mdi <command>
-mdi <command> --help
+protaminer # or ./mdi if you didn't create an alias
+protaminer --help
+protaminer <command>
+protaminer <command> --help
 ```
 
 ### Add the Protamine Tools suite to your MDI installation
@@ -70,8 +70,8 @@ mdi <command> --help
 The following commands will install Protamine Tools into your MDI installation.
 
 ```bash
-./mdi add --help
-./mdi add -p -s HammoudWilson/protamine-tools 
+protaminer add --help
+protaminer add -s HammoudWilson/protamine-tools 
 ```
 
 Alternatively, perform the required steps manually:
@@ -87,8 +87,14 @@ suites:
 ```
 
 ```sh
-mdi install --help
-mdi install # re-install to obtain the new tool suite
+protaminer install --help
+protaminer install # re-install to obtain the new tool suite
+```
+
+Finally, see the tools that are available in your installation:
+
+```sh
+protaminer list
 ```
 
 ### Build the required Conda environments
@@ -97,14 +103,17 @@ Protamine Tools pipelines use version-controlled 3rd-party software built
 into conda environments. Build those environments in your MDI installation as follows:
 
 ```sh
-mdi nascent conda --create # for preparing round spermatid Pro-seq data
-mdi atac conda --create    # for executing ATAC-seq data analysis
+protaminer nascent conda --create # for preparing round spermatid Pro-seq data
+protaminer atac conda --create    # for executing ATAC-seq data analysis
 ```
 
 You must have `conda` available in your server environment. If you need to run
 a command to make conda available, follow the instructions in
 `.../mdi/config/stage1-pipelines.yml`, which is pre-configured to work on
 the University of Michigan Great Lakes cluster.
+
+HINT: on our shared server environment, we need to build the conda environments
+on a worker node, as the conda build process exceeds memory limits on the login nodes.
 
 ### Obtain additional external resources and data sets
 
@@ -124,6 +133,15 @@ Paths to the above files are passed to pipelines using options
 `--bigwig-file-forward`, 
 `--bigwig-file-reverse`, and 
 `--liftOver-chain`.
+
+### Create required directory paths
+
+If you will use default values for genome options (recommended), 
+you should manually create the following directory:
+
+```sh
+mkdir -p /path/to/mdi/resources/genomes # adjust the path as needed
+```
 
 ## Execute pipelines using the CLI
 
@@ -145,8 +163,8 @@ Details of the execution and options for each action are beyond the scope
 of this README but can be listed using the CLI, e.g.
 
 ```bash
-mdi genome download --help # show the options help for one pipeline action
-mdi genome template --all-options # output a job file template for all pipeline actions
+protaminer genome download --help # show the options help for one pipeline action
+protaminer genome template --all-options # output a job file template for all pipeline actions
 # etc.
 ```
 
@@ -157,7 +175,10 @@ Each pipeline's `pipeline.yml` file describes its actions,
 and each action's `Workflow.sh` script coordinates the work it accomplishes.
 
 Note that Protamine Tools requires specifically configured genome resource files,
-which you must obtain and assemble using `genome download`, etc.
+which you must obtain and assemble using `genome download`, etc. Some actions
+of the `genome` pipeline are slow but only need to be performed once per genome,
+independently of any sample data to be analyzed. Similarly, the `nascent` pipeline
+only needs to be executed once on the Pro-seq data files listed above. 
 
 ### Universally required options
 
@@ -182,26 +203,36 @@ are strongly encouraged to create YAML-format job configuration files that defin
 parameters for your job and coordinate execution steps.
 
 See 
-[the templates folder](https://github.com/HammoudWilson/protamine-tools/tree/main/templates)
-for job file templates for all pipelines and actions, and 
-<https://midataint.github.io/mdi/docs/job_config_files.html>
+the [protamine-tools/templates](https://github.com/HammoudWilson/protamine-tools/tree/main/templates) folder
+for job file templates for all pipelines, which are the same as the job files we used except for file paths, 
+and <https://midataint.github.io/mdi/docs/job_config_files.html>
 for extended help on using job files. Job file templates can also be generated with 
-command `mdi <pipeline> template` as in the example above.
+command `protaminer <pipeline> template` as in the example above.
 
 The MDI CLI and job files can run pipeline actions either 
 inline in the calling shell or by submitting jobs to your server job scheduler,
 which is recommended for most use cases. Thus, our most common usage pattern is:
 
 ```sh
-mdi inspect myJob.yml          # check the formatting of your job file
-mdi mkdir myJob.yml            # create any missing output directories
-mdi submit --dry-run myJob.yml # test the job file to see what will happen
-mdi submit myJob.yml           # submit the job to Slurm or your scheduler
-mdi myJob.yml status           # show the state of all submitted jobs
-mdi myJob.yml top              # monitor a running job
-mdi myJob.yml report           # show a job log report
-mdi myJob.yml ls               # show the contents of a job's output diretory
+protaminer inspect myJob.yml          # check the formatting of your job file
+protaminer mkdir myJob.yml            # create any missing output directories
+protaminer submit --dry-run myJob.yml # test the job file to see what will happen
+protaminer submit myJob.yml           # submit the job to Slurm or your scheduler
+protaminer myJob.yml status           # show the state of all submitted jobs
+protaminer myJob.yml top              # monitor a running job
+protaminer myJob.yml report           # show a job log report
+protaminer myJob.yml ls               # show the contents of a job's output diretory
 ```
+
+### Example status and log files
+
+The [protamine-tools/logs](https://github.com/HammoudWilson/protamine-tools/tree/main/logs) folder
+has files with the output of our execution of the different pipelines, as 
+generated by `protaminer status` followed by `protaminer report`. 
+These are the program logs as we ran
+them except that environment-specific values such as accounts and file paths
+are replaced with dummy values. Comparison to your logs may help identify
+the source of problems.
 
 ## Launch the interactive apps server
 
@@ -218,7 +249,7 @@ into the app interface.
 You can also install the apps framework into your MDI installation from the command line:
 
 ```bash
-mdi install --install-packages --n-cpu 4
+protaminer install --install-packages --n-cpu 4
 ```
 
 An active R installation must be present on your server when installing

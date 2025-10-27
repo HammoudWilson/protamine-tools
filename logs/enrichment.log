@@ -1,0 +1,430 @@
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+pipline: enrichment
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+protaminer status
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+updating /path/to/jobFiles/.enrichment.yml.data/enrichment.yml.status
+updated	10/27/2025 19:23:33
+qType	slurm
+submitted	10/27/2025 19:18:53	XXXXX
+job_name                              array  job_ID     exit_status  start_time  wall_time  maxvmem
+enrichment_bed_atac_102525_v6 ----------     34952958   0    Mon 10/27/25 19:19  00:03:07   1.02G  
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+protaminer report
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+====================================================================================================
+job: 34952958
+----------------------------------------------------------------------------------------------------
+/path/to/jobFiles/.enrichment.yml.data/log/slurm/enrichment_bed_atac_102525_v6.o34952958
+----------------------------------------------------------------------------------------------------
+
+---
+job-manager:
+    host: gl3085.arc-ts.umich.edu
+    started: Mon 10/27/25 19:19
+---
+pipeline: protamine-tools/enrichment:main
+description: "assemble BED files of genome regions for ATAC-seq enrichment analysis"
+execute: bed
+thread: default
+nTasks: 1
+bed:
+    composite:
+        primary-genome: mm39
+        primary-genome-dir: null
+        spike-in-genome: dm6
+        spike-in-genome-dir: null
+    genome:
+        genome:         mm39_dm6
+        genome-dir:     null
+    regions-bed:
+        force-bed:      NA
+        force-all-bed:  true
+    output:
+        output-dir:     /path/to/output
+        data-name:      atac_102525_v6
+    push:
+        push-server:    null
+        push-dir:       /srv/data
+        push-user:      ubuntu
+        push-key:       ~/.ssh/mdi-push-key.pem
+    version:
+        version:        latest
+    resources:
+        runtime:        auto
+        n-cpu:          1
+        n-gpu:          0
+        ram-per-cpu:    8G
+        tmp-dir:        /tmp
+        tmp-dir-large:  /tmp
+    job-manager:
+        email:          nobody@nowhere.edu
+        account:        XXXXX
+        time-limit:     4:00:00
+        partition:      standard
+        exclusive:      false
+    workflow:
+        force:          false
+        rollback:       null
+        quiet:          false
+    help:
+        help:           false
+        dry-run:        true
+    conda:
+        prefix: /path/to/mdi/environments/protamine-tools 
+        channels:
+            - conda-forge
+            - bioconda
+            - defaults
+        dependencies:
+            - pigz=2.8
+            - fastp=0.24
+            - bowtie2=2.5
+            - genmap=1.3
+            - samtools=1.21
+            - bedtools=2.31
+            - r-ggseqlogo
+            - r-uwot
+            - r-rcpphnsw
+            - r-matrixstats
+            - r-base=4.4
+            - r-essentials=4.4
+            - r-r.utils=2.12
+            - r-mass=7
+...
+
+executing: enrichment bed, step 1 = make_bed
+
+primary genome: mm39
+total bp:       2723431143
+included bp:    2542229700
+
+--------------------------------------------------------------------------------
+genome/bins_fraction_gc_all
+--------------------------------------------------------------------------------
+input file: /path/to/mdi/XXXXXlab/greatlakes/mdi/resources/genomes/mm39/bins/mm39.bin_1000.bed.gz
+chrom	start0	end1	excluded	pct_gc
+chr1	0	1000	1	0.000000
+chr1	1000	2000	1	0.000000
+chr1	2000	3000	1	0.000000
+chr1	3000	4000	1	0.000000
+chr1	4000	5000	1	0.000000
+chr1	5000	6000	1	0.000000
+chr1	6000	7000	1	0.000000
+chr1	7000	8000	1	0.000000
+chr1	8000	9000	1	0.000000
+
+output file: /path/to/output/atac_102525_v6/regions_bed/genome/bins_fraction_gc_all.bed
+# regions:   2545093
+region bp:   2542229700
+chrom	start0	end1	name	Fraction_GC
+chr1	3050000	3051000	.	0.428
+chr1	3051000	3052000	.	0.395
+chr1	3052000	3053000	.	0.38
+chr1	3053000	3054000	.	0.405
+chr1	3054000	3055000	.	0.34
+chr1	3055000	3056000	.	0.354
+chr1	3056000	3057000	.	0.374
+chr1	3057000	3058000	.	0.381
+chr1	3058000	3059000	.	0.442
+
+--------------------------------------------------------------------------------
+annotation/tss_txn_rounds_all
+--------------------------------------------------------------------------------
+input file: /path/to/output/atac_102525_v6/atac_102525_v6.mm39_dm6.gencode.M36.tss.bed.gz
+chrom	start	end	name	gene_size	strand	upstream_rpkm	gene_start_rpkm	tss_fold_increase
+chr1-mm39	3142476	3144476	ENSMUSG00000102693.2/4933401J01Rik	1070	+	0.0730458263765274	0.106717927066958	1.46097227399225
+chr1-mm39	3536508	3538508	ENSMUSG00000103025.2/Gm37686	2309	-	0	0.00740984754757873	Inf
+chr1-mm39	3583730	3585730	ENSMUSG00000103201.2/Gm37329	2057	-	0	0.00715309773575078	Inf
+chr1-mm39	3665126	3667126	ENSMUSG00000103161.2/Gm38148	3012	-	0	0.00740984754757873	Inf
+chr1-mm39	3728127	3730127	ENSMUSG00000102331.2/Gm19938	11596	-	0.0526785729256246	0.0319895279904657	0.607258819171711
+chr1-mm39	3740721	3742721	ENSMUSG00000051951.6/Xkr4	465598	-	0.477520179903002	0.175731038871503	0.368007565475451
+chr1-mm39	3749378	3751378	ENSMUSG00000102348.2/Gm10568	1634	+	0.00740984754757873	0	0
+chr1-mm39	3942429	3944429	ENSMUSG00000142494.1/ENSMUSG00000142494	75199	+	0.0296393896086197	0.657708413237909	22.1903494614017
+chr1-mm39	4025747	4027747	ENSMUSG00000133908.1/ENSMUSG00000133908	2942	-	0.0169130830834803	0.536607259124575	31.7273471948295
+
+output file: /path/to/output/atac_102525_v6/regions_bed/annotation/tss_txn_rounds_all.bed
+# regions:   46051
+region bp:   9452346
+chrom	start0	end1	name	Log10_TSS_RPKM
+chr1	3143376	3143576	ENSMUSG00000102693.2/4933401J01Rik	-0.96
+chr1	3537408	3537608	ENSMUSG00000103025.2/Gm37686	-2.12
+chr1	3584630	3584830	ENSMUSG00000103201.2/Gm37329	-2.14
+chr1	3666026	3666226	ENSMUSG00000103161.2/Gm38148	-2.12
+chr1	3729027	3729227	ENSMUSG00000102331.2/Gm19938	-1.48
+chr1	3741621	3741821	ENSMUSG00000051951.6/Xkr4	-0.75
+chr1	3750278	3750478	ENSMUSG00000102348.2/Gm10568	-3
+chr1	3943329	3943529	ENSMUSG00000142494.1/ENSMUSG00000142494	-0.17
+chr1	4026647	4026847	ENSMUSG00000133908.1/ENSMUSG00000133908	-0.26
+
+--------------------------------------------------------------------------------
+annotation/tss_txn_rounds_active
+--------------------------------------------------------------------------------
+input file: /path/to/output/atac_102525_v6/atac_102525_v6.mm39_dm6.gencode.M36.tss.bed.gz
+chrom	start	end	name	gene_size	strand	upstream_rpkm	gene_start_rpkm	tss_fold_increase
+chr1-mm39	3142476	3144476	ENSMUSG00000102693.2/4933401J01Rik	1070	+	0.0730458263765274	0.106717927066958	1.46097227399225
+chr1-mm39	3536508	3538508	ENSMUSG00000103025.2/Gm37686	2309	-	0	0.00740984754757873	Inf
+chr1-mm39	3583730	3585730	ENSMUSG00000103201.2/Gm37329	2057	-	0	0.00715309773575078	Inf
+chr1-mm39	3665126	3667126	ENSMUSG00000103161.2/Gm38148	3012	-	0	0.00740984754757873	Inf
+chr1-mm39	3728127	3730127	ENSMUSG00000102331.2/Gm19938	11596	-	0.0526785729256246	0.0319895279904657	0.607258819171711
+chr1-mm39	3740721	3742721	ENSMUSG00000051951.6/Xkr4	465598	-	0.477520179903002	0.175731038871503	0.368007565475451
+chr1-mm39	3749378	3751378	ENSMUSG00000102348.2/Gm10568	1634	+	0.00740984754757873	0	0
+chr1-mm39	3942429	3944429	ENSMUSG00000142494.1/ENSMUSG00000142494	75199	+	0.0296393896086197	0.657708413237909	22.1903494614017
+chr1-mm39	4025747	4027747	ENSMUSG00000133908.1/ENSMUSG00000133908	2942	-	0.0169130830834803	0.536607259124575	31.7273471948295
+
+output file: /path/to/output/atac_102525_v6/regions_bed/annotation/tss_txn_rounds_active.bed
+# regions:   9336
+region bp:   1885245
+chrom	start0	end1	name	Log10_TSS_RPKM
+chr1	3943329	3943529	ENSMUSG00000142494.1/ENSMUSG00000142494	-0.17
+chr1	4026647	4026847	ENSMUSG00000133908.1/ENSMUSG00000133908	-0.26
+chr1	4679070	4679270	ENSMUSG00000131850.1/ENSMUSG00000131850	0.46
+chr1	4759526	4759726	ENSMUSG00000098104.2/Gm6085	-0.06
+chr1	4792476	4792676	ENSMUSG00000135930.1/ENSMUSG00000135930	0.5
+chr1	5213267	5213467	ENSMUSG00000143188.1/ENSMUSG00000143188	0.15
+chr1	6285417	6285617	ENSMUSG00000090031.5/4732440D04Rik	0.98
+chr1	7159134	7159334	ENSMUSG00000120372.2/Gm57122	0.91
+chr1	9615533	9615733	ENSMUSG00000061024.9/Rrs1	0.85
+
+--------------------------------------------------------------------------------
+annotation/spans_txn_rounds_genic
+--------------------------------------------------------------------------------
+input file 1: /path/to/mdi/resources/genomes/mm39/annotations/mm39.gencode.M36.genes.bed.gz
+chr1	3143475	3144545	ENSMUSG00000102693.2/4933401J01Rik	0	+
+chr1	3172238	3172348	ENSMUSG00000064842.3/Gm26206	0	+
+chr1	3276123	3741721	ENSMUSG00000051951.6/Xkr4	0	-
+chr1	3322979	3323459	ENSMUSG00000102851.2/Gm18956	0	+
+chr1	3435953	3438772	ENSMUSG00000103377.2/Gm37180	0	-
+chr1	3445778	3448011	ENSMUSG00000104017.2/Gm37363	0	-
+chr1	3535199	3537508	ENSMUSG00000103025.2/Gm37686	0	-
+chr1	3536793	3583776	ENSMUSG00000089699.3/Gm1992	0	+
+chr1	3582673	3584730	ENSMUSG00000103201.2/Gm37329	0	-
+chr1	3602017	3602943	ENSMUSG00000103147.2/Gm7341	0	+
+
+input file 2: /path/to/output/atac_102525_v6/atac_102525_v6.nascent_transcriptome_unstranded.bed.gz
+chrom	start0	end1	cpm
+chr1-mm39	0	1000	0
+chr1-mm39	1000	2000	0
+chr1-mm39	2000	3000	0
+chr1-mm39	3000	4000	0
+chr1-mm39	4000	5000	0
+chr1-mm39	5000	6000	0
+chr1-mm39	6000	7000	0
+chr1-mm39	7000	8000	0
+chr1-mm39	8000	9000	0
+
+output file: /path/to/output/atac_102525_v6/regions_bed/annotation/spans_txn_rounds_genic.bed
+# regions:   42016
+region bp:   1439019191
+chrom	start0	end1	name	Log10_Gene_RPKM
+chr1	3143475	3144545	ENSMUSG00000102693.2/4933401J01Rik	-0.98
+chr1	3172238	3172348	ENSMUSG00000064842.3/Gm26206	-2.3
+chr1	3276123	3741721	ENSMUSG00000051951.6/Xkr4,ENSMUSG00000089699.3/Gm1992,ENSMUSG00000102331.2/Gm19938,ENSMUSG00000102851.2/Gm18956,ENSMUSG00000103025.2/Gm37686,ENSMUSG00000103147.2/Gm7341,ENSMUSG00000103161.2/Gm38148,ENSMUSG00000103201.2/Gm37329,ENSMUSG00000103377.2/Gm37180,ENSMUSG00000104017.2/Gm37363	-0.97
+chr1	3750377	3752011	ENSMUSG00000102348.2/Gm10568	-2.78
+chr1	3822232	3824583	ENSMUSG00000102592.2/Gm38385	-1.29
+chr1	3854098	3854156	ENSMUSG00000088333.4/Gm27396	-2.14
+chr1	3943428	4056438	ENSMUSG00000102343.2/Gm37381,ENSMUSG00000133908.1/ENSMUSG00000133908,ENSMUSG00000142494.1/ENSMUSG00000142494	-0.56
+chr1	4069779	4482971	ENSMUSG00000025900.14/Rp1,ENSMUSG00000102948.2/Gm6101,ENSMUSG00000104123.2/Gm37483,ENSMUSG00000135717.1/ENSMUSG00000135717	-1.08
+chr1	4502438	4503914	ENSMUSG00000139157.1/ENSMUSG00000139157	-2.06
+
+--------------------------------------------------------------------------------
+annotation/spans_txn_rounds_intergenic
+--------------------------------------------------------------------------------
+input file 1: /path/to/mdi/resources/genomes/mm39/annotations/mm39.gencode.M36.genes.bed.gz
+chr1	3143475	3144545	ENSMUSG00000102693.2/4933401J01Rik	0	+
+chr1	3172238	3172348	ENSMUSG00000064842.3/Gm26206	0	+
+chr1	3276123	3741721	ENSMUSG00000051951.6/Xkr4	0	-
+chr1	3322979	3323459	ENSMUSG00000102851.2/Gm18956	0	+
+chr1	3435953	3438772	ENSMUSG00000103377.2/Gm37180	0	-
+chr1	3445778	3448011	ENSMUSG00000104017.2/Gm37363	0	-
+chr1	3535199	3537508	ENSMUSG00000103025.2/Gm37686	0	-
+chr1	3536793	3583776	ENSMUSG00000089699.3/Gm1992	0	+
+chr1	3582673	3584730	ENSMUSG00000103201.2/Gm37329	0	-
+chr1	3602017	3602943	ENSMUSG00000103147.2/Gm7341	0	+
+
+input file 2: /path/to/output/atac_102525_v6/atac_102525_v6.nascent_transcriptome_unstranded.bed.gz
+chrom	start0	end1	cpm
+chr1-mm39	0	1000	0
+chr1-mm39	1000	2000	0
+chr1-mm39	2000	3000	0
+chr1-mm39	3000	4000	0
+chr1-mm39	4000	5000	0
+chr1-mm39	5000	6000	0
+chr1-mm39	6000	7000	0
+chr1-mm39	7000	8000	0
+chr1-mm39	8000	9000	0
+
+output file: /path/to/output/atac_102525_v6/regions_bed/annotation/spans_txn_rounds_intergenic.bed
+# regions:   42304
+region bp:   1103210509
+chrom	start0	end1	name	Log10_RPKM
+chr1	3050000	3143475	.	-2.88
+chr1	3144545	3172238	.	-1.19
+chr1	3172348	3276123	.	-1.48
+chr1	3741721	3750377	.	-0.09
+chr1	3752011	3822232	.	-1.71
+chr1	3824583	3854098	.	-1.46
+chr1	3854156	3943428	.	-1.47
+chr1	4056438	4069779	.	-0.64
+chr1	4482971	4502438	.	-1.86
+
+--------------------------------------------------------------------------------
+transcription/bins_txn_rounds_all
+--------------------------------------------------------------------------------
+input file: /path/to/output/atac_102525_v6/atac_102525_v6.nascent_transcriptome_unstranded.bed.gz
+chrom	start0	end1	cpm
+chr1-mm39	0	1000	0
+chr1-mm39	1000	2000	0
+chr1-mm39	2000	3000	0
+chr1-mm39	3000	4000	0
+chr1-mm39	4000	5000	0
+chr1-mm39	5000	6000	0
+chr1-mm39	6000	7000	0
+chr1-mm39	7000	8000	0
+chr1-mm39	8000	9000	0
+
+output file: /path/to/output/atac_102525_v6/regions_bed/transcription/bins_txn_rounds_all.bed
+# regions:   2545093
+region bp:   2542229700
+chrom	start0	end1	name	Log10_RPKM
+chr1	3050000	3051000	.	-3
+chr1	3051000	3052000	.	-3
+chr1	3052000	3053000	.	-3
+chr1	3053000	3054000	.	-3
+chr1	3054000	3055000	.	-3
+chr1	3055000	3056000	.	-3
+chr1	3056000	3057000	.	-3
+chr1	3057000	3058000	.	-3
+chr1	3058000	3059000	.	-3
+
+--------------------------------------------------------------------------------
+transcription/spans_txn_rounds_all
+--------------------------------------------------------------------------------
+input file: /path/to/output/atac_102525_v6/atac_102525_v6.nascent_transcriptome_unstranded.bed.gz
+chrom	start0	end1	cpm
+chr1-mm39	0	1000	0
+chr1-mm39	1000	2000	0
+chr1-mm39	2000	3000	0
+chr1-mm39	3000	4000	0
+chr1-mm39	4000	5000	0
+chr1-mm39	5000	6000	0
+chr1-mm39	6000	7000	0
+chr1-mm39	7000	8000	0
+chr1-mm39	8000	9000	0
+
+output file: /path/to/output/atac_102525_v6/regions_bed/transcription/spans_txn_rounds_all.bed
+# regions:   2023622
+region bp:   2542229700
+chrom	start0	end1	name	Log10_RPKM
+chr1	3050000	3070000	.	-3
+chr1	3070000	3071000	.	-1.4
+chr1	3071000	3072000	.	-1.6
+chr1	3072000	3073000	.	-3
+chr1	3073000	3074000	.	-1.6
+chr1	3074000	3077000	.	-3
+chr1	3077000	3078000	.	-2
+chr1	3078000	3079000	.	-1.8
+chr1	3079000	3080000	.	-2
+
+--------------------------------------------------------------------------------
+transcription/spans_txn_rounds_active_0.1
+--------------------------------------------------------------------------------
+input file: /path/to/output/atac_102525_v6/atac_102525_v6.nascent_transcriptome_unstranded.bed.gz
+chrom	start0	end1	cpm
+chr1-mm39	0	1000	0
+chr1-mm39	1000	2000	0
+chr1-mm39	2000	3000	0
+chr1-mm39	3000	4000	0
+chr1-mm39	4000	5000	0
+chr1-mm39	5000	6000	0
+chr1-mm39	6000	7000	0
+chr1-mm39	7000	8000	0
+chr1-mm39	8000	9000	0
+
+output file: /path/to/output/atac_102525_v6/regions_bed/transcription/spans_txn_rounds_active_0.1.bed
+# regions:   144570
+region bp:   940822325
+chrom	start0	end1	name	Log10_RPKM
+chr1	3089000	3093000	.	-0.72
+chr1	3099000	3100000	.	-0.83
+chr1	3101000	3102000	.	-0.99
+chr1	3140000	3142000	.	-0.2
+chr1	3144000	3148000	.	-0.78
+chr1	3149000	3150000	.	-0.97
+chr1	3151000	3152000	.	-0.78
+chr1	3181000	3182000	.	-0.88
+chr1	3207000	3208000	.	-0.84
+
+--------------------------------------------------------------------------------
+transcription/spans_txn_rounds_active_0.5
+--------------------------------------------------------------------------------
+input file: /path/to/output/atac_102525_v6/atac_102525_v6.nascent_transcriptome_unstranded.bed.gz
+chrom	start0	end1	cpm
+chr1-mm39	0	1000	0
+chr1-mm39	1000	2000	0
+chr1-mm39	2000	3000	0
+chr1-mm39	3000	4000	0
+chr1-mm39	4000	5000	0
+chr1-mm39	5000	6000	0
+chr1-mm39	6000	7000	0
+chr1-mm39	7000	8000	0
+chr1-mm39	8000	9000	0
+
+output file: /path/to/output/atac_102525_v6/regions_bed/transcription/spans_txn_rounds_active_0.5.bed
+# regions:   60653
+region bp:   384874323
+chrom	start0	end1	name	Log10_RPKM
+chr1	3140000	3141000	.	0.05
+chr1	3388000	3389000	.	0.19
+chr1	3414000	3415000	.	-0.09
+chr1	3542000	3543000	.	0.28
+chr1	3558000	3559000	.	0.28
+chr1	3615000	3616000	.	-0.25
+chr1	3654000	3655000	.	-0.16
+chr1	3741000	3745000	.	0.3
+chr1	3943000	3944000	.	-0.14
+
+--------------------------------------------------------------------------------
+transcription/spans_txn_rounds_inactive_0.1
+--------------------------------------------------------------------------------
+input file: /path/to/output/atac_102525_v6/atac_102525_v6.nascent_transcriptome_unstranded.bed.gz
+chrom	start0	end1	cpm
+chr1-mm39	0	1000	0
+chr1-mm39	1000	2000	0
+chr1-mm39	2000	3000	0
+chr1-mm39	3000	4000	0
+chr1-mm39	4000	5000	0
+chr1-mm39	5000	6000	0
+chr1-mm39	6000	7000	0
+chr1-mm39	7000	8000	0
+chr1-mm39	8000	9000	0
+
+output file: /path/to/output/atac_102525_v6/regions_bed/transcription/spans_txn_rounds_inactive_0.1.bed
+# regions:   144905
+region bp:   1601407375
+chrom	start0	end1	name	Log10_RPKM
+chr1	3050000	3089000	.	-3
+chr1	3093000	3099000	.	-1.57
+chr1	3100000	3101000	.	-2.3
+chr1	3102000	3140000	.	-1.47
+chr1	3142000	3144000	.	-1.03
+chr1	3148000	3149000	.	-1.1
+chr1	3150000	3151000	.	-1.02
+chr1	3152000	3181000	.	-1.49
+chr1	3182000	3207000	.	-1.93
+
+done
+
+---
+job-manager:
+    exit_status: 0
+    walltime: 3:07.48
+    seconds: 187.48
+    maxvmem: 1020296K
+    swaps: 0
+---
+job-manager:
+    ended: Mon 10/27/25 19:22
+...
+====================================================================================================
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

@@ -1,0 +1,450 @@
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+pipline: atac
+action:  align
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+protaminer report
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+====================================================================================================
+job: 26517445
+----------------------------------------------------------------------------------------------------
+/path/to/mdi/wilsontelab/greatlakes/data-scripts/hammoud/protamine/.atac_060225.yml.data/log/slurm/atac_align.o26517445-1
+----------------------------------------------------------------------------------------------------
+
+---
+job-manager:
+    host: gl3044.arc-ts.umich.edu
+    started: Mon 06/02/25 08:40
+---
+pipeline: protamine-tools/atac:main
+description: "prepare protamine ATAC-seq data for analysis in the interactive app"
+execute: align
+thread: default
+nTasks: 3
+align:
+    samples:
+        metadata-file:  /path/to/mdi/wilsontelab/greatlakes/data-scripts/hammoud/protamine/ATAC_sample_file_v5.csv
+        input-dir:      /scratch/wilsonte_root/XXXXX/shared_data/Hammoud/protamine/v5
+    genome:
+        genome:         mm39_dm6
+        genome-dir:     /path/to/mdi/wilsontelab/greatlakes/mdi/resources/genomes/mm39_dm6
+    alignment:
+        alignment-batch:
+            - 23734
+            - 24290R
+            - 26104R
+        bam-output-dir: /path/to/mdi/wilsontelab/greatlakes/output/Hammoud/protamine/atac_060225_v5/bam
+    quality:
+        min-mapq:       30
+    output:
+        output-dir:     /path/to/mdi/wilsontelab/greatlakes/output/Hammoud/protamine/atac_060225_v5/atac-align
+        data-name:
+            - 23734
+            - 24290R
+            - 26104R
+    push:
+        push-server:    hammoud.wilsonte-umich.io
+        push-dir:       /srv/mnt/efs/Hammoud
+        push-user:      ubuntu
+        push-key:       ~/.ssh/mdi-servers.pem
+    version:
+        version:        latest
+    resources:
+        runtime:        auto
+        n-cpu:          16
+        n-gpu:          0
+        ram-per-cpu:    2G
+        tmp-dir:        /tmp
+        tmp-dir-large:  /tmp
+    job-manager:
+        email:          nobody@nowhere.edu
+        account:        XXXXX
+        time-limit:     30:00:00
+        partition:      standard
+        exclusive:      false
+    workflow:
+        force:          false
+        rollback:       0
+        quiet:          false
+    help:
+        help:           false
+        dry-run:        true
+    conda:
+        prefix: /path/to/mdi/wilsontelab/greatlakes/mdi/environments/protamine-tools 
+        channels:
+            - conda-forge
+            - bioconda
+            - defaults
+        dependencies:
+            - pigz=2.8
+            - fastp=0.24
+            - bowtie2=2.5
+            - genmap=1.3
+            - samtools=1.21
+            - bedtools=2.31
+            - r-ggseqlogo
+            - r-base=4.4
+            - r-essentials=4.4
+            - r-r.utils=2.12
+...
+---
+task:
+    task-id: 1
+    alignment-batch: 23734
+    data-name: 23734
+...
+rolling back to pipeline step 0
+
+
+executing: atac align, step 1 = index
+bowtie2 index files already exist, skipping index creation
+
+executing: atac align, step 2 = align
+aligning samples in batch 23734
+  aligning sample 23734X2
+    read2 count = 76423940
+    read1 count = 76423940
+[bam_sort_core] merging from 1 files and 16 in-memory blocks...
+  aligning sample 23734X3
+    read2 count = 79283133
+    read1 count = 79283133
+[bam_sort_core] merging from 1 files and 16 in-memory blocks...
+  aligning sample 23734X4
+    read2 count = 98793226
+    read1 count = 98793226
+[bam_sort_core] merging from 1 files and 16 in-memory blocks...
+
+done with all batch samples
+
+---
+job-manager:
+    exit_status: 0
+    walltime: 1:53:53
+    seconds: 6833.74
+    maxvmem: 19048348K
+    swaps: 0
+---
+job-manager:
+    ended: Mon 06/02/25 10:33
+...
+----------------------------------------------------------------------------------------------------
+/path/to/mdi/wilsontelab/greatlakes/data-scripts/hammoud/protamine/.atac_060225.yml.data/log/slurm/atac_align.o26517445-2
+----------------------------------------------------------------------------------------------------
+
+---
+job-manager:
+    host: gl3052.arc-ts.umich.edu
+    started: Mon 06/02/25 08:40
+---
+pipeline: protamine-tools/atac:main
+description: "prepare protamine ATAC-seq data for analysis in the interactive app"
+execute: align
+thread: default
+nTasks: 3
+align:
+    samples:
+        metadata-file:  /path/to/mdi/wilsontelab/greatlakes/data-scripts/hammoud/protamine/ATAC_sample_file_v5.csv
+        input-dir:      /scratch/wilsonte_root/XXXXX/shared_data/Hammoud/protamine/v5
+    genome:
+        genome:         mm39_dm6
+        genome-dir:     /path/to/mdi/wilsontelab/greatlakes/mdi/resources/genomes/mm39_dm6
+    alignment:
+        alignment-batch:
+            - 23734
+            - 24290R
+            - 26104R
+        bam-output-dir: /path/to/mdi/wilsontelab/greatlakes/output/Hammoud/protamine/atac_060225_v5/bam
+    quality:
+        min-mapq:       30
+    output:
+        output-dir:     /path/to/mdi/wilsontelab/greatlakes/output/Hammoud/protamine/atac_060225_v5/atac-align
+        data-name:
+            - 23734
+            - 24290R
+            - 26104R
+    push:
+        push-server:    hammoud.wilsonte-umich.io
+        push-dir:       /srv/mnt/efs/Hammoud
+        push-user:      ubuntu
+        push-key:       ~/.ssh/mdi-servers.pem
+    version:
+        version:        latest
+    resources:
+        runtime:        auto
+        n-cpu:          16
+        n-gpu:          0
+        ram-per-cpu:    2G
+        tmp-dir:        /tmp
+        tmp-dir-large:  /tmp
+    job-manager:
+        email:          nobody@nowhere.edu
+        account:        XXXXX
+        time-limit:     30:00:00
+        partition:      standard
+        exclusive:      false
+    workflow:
+        force:          false
+        rollback:       0
+        quiet:          false
+    help:
+        help:           false
+        dry-run:        true
+    conda:
+        prefix: /path/to/mdi/wilsontelab/greatlakes/mdi/environments/protamine-tools 
+        channels:
+            - conda-forge
+            - bioconda
+            - defaults
+        dependencies:
+            - pigz=2.8
+            - fastp=0.24
+            - bowtie2=2.5
+            - genmap=1.3
+            - samtools=1.21
+            - bedtools=2.31
+            - r-ggseqlogo
+            - r-base=4.4
+            - r-essentials=4.4
+            - r-r.utils=2.12
+...
+---
+task:
+    task-id: 2
+    alignment-batch: 24290R
+    data-name: 24290R
+...
+rolling back to pipeline step 0
+
+
+executing: atac align, step 1 = index
+bowtie2 index files already exist, skipping index creation
+
+executing: atac align, step 2 = align
+aligning samples in batch 24290R
+  aligning sample 24290X10
+    read1 count = 79183280
+    read2 count = 79183280
+[bam_sort_core] merging from 2 files and 16 in-memory blocks...
+  aligning sample 24290X11
+    read2 count = 101159130
+    read1 count = 101159130
+[bam_sort_core] merging from 2 files and 16 in-memory blocks...
+  aligning sample 24290X1
+    read2 count = 175718604
+    read1 count = 175718604
+[bam_sort_core] merging from 3 files and 16 in-memory blocks...
+  aligning sample 24290X2
+    read1 count = 141950514
+    read2 count = 141950514
+[bam_sort_core] merging from 2 files and 16 in-memory blocks...
+  aligning sample 24290X3
+    read2 count = 137189731
+    read1 count = 137189731
+[bam_sort_core] merging from 2 files and 16 in-memory blocks...
+  aligning sample 24290X4
+    read1 count = 88422066
+    read2 count = 88422066
+[bam_sort_core] merging from 2 files and 16 in-memory blocks...
+  aligning sample 24290X5
+    read1 count = 114621905
+    read2 count = 114621905
+[bam_sort_core] merging from 2 files and 16 in-memory blocks...
+  aligning sample 24290X6
+    read1 count = 107710282
+    read2 count = 107710282
+[bam_sort_core] merging from 2 files and 16 in-memory blocks...
+  aligning sample 24290X7
+    read2 count = 117893319
+    read1 count = 117893319
+[bam_sort_core] merging from 2 files and 16 in-memory blocks...
+  aligning sample 24290X8
+    read1 count = 93653988
+    read2 count = 93653988
+[bam_sort_core] merging from 2 files and 16 in-memory blocks...
+  aligning sample 24290X9
+    read1 count = 89773705
+    read2 count = 89773705
+[bam_sort_core] merging from 2 files and 16 in-memory blocks...
+
+done with all batch samples
+
+---
+job-manager:
+    exit_status: 0
+    walltime: 10:20:06
+    seconds: 37206.20
+    maxvmem: 19467020K
+    swaps: 0
+---
+job-manager:
+    ended: Mon 06/02/25 19:00
+...
+----------------------------------------------------------------------------------------------------
+/path/to/mdi/wilsontelab/greatlakes/data-scripts/hammoud/protamine/.atac_060225.yml.data/log/slurm/atac_align.o26517445-3
+----------------------------------------------------------------------------------------------------
+
+---
+job-manager:
+    host: gl3078.arc-ts.umich.edu
+    started: Mon 06/02/25 08:40
+---
+pipeline: protamine-tools/atac:main
+description: "prepare protamine ATAC-seq data for analysis in the interactive app"
+execute: align
+thread: default
+nTasks: 3
+align:
+    samples:
+        metadata-file:  /path/to/mdi/wilsontelab/greatlakes/data-scripts/hammoud/protamine/ATAC_sample_file_v5.csv
+        input-dir:      /scratch/wilsonte_root/XXXXX/shared_data/Hammoud/protamine/v5
+    genome:
+        genome:         mm39_dm6
+        genome-dir:     /path/to/mdi/wilsontelab/greatlakes/mdi/resources/genomes/mm39_dm6
+    alignment:
+        alignment-batch:
+            - 23734
+            - 24290R
+            - 26104R
+        bam-output-dir: /path/to/mdi/wilsontelab/greatlakes/output/Hammoud/protamine/atac_060225_v5/bam
+    quality:
+        min-mapq:       30
+    output:
+        output-dir:     /path/to/mdi/wilsontelab/greatlakes/output/Hammoud/protamine/atac_060225_v5/atac-align
+        data-name:
+            - 23734
+            - 24290R
+            - 26104R
+    push:
+        push-server:    hammoud.wilsonte-umich.io
+        push-dir:       /srv/mnt/efs/Hammoud
+        push-user:      ubuntu
+        push-key:       ~/.ssh/mdi-servers.pem
+    version:
+        version:        latest
+    resources:
+        runtime:        auto
+        n-cpu:          16
+        n-gpu:          0
+        ram-per-cpu:    2G
+        tmp-dir:        /tmp
+        tmp-dir-large:  /tmp
+    job-manager:
+        email:          nobody@nowhere.edu
+        account:        XXXXX
+        time-limit:     30:00:00
+        partition:      standard
+        exclusive:      false
+    workflow:
+        force:          false
+        rollback:       0
+        quiet:          false
+    help:
+        help:           false
+        dry-run:        true
+    conda:
+        prefix: /path/to/mdi/wilsontelab/greatlakes/mdi/environments/protamine-tools 
+        channels:
+            - conda-forge
+            - bioconda
+            - defaults
+        dependencies:
+            - pigz=2.8
+            - fastp=0.24
+            - bowtie2=2.5
+            - genmap=1.3
+            - samtools=1.21
+            - bedtools=2.31
+            - r-ggseqlogo
+            - r-base=4.4
+            - r-essentials=4.4
+            - r-r.utils=2.12
+...
+---
+task:
+    task-id: 3
+    alignment-batch: 26104R
+    data-name: 26104R
+...
+rolling back to pipeline step 0
+
+
+executing: atac align, step 1 = index
+bowtie2 index files already exist, skipping index creation
+
+executing: atac align, step 2 = align
+aligning samples in batch 26104R
+  aligning sample 26104X10
+    read1 count = 75769801
+    read2 count = 75769801
+[bam_sort_core] merging from 1 files and 16 in-memory blocks...
+  aligning sample 26104X11
+    read1 count = 89322944
+    read2 count = 89322944
+[bam_sort_core] merging from 1 files and 16 in-memory blocks...
+  aligning sample 26104X1
+    read1 count = 87553036
+    read2 count = 87553036
+[bam_sort_core] merging from 1 files and 16 in-memory blocks...
+  aligning sample 26104X12
+    read2 count = 94707628
+    read1 count = 94707628
+[bam_sort_core] merging from 1 files and 16 in-memory blocks...
+  aligning sample 26104X13
+    read2 count = 90071727
+    read1 count = 90071727
+[bam_sort_core] merging from 1 files and 16 in-memory blocks...
+  aligning sample 26104X14
+    read2 count = 120654198
+    read1 count = 120654198
+[bam_sort_core] merging from 2 files and 16 in-memory blocks...
+  aligning sample 26104X15
+    read2 count = 74670027
+    read1 count = 74670027
+[bam_sort_core] merging from 1 files and 16 in-memory blocks...
+  aligning sample 26104X2
+    read1 count = 97533585
+    read2 count = 97533585
+[bam_sort_core] merging from 1 files and 16 in-memory blocks...
+  aligning sample 26104X3
+    read2 count = 90567238
+    read1 count = 90567238
+[bam_sort_core] merging from 1 files and 16 in-memory blocks...
+  aligning sample 26104X4
+    read2 count = 107810322
+    read1 count = 107810322
+[bam_sort_core] merging from 1 files and 16 in-memory blocks...
+  aligning sample 26104X5
+    read2 count = 108890431
+    read1 count = 108890431
+[bam_sort_core] merging from 1 files and 16 in-memory blocks...
+  aligning sample 26104X6
+    read2 count = 100776780
+    read1 count = 100776780
+[bam_sort_core] merging from 1 files and 16 in-memory blocks...
+  aligning sample 26104X7
+    read1 count = 103407442
+    read2 count = 103407442
+[bam_sort_core] merging from 1 files and 16 in-memory blocks...
+  aligning sample 26104X8
+    read1 count = 70645658
+    read2 count = 70645658
+[bam_sort_core] merging from 1 files and 16 in-memory blocks...
+  aligning sample 26104X9
+    read1 count = 66456231
+    read2 count = 66456231
+[bam_sort_core] merging from 1 files and 16 in-memory blocks...
+
+done with all batch samples
+
+---
+job-manager:
+    exit_status: 0
+    walltime: 8:44:17
+    seconds: 31457.21
+    maxvmem: 19313488K
+    swaps: 0
+---
+job-manager:
+    ended: Mon 06/02/25 17:24
+...
+====================================================================================================
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

@@ -10,6 +10,7 @@ variables:
     RESOURCE_DIR:    ${PWD}
     FASTQ_INPUT_DIR: ${PWD}/${VERSION}
     BAM_DIR:         ${OUTPUT_DIR}/${PROJECT_NAME}/bam # fixed, unless reads aligned externally
+    HIC_BED:         ${OUTPUT_DIR}/${PROJECT_NAME}/regions_bed/genome/spans_compartments_combined_hic.bed
 shared:
     samples:
         metadata-file:  ${RESOURCE_DIR}/ATAC_sample_file_${VERSION}.csv
@@ -17,6 +18,8 @@ shared:
         histone-stage:   early_RS # the defaults, repeated here for clarity
         protamine-stage: int_ES
         stage-types:     round:early_RS,int_RS,late_RS;elong:early_ES,int_ES
+    # score:
+    #     hic-compartment-bed: ${HIC_BED} # uncomment if properly formatted HiC bed file is available
     output:
         output-dir:     ${OUTPUT_DIR}
         data-name:      ${PROJECT_NAME}
@@ -56,8 +59,6 @@ tss:
 recollate:
     samples: 
         input-dir: ${BAM_DIR}
-    score:
-        hic-compartment-bed: ${OUTPUT_DIR}/${PROJECT_NAME}/regions_bed/genome/spans_compartments_combined_hic.bed
     resources:
         n-cpu: 14
         ram-per-cpu: 5G 
