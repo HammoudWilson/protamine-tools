@@ -1,0 +1,26 @@
+---
+# this job file executes pipeline actions that analyze spermatid Cut&Tag data
+# update variables PROJECT_NAME, OUTPUT_DIR, RESOURCE_DIR, CUTTAG_DIR as needed
+pipeline: protamine-tools/cuttag:latest
+variables:
+    TIMESTAMP:       102525 # place output into same folder as ATAC-seq data
+    VERSION:         v6
+    PROJECT_NAME:    atac_${TIMESTAMP}_${VERSION}
+    OUTPUT_DIR:      ${PWD}
+    RESOURCE_DIR:    ${PWD}
+    CUTTAG_DIR:      ${PWD}/cuttag
+    PROJECT_DIR:     ${OUTPUT_DIR}/${PROJECT_NAME}
+score:
+    samples:
+        metadata-file:  ${RESOURCE_DIR}/CutAndTag_sample_file_v2.csv
+        input-dir:      ${CUTTAG_DIR}
+    output:
+        output-dir:     ${OUTPUT_DIR}
+        data-name:      ${PROJECT_NAME}
+    resources:
+        n-cpu: 6
+        ram-per-cpu: 4G 
+execute:
+    # dependent action, run after atac/collate
+    # after running, re-run atac/collate and atac/tss with no rollback to update data packages
+    - score

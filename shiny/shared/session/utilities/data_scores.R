@@ -109,7 +109,7 @@ getGenomeScores <- function(sourceId, scoreTypeName, binI, stgmQuantile = TRUE, 
             scores_wrk <- scores[bins$included == 1 & !is.na(scores)]
             stgm_ecdf[[sourceId]] <<- ecdf(scores_wrk)
         }
-        1 - stgm_ecdf[[sourceId]](scores[binI])
+        1 - stgm_ecdf[[sourceId]](scores[binI]) # thus, red = low stage mean (high in early stages), blue = high stage mean (high in late stages)
         # stgm_ecdf[[sourceId]](scores[binI])
     } else if(scoreTypeName == "hic" && hicQuantile) {
         if(is.null(hic_ecdf[[sourceId]])) {
@@ -121,8 +121,8 @@ getGenomeScores <- function(sourceId, scoreTypeName, binI, stgmQuantile = TRUE, 
         scores[binI]
     }
 }
-getSampleScores <- function(metadata, config, coord, scoreTypeName, dataType){ # returns a list of sample-level score objects based on GC normalization
-    scoresDir <- trimws(config$Scores_Dir)
+getSampleScores <- function(metadata, config, coord, scoreTypeName, dataType, isCutTagScore = FALSE){ # returns a list of sample-level score objects based on GC normalization
+    scoresDir <- if(isCutTagScore) trimws(config$CutTag_Dir) else trimws(config$Scores_Dir)
     if(scoresDir == "") scoresDir <- metadata$env$SCORES_DIR
     scoreTable <- metadata$scoreTables[[scoreTypeName]][[dataType]]
     bgzFileName <- scoreTable$bgzFile
@@ -183,11 +183,11 @@ getSampleScores_regions <- function(metadata, config, scoreTypeName, dataType){ 
         spinnerMessage = paste("parsing bin overlaps")
     )
 }
-getSeriesAggNames <- function(metadata, config){
+getSeriesAggNames <- function(metadata, config, samplesFilter = TRUE){
     switch(
         config$Aggregate_By,
-        sample     = metadata$samples$sample_name,
-        stage      = unique(metadata$samples$stage),
+        sample     = metadata$samples[samplesFilter]$sample_name,
+        stage      = unique(metadata$samples[samplesFilter]$stage),
         stage_type = names(metadata$stageTypes)
     )
 }

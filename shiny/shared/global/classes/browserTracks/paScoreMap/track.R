@@ -35,6 +35,7 @@ build.paScoreMapTrack <- function(track, reference, coord, layout){
         labelWidthPixels   = as.integer(layout$mai$left  * layout$dpi),
         legendWidthPixels  = as.integer(layout$mai$right * layout$dpi),
         Scores_Dir         = track$settings$get("Data_Path","Scores_Dir"),
+        CutTag_Dir         = track$settings$get("Data_Path","CutTag_Dir"),
         basesPerPixel      = basesPerPixel
     )
     config <- c(config, sapply(
@@ -48,11 +49,15 @@ build.paScoreMapTrack <- function(track, reference, coord, layout){
     startSpinner(session, message = "getting bins")
     sourceId <- track$settings$items()[[1]]$Source_ID
     req(sourceId)
-    metadata <- paScores_metadata(sourceId)
+    atac_metadata   <- paScores_metadata(sourceId)
+    cuttag_metadata <- paCutTag_metadata(sourceId)
     bins <- paScores_bins(sourceId)
     req(bins)
     binI <- bins[chrom == coord$chromosome & start0 < coord$end & end1 >= coord$start, binI]
     req(any(binI))
+    config$samples <- paCutTag_samples(sourceId)
+    config$binSize <- atac_metadata$env$BIN_SIZE
+    config$binsPerPixel <- basesPerPixel / atac_metadata$env$BIN_SIZE
 
     # correlate bin to pixel crossing and overlap
     startSpinner(session, message = "parsing bin pixels")
@@ -69,7 +74,7 @@ build.paScoreMapTrack <- function(track, reference, coord, layout){
             binI, 
             included,
             pixel,
-            basesInPixel = metadata$env$BIN_SIZE
+            basesInPixel = atac_metadata$env$BIN_SIZE
         )],
         b[pixel != endPixel, {
             pixels <- pixel:endPixel
@@ -93,7 +98,7 @@ build.paScoreMapTrack <- function(track, reference, coord, layout){
             # c("gc_z","txn","hic","stgm","gcrz_obs","nrll"), # ,"gcrz_wgt"
             config$Show_Tracks,
             scoreMapGroupImage,
-            sourceId, metadata, config, coord, binI, b
+            sourceId, atac_metadata, cuttag_metadata, config, coord, binI, b
         ),
         axis = 'y'
     ) %>% imager::save.image(pngFile)

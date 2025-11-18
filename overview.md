@@ -8,7 +8,7 @@ nav_order: 0
 {% include mdi-project-overview.md %}
 
 Protamine Tools provides code used in portions of the analysis of spermatid
-ATAC-seq data and its relationship with other transcription and
+ATAC-seq and Cut&Tag data and its relationship with other transcription and
 chromatin data sets, as reported in 
 Rabbani et al. (in preparation), 
 a collaboration between the 

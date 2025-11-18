@@ -216,11 +216,12 @@ analyzeSampleScores <- function(scoreFn, scoreType, ...){
     names(x) <- collate$samples$sample_name
     x
 }
-aggregateAndAnalyzeScores <- function(sampleScores, sample_names, scoreType, data_set_name, return_scores = FALSE){
+aggregateAndAnalyzeScores <- function(sampleScores, sample_names, scoreType, data_set_name, 
+                                      return_scores = FALSE, rowAggFn = rowMeans){
     x <- as.data.table(sapply(sample_names, function(sample_name){
         sampleScores[[sample_name]]$scores
     }, simplify = FALSE, USE.NAMES = TRUE))
-    analyzeScoreDist(x[, replaceNaN(rowMeans(.SD, na.rm = TRUE))], scoreType, data_set_name, return_scores)
+    analyzeScoreDist(x[, replaceNaN(rowAggFn(.SD, na.rm = TRUE))], scoreType, data_set_name, return_scores)
 }
 aggregateSampleScores <- function(sampleScores, scoreType){
 

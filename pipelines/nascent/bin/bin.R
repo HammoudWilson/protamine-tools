@@ -15,7 +15,7 @@
 # outputs:
 #     transcription map as a composite-genome-wide bin BED file where
 #       score = cpm over both strands
-#       cpm is Counts Per Million reads
+#       cpm is Counts Per Million reads == Reads Per Million == RPKM at bin size == 1kb
 #       both primary and spike-in genome bins are included, but spike-in bins always have 0 cpm
 
 #=====================================================================================

@@ -25,6 +25,8 @@ uploadTypes:
                 required: false
             lag_analysis:
                 required: false
+            cuttag:
+                required: false
 
 #----------------------------------------------------------------------
 # labels and definitions for all sequential analysis steps shown in sidebar

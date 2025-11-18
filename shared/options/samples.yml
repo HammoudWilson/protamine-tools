@@ -13,4 +13,4 @@ options:
         type: string
         required: true
         default: null
-        description: "path to a directory containing all relevant fastq or bam files"
+        description: "path to a directory containing all relevant fastq, bam, or bigwig files"

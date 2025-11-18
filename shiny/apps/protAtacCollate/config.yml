@@ -21,6 +21,8 @@ uploadTypes:
                 required: true
             scores:
                 required: true
+            cuttag:
+                required: false
 
 #----------------------------------------------------------------------
 # labels and definitions for all sequential analysis steps shown in sidebar
@@ -43,6 +45,8 @@ appSteps:
         module: normalization
     scoreSummary:
         module: scoreSummary
+    cuttagSummary:
+        module: cuttagSummary
     # browser:
     #     module: genomex-mdi-tools//trackBrowser
     regionEnrichment:

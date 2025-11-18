@@ -1,7 +1,7 @@
 ---
 pipeline:
     name: atac
-    description: "prepare protamine ATAC-seq data for analysis in the interactive app"
+    description: "prepare spermatid ATAC-seq data for analysis in the interactive app"
     # version: v0.0.1
 # suiteVersions:
 #     suiteName: v0.0.0
@@ -163,6 +163,9 @@ package:
             scores: # no longer includes the bin-level score matrices, only score summaries
                 type: rds
                 file: $DATA_FILE_PREFIX.scores.rds
+            cuttag:
+                type: rds
+                file: $DATA_FILE_PREFIX.cuttag.rds
     tss:
         uploadType: protamine-atac-tss # a signal to the Stage 2 framework regarding the package contents
         files:
@@ -181,6 +184,9 @@ package:
             lag_analysis:
                 type: rds
                 file: $DATA_FILE_PREFIX.lag_analysis.rds
+            cuttag:
+                type: rds
+                file: $DATA_FILE_PREFIX.cuttag.rds
         extraPushFiles: # files pushed to remote server in addition to the data package but not included in the package
             - $TASK_DIR/scores
             - $TASK_DIR/inserts_bgz

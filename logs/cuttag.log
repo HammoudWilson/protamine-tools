@@ -1,0 +1,466 @@
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+====================================================================================================
+job: 36250481
+----------------------------------------------------------------------------------------------------
+/path/to/jobFiles/.cuttag.yml.data/log/slurm/cuttag_score_atac_102525_v6.o36250481
+----------------------------------------------------------------------------------------------------
+
+---
+job-manager:
+    host: gl3021.arc-ts.umich.edu
+    started: Tue 11/18/25 13:51
+---
+pipeline: protamine-tools/cuttag:main
+description: "prepare histone Cut&Tag data for analysis in the interactive app"
+execute: score
+thread: default
+nTasks: 1
+score:
+    samples:
+        metadata-file:  /path/to/mdi/suites/definitive/protamine-tools/resources/CutAndTag_sample_file_v2.csv
+        input-dir:      /scratch/XXXXX_root/XXXXX/shared_data/Hammoud/protamine/cuttag
+    composite:
+        primary-genome: mm39
+        primary-genome-dir: null
+        spike-in-genome: dm6
+        spike-in-genome-dir: null
+    genome:
+        genome:         mm39_dm6
+        genome-dir:     null
+    bin:
+        bin-size:       1000
+    cuttag:
+        gc-limits:      0.25,0.6
+    output:
+        output-dir:     /path/to/output
+        data-name:      atac_102525_v6
+    push:
+        push-server:    null
+        push-dir:       /srv/data
+        push-user:      ubuntu
+        push-key:       ~/.ssh/mdi-push-key.pem
+    version:
+        version:        latest
+    resources:
+        runtime:        auto
+        n-cpu:          6
+        n-gpu:          0
+        ram-per-cpu:    4G
+        tmp-dir:        /tmp
+        tmp-dir-large:  /tmp
+    job-manager:
+        email:          nobody@nowhere.edu
+        account:        XXXXX
+        time-limit:     4:00:00
+        partition:      standard
+        exclusive:      false
+    workflow:
+        force:          false
+        rollback:       0
+        quiet:          false
+    help:
+        help:           false
+        dry-run:        true
+    conda:
+        prefix: /path/to/mdi/environments/protamine-nascent 
+        channels:
+            - conda-forge
+            - bioconda
+            - defaults
+        dependencies:
+            - pigz=2.8
+            - bioconductor-rtracklayer
+            - samtools=1.21
+            - r-essentials
+            - r-r.utils
+...
+rolling back to pipeline step 0
+
+
+executing: cuttag score, step 1 = score
+initializing
+loading collate step output
+parsing spermiogenic stages
+restricting attention to primary genome bins
+calculating aggregated number of alleles
+restricting attention to included primary autosomal bins for score calculations
+loading Cut&Tag sample metadata
+analyzing sample-level scores
+  H2B
+    analyzeSampleScores H2B_1
+    analyzeSampleScores H2B_2
+    single-sample stage earliest_ES
+    single-sample stage early_ES
+  H4
+    analyzeSampleScores H4_1
+    analyzeSampleScores H4_2
+    single-sample stage earliest_ES
+    single-sample stage early_ES
+  H3K27me3
+    analyzeSampleScores H3K27me3_5
+    analyzeSampleScores H3K27me3_1
+    analyzeSampleScores H3K27me3_3
+    analyzeSampleScores H3K27me3_2
+    analyzeSampleScores H3K27me3_4
+    analyzeSampleScores H3K27me3_6
+    single-sample stage early_RS
+    single-sample stage late_RS
+    single-sample stage earliest_ES
+    aggregateSampleScores by_stage early_ES
+    single-sample stage int_ES
+  H4ac
+    analyzeSampleScores H4ac_1
+    analyzeSampleScores H4ac_2
+    single-sample stage earliest_ES
+    single-sample stage early_ES
+refactoring bin-level score data for tabixed retrieval in app
+  H2B
+  H4
+  H3K27me3
+  H4ac
+
+saving output for app
+List of 5
+ $ env        :List of 5
+  ..$ PRIMARY_GENOME : chr "mm39"
+  ..$ SPIKE_IN_GENOME: chr "dm6"
+  ..$ GENOME         : chr "mm39_dm6"
+  ..$ BIN_SIZE       : int 1000
+  ..$ SCORES_DIR     : chr "/path/to/output/atac_102525_v6/cuttag"
+ $ samples    :Classes ‘data.table’ and 'data.frame':	12 obs. of  17 variables:
+  ..$ class          : chr [1:12] "core_histone" "core_histone" "core_histone" "core_histone" ...
+  ..$ class_order    : int [1:12] 1 1 1 1 2 2 2 2 2 2 ...
+  ..$ sub_directory  : chr [1:12] "A8672_H4_H2B" "A8672_H4_H2B" "A8672_H4_H2B" "A8672_H4_H2B" ...
+  ..$ antibody_target: chr [1:12] "H2B" "H2B" "H4" "H4" ...
+  ..$ target_order   : int [1:12] 1 1 2 2 1 1 1 1 1 1 ...
+  ..$ sample_name    : chr [1:12] "H2B_1" "H2B_2" "H4_1" "H4_2" ...
+  ..$ bigwig_file    : chr [1:12] "day56_RS_H2b.count.bw" "day56_ES_H2b.count.bw" "day56_RS_H4.count.bw" "day56_ES_H4.count.bw" ...
+  ..$ genotype       : chr [1:12] "wt" "wt" "wt" "wt" ...
+  ..$ phenotype      : chr [1:12] "wt" "wt" "wt" "wt" ...
+  ..$ staging        : chr [1:12] "RS_7-ES_8" "ES_9" "RS_7-ES_8" "ES_9" ...
+  ..$ staging_order  : int [1:12] 3 4 3 4 1 2 3 4 4 5 ...
+  ..$ stage          : chr [1:12] "earliest_ES" "early_ES" "earliest_ES" "early_ES" ...
+  ..$ stage_long     : chr [1:12] "Earliest Elongating Spermatids" "Early Elongating Spermatids" "Earliest Elongating Spermatids" "Early Elongating Spermatids" ...
+  ..$ n_reads        : int [1:12] 5998418 18332553 15403163 57688492 1951624 4291225 2064540 432323 435903 1088859 ...
+  ..$ scale_factor   : num [1:12] 16.87 16.87 16.87 16.87 1.66 ...
+  ..$ reads_per_bin  : num [1:12] 2.222 6.79 5.705 21.366 0.723 ...
+  ..$ final_order    : int [1:12] 1 2 3 4 5 6 7 8 9 10 ...
+  ..- attr(*, ".internal.selfref")=<externalptr> 
+  ..- attr(*, "index")= int(0) 
+  .. ..- attr(*, "__antibody_target")= int [1:12] 1 2 5 6 7 8 9 10 3 4 ...
+ $ gcLimits   : chr [1:2] "0.25" "0.6"
+ $ scores     :List of 1
+  ..$ sample:List of 4
+  .. ..$ H2B     :List of 2
+  .. .. ..$ sampleScores   :List of 2
+  .. .. .. ..$ H2B_1:List of 6
+  .. .. .. .. ..$ dist     :Classes ‘data.table’ and 'data.frame':	71 obs. of  2 variables:
+  .. .. .. .. .. ..$ x: num [1:71] 0 1 2 3 4 5 6 7 8 9 ...
+  .. .. .. .. .. ..$ y: num [1:71] 0.178 0.214 0.196 0.151 0.104 ...
+  .. .. .. .. .. ..- attr(*, "sorted")= chr "x"
+  .. .. .. .. .. ..- attr(*, ".internal.selfref")=<externalptr> 
+  .. .. .. .. ..$ peak     : num 1
+  .. .. .. .. ..$ median   : int 2
+  .. .. .. .. ..$ mean     : num 2.48
+  .. .. .. .. ..$ sd       : num 2.23
+  .. .. .. .. ..$ scoreFile: chr "/tmp/protamine-tools.cuttag.score/atac_102525_v6/atac_102525_v6.bin_scores.H2B.H2B_1.rds"
+  .. .. .. ..$ H2B_2:List of 6
+  .. .. .. .. ..$ dist     :Classes ‘data.table’ and 'data.frame':	114 obs. of  2 variables:
+  .. .. .. .. .. ..$ x: num [1:114] 0 1 2 3 4 5 6 7 8 9 ...
+  .. .. .. .. .. ..$ y: num [1:114] 0.036 0.0526 0.069 0.0811 0.088 ...
+  .. .. .. .. .. ..- attr(*, "sorted")= chr "x"
+  .. .. .. .. .. ..- attr(*, ".internal.selfref")=<externalptr> 
+  .. .. .. .. ..$ peak     : num 5
+  .. .. .. .. ..$ median   : int 6
+  .. .. .. .. ..$ mean     : num 7.58
+  .. .. .. .. ..$ sd       : num 5.6
+  .. .. .. .. ..$ scoreFile: chr "/tmp/protamine-tools.cuttag.score/atac_102525_v6/atac_102525_v6.bin_scores.H2B.H2B_2.rds"
+  .. .. ..$ aggregateScores:List of 1
+  .. .. .. ..$ by_stage:List of 2
+  .. .. .. .. ..$ earliest_ES:List of 6
+  .. .. .. .. .. ..$ dist     :Classes ‘data.table’ and 'data.frame':	71 obs. of  2 variables:
+  .. .. .. .. .. .. ..$ x: num [1:71] 0 1 2 3 4 5 6 7 8 9 ...
+  .. .. .. .. .. .. ..$ y: num [1:71] 0.178 0.214 0.196 0.151 0.104 ...
+  .. .. .. .. .. .. ..- attr(*, "sorted")= chr "x"
+  .. .. .. .. .. .. ..- attr(*, ".internal.selfref")=<externalptr> 
+  .. .. .. .. .. ..$ peak     : num 1
+  .. .. .. .. .. ..$ median   : int 2
+  .. .. .. .. .. ..$ mean     : num 2.48
+  .. .. .. .. .. ..$ sd       : num 2.23
+  .. .. .. .. .. ..$ scoreFile: chr "/tmp/protamine-tools.cuttag.score/atac_102525_v6/atac_102525_v6.bin_scores.H2B.H2B_1.rds"
+  .. .. .. .. ..$ early_ES   :List of 6
+  .. .. .. .. .. ..$ dist     :Classes ‘data.table’ and 'data.frame':	114 obs. of  2 variables:
+  .. .. .. .. .. .. ..$ x: num [1:114] 0 1 2 3 4 5 6 7 8 9 ...
+  .. .. .. .. .. .. ..$ y: num [1:114] 0.036 0.0526 0.069 0.0811 0.088 ...
+  .. .. .. .. .. .. ..- attr(*, "sorted")= chr "x"
+  .. .. .. .. .. .. ..- attr(*, ".internal.selfref")=<externalptr> 
+  .. .. .. .. .. ..$ peak     : num 5
+  .. .. .. .. .. ..$ median   : int 6
+  .. .. .. .. .. ..$ mean     : num 7.58
+  .. .. .. .. .. ..$ sd       : num 5.6
+  .. .. .. .. .. ..$ scoreFile: chr "/tmp/protamine-tools.cuttag.score/atac_102525_v6/atac_102525_v6.bin_scores.H2B.H2B_2.rds"
+  .. ..$ H4      :List of 2
+  .. .. ..$ sampleScores   :List of 2
+  .. .. .. ..$ H4_1:List of 6
+  .. .. .. .. ..$ dist     :Classes ‘data.table’ and 'data.frame':	485 obs. of  2 variables:
+  .. .. .. .. .. ..$ x: num [1:485] 0 1 2 3 4 5 6 7 8 9 ...
+  .. .. .. .. .. ..$ y: num [1:485] 0.0792 0.12 0.1371 0.1325 0.1137 ...
+  .. .. .. .. .. ..- attr(*, "sorted")= chr "x"
+  .. .. .. .. .. ..- attr(*, ".internal.selfref")=<externalptr> 
+  .. .. .. .. ..$ peak     : num 2
+  .. .. .. .. ..$ median   : int 4
+  .. .. .. .. ..$ mean     : num 6.31
+  .. .. .. .. ..$ sd       : num 12.2
+  .. .. .. .. ..$ scoreFile: chr "/tmp/protamine-tools.cuttag.score/atac_102525_v6/atac_102525_v6.bin_scores.H4.H4_1.rds"
+  .. .. .. ..$ H4_2:List of 6
+  .. .. .. .. ..$ dist     :Classes ‘data.table’ and 'data.frame':	337 obs. of  2 variables:
+  .. .. .. .. .. ..$ x: num [1:337] 0 1 2 3 4 5 6 7 8 9 ...
+  .. .. .. .. .. ..$ y: num [1:337] 0.0145 0.0147 0.0155 0.0172 0.0192 ...
+  .. .. .. .. .. ..- attr(*, "sorted")= chr "x"
+  .. .. .. .. .. ..- attr(*, ".internal.selfref")=<externalptr> 
+  .. .. .. .. ..$ peak     : num 13
+  .. .. .. .. ..$ median   : int 20
+  .. .. .. .. ..$ mean     : num 23.9
+  .. .. .. .. ..$ sd       : num 19.1
+  .. .. .. .. ..$ scoreFile: chr "/tmp/protamine-tools.cuttag.score/atac_102525_v6/atac_102525_v6.bin_scores.H4.H4_2.rds"
+  .. .. ..$ aggregateScores:List of 1
+  .. .. .. ..$ by_stage:List of 2
+  .. .. .. .. ..$ earliest_ES:List of 6
+  .. .. .. .. .. ..$ dist     :Classes ‘data.table’ and 'data.frame':	485 obs. of  2 variables:
+  .. .. .. .. .. .. ..$ x: num [1:485] 0 1 2 3 4 5 6 7 8 9 ...
+  .. .. .. .. .. .. ..$ y: num [1:485] 0.0792 0.12 0.1371 0.1325 0.1137 ...
+  .. .. .. .. .. .. ..- attr(*, "sorted")= chr "x"
+  .. .. .. .. .. .. ..- attr(*, ".internal.selfref")=<externalptr> 
+  .. .. .. .. .. ..$ peak     : num 2
+  .. .. .. .. .. ..$ median   : int 4
+  .. .. .. .. .. ..$ mean     : num 6.31
+  .. .. .. .. .. ..$ sd       : num 12.2
+  .. .. .. .. .. ..$ scoreFile: chr "/tmp/protamine-tools.cuttag.score/atac_102525_v6/atac_102525_v6.bin_scores.H4.H4_1.rds"
+  .. .. .. .. ..$ early_ES   :List of 6
+  .. .. .. .. .. ..$ dist     :Classes ‘data.table’ and 'data.frame':	337 obs. of  2 variables:
+  .. .. .. .. .. .. ..$ x: num [1:337] 0 1 2 3 4 5 6 7 8 9 ...
+  .. .. .. .. .. .. ..$ y: num [1:337] 0.0145 0.0147 0.0155 0.0172 0.0192 ...
+  .. .. .. .. .. .. ..- attr(*, "sorted")= chr "x"
+  .. .. .. .. .. .. ..- attr(*, ".internal.selfref")=<externalptr> 
+  .. .. .. .. .. ..$ peak     : num 13
+  .. .. .. .. .. ..$ median   : int 20
+  .. .. .. .. .. ..$ mean     : num 23.9
+  .. .. .. .. .. ..$ sd       : num 19.1
+  .. .. .. .. .. ..$ scoreFile: chr "/tmp/protamine-tools.cuttag.score/atac_102525_v6/atac_102525_v6.bin_scores.H4.H4_2.rds"
+  .. ..$ H3K27me3:List of 2
+  .. .. ..$ sampleScores   :List of 6
+  .. .. .. ..$ H3K27me3_5:List of 6
+  .. .. .. .. ..$ dist     :Classes ‘data.table’ and 'data.frame':	207 obs. of  2 variables:
+  .. .. .. .. .. ..$ x: num [1:207] 0 1 2 3 4 5 6 7 8 9 ...
+  .. .. .. .. .. ..$ y: num [1:207] 0.76192 0.14981 0.0425 0.0152 0.00695 ...
+  .. .. .. .. .. ..- attr(*, "sorted")= chr "x"
+  .. .. .. .. .. ..- attr(*, ".internal.selfref")=<externalptr> 
+  .. .. .. .. ..$ peak     : num 0
+  .. .. .. .. ..$ median   : int 0
+  .. .. .. .. ..$ mean     : num 0.757
+  .. .. .. .. ..$ sd       : num 4.48
+  .. .. .. .. ..$ scoreFile: chr "/tmp/protamine-tools.cuttag.score/atac_102525_v6/atac_102525_v6.bin_scores.H3K27me3.H3K27me3_5.rds"
+  .. .. .. ..$ H3K27me3_1:List of 6
+  .. .. .. .. ..$ dist     :Classes ‘data.table’ and 'data.frame':	385 obs. of  2 variables:
+  .. .. .. .. .. ..$ x: num [1:385] 0 1 2 3 4 5 6 7 8 9 ...
+  .. .. .. .. .. ..$ y: num [1:385] 0.7116 0.1453 0.0573 0.0268 0.0144 ...
+  .. .. .. .. .. ..- attr(*, "sorted")= chr "x"
+  .. .. .. .. .. ..- attr(*, ".internal.selfref")=<externalptr> 
+  .. .. .. .. ..$ peak     : num 0
+  .. .. .. .. ..$ median   : int 0
+  .. .. .. .. ..$ mean     : num 1.51
+  .. .. .. .. ..$ sd       : num 10.1
+  .. .. .. .. ..$ scoreFile: chr "/tmp/protamine-tools.cuttag.score/atac_102525_v6/atac_102525_v6.bin_scores.H3K27me3.H3K27me3_1.rds"
+  .. .. .. ..$ H3K27me3_3:List of 6
+  .. .. .. .. ..$ dist     :Classes ‘data.table’ and 'data.frame':	232 obs. of  2 variables:
+  .. .. .. .. .. ..$ x: num [1:232] 0 1 2 3 4 5 6 7 8 9 ...
+  .. .. .. .. .. ..$ y: num [1:232] 0.78696 0.11945 0.04413 0.01818 0.00864 ...
+  .. .. .. .. .. ..- attr(*, "sorted")= chr "x"
+  .. .. .. .. .. ..- attr(*, ".internal.selfref")=<externalptr> 
+  .. .. .. .. ..$ peak     : num 0
+  .. .. .. .. ..$ median   : int 0
+  .. .. .. .. ..$ mean     : num 0.709
+  .. .. .. .. ..$ sd       : num 4.55
+  .. .. .. .. ..$ scoreFile: chr "/tmp/protamine-tools.cuttag.score/atac_102525_v6/atac_102525_v6.bin_scores.H3K27me3.H3K27me3_3.rds"
+  .. .. .. ..$ H3K27me3_2:List of 6
+  .. .. .. .. ..$ dist     :Classes ‘data.table’ and 'data.frame':	42 obs. of  2 variables:
+  .. .. .. .. .. ..$ x: num [1:42] 0 1 2 3 4 5 6 7 8 9 ...
+  .. .. .. .. .. ..$ y: num [1:42] 0.90505 0.07018 0.01543 0.00465 0.00188 ...
+  .. .. .. .. .. ..- attr(*, "sorted")= chr "x"
+  .. .. .. .. .. ..- attr(*, ".internal.selfref")=<externalptr> 
+  .. .. .. .. ..$ peak     : num 0
+  .. .. .. .. ..$ median   : int 0
+  .. .. .. .. ..$ mean     : num 0.143
+  .. .. .. .. ..$ sd       : num 0.622
+  .. .. .. .. ..$ scoreFile: chr "/tmp/protamine-tools.cuttag.score/atac_102525_v6/atac_102525_v6.bin_scores.H3K27me3.H3K27me3_2.rds"
+  .. .. .. ..$ H3K27me3_4:List of 6
+  .. .. .. .. ..$ dist     :Classes ‘data.table’ and 'data.frame':	46 obs. of  2 variables:
+  .. .. .. .. .. ..$ x: num [1:46] 0 1 2 3 4 5 6 7 8 9 ...
+  .. .. .. .. .. ..$ y: num [1:46] 0.90076 0.07466 0.01596 0.00458 0.00176 ...
+  .. .. .. .. .. ..- attr(*, "sorted")= chr "x"
+  .. .. .. .. .. ..- attr(*, ".internal.selfref")=<externalptr> 
+  .. .. .. .. ..$ peak     : num 0
+  .. .. .. .. ..$ median   : int 0
+  .. .. .. .. ..$ mean     : num 0.144
+  .. .. .. .. ..$ sd       : num 0.613
+  .. .. .. .. ..$ scoreFile: chr "/tmp/protamine-tools.cuttag.score/atac_102525_v6/atac_102525_v6.bin_scores.H3K27me3.H3K27me3_4.rds"
+  .. .. .. ..$ H3K27me3_6:List of 6
+  .. .. .. .. ..$ dist     :Classes ‘data.table’ and 'data.frame':	81 obs. of  2 variables:
+  .. .. .. .. .. ..$ x: num [1:81] 0 1 2 3 4 5 6 7 8 9 ...
+  .. .. .. .. .. ..$ y: num [1:81] 0.83449 0.09668 0.0365 0.01404 0.00593 ...
+  .. .. .. .. .. ..- attr(*, "sorted")= chr "x"
+  .. .. .. .. .. ..- attr(*, ".internal.selfref")=<externalptr> 
+  .. .. .. .. ..$ peak     : num 0
+  .. .. .. .. ..$ median   : int 0
+  .. .. .. .. ..$ mean     : num 0.376
+  .. .. .. .. ..$ sd       : num 1.69
+  .. .. .. .. ..$ scoreFile: chr "/tmp/protamine-tools.cuttag.score/atac_102525_v6/atac_102525_v6.bin_scores.H3K27me3.H3K27me3_6.rds"
+  .. .. ..$ aggregateScores:List of 1
+  .. .. .. ..$ by_stage:List of 5
+  .. .. .. .. ..$ early_RS   :List of 6
+  .. .. .. .. .. ..$ dist     :Classes ‘data.table’ and 'data.frame':	207 obs. of  2 variables:
+  .. .. .. .. .. .. ..$ x: num [1:207] 0 1 2 3 4 5 6 7 8 9 ...
+  .. .. .. .. .. .. ..$ y: num [1:207] 0.76192 0.14981 0.0425 0.0152 0.00695 ...
+  .. .. .. .. .. .. ..- attr(*, "sorted")= chr "x"
+  .. .. .. .. .. .. ..- attr(*, ".internal.selfref")=<externalptr> 
+  .. .. .. .. .. ..$ peak     : num 0
+  .. .. .. .. .. ..$ median   : int 0
+  .. .. .. .. .. ..$ mean     : num 0.757
+  .. .. .. .. .. ..$ sd       : num 4.48
+  .. .. .. .. .. ..$ scoreFile: chr "/tmp/protamine-tools.cuttag.score/atac_102525_v6/atac_102525_v6.bin_scores.H3K27me3.H3K27me3_5.rds"
+  .. .. .. .. ..$ late_RS    :List of 6
+  .. .. .. .. .. ..$ dist     :Classes ‘data.table’ and 'data.frame':	385 obs. of  2 variables:
+  .. .. .. .. .. .. ..$ x: num [1:385] 0 1 2 3 4 5 6 7 8 9 ...
+  .. .. .. .. .. .. ..$ y: num [1:385] 0.7116 0.1453 0.0573 0.0268 0.0144 ...
+  .. .. .. .. .. .. ..- attr(*, "sorted")= chr "x"
+  .. .. .. .. .. .. ..- attr(*, ".internal.selfref")=<externalptr> 
+  .. .. .. .. .. ..$ peak     : num 0
+  .. .. .. .. .. ..$ median   : int 0
+  .. .. .. .. .. ..$ mean     : num 1.51
+  .. .. .. .. .. ..$ sd       : num 10.1
+  .. .. .. .. .. ..$ scoreFile: chr "/tmp/protamine-tools.cuttag.score/atac_102525_v6/atac_102525_v6.bin_scores.H3K27me3.H3K27me3_1.rds"
+  .. .. .. .. ..$ earliest_ES:List of 6
+  .. .. .. .. .. ..$ dist     :Classes ‘data.table’ and 'data.frame':	232 obs. of  2 variables:
+  .. .. .. .. .. .. ..$ x: num [1:232] 0 1 2 3 4 5 6 7 8 9 ...
+  .. .. .. .. .. .. ..$ y: num [1:232] 0.78696 0.11945 0.04413 0.01818 0.00864 ...
+  .. .. .. .. .. .. ..- attr(*, "sorted")= chr "x"
+  .. .. .. .. .. .. ..- attr(*, ".internal.selfref")=<externalptr> 
+  .. .. .. .. .. ..$ peak     : num 0
+  .. .. .. .. .. ..$ median   : int 0
+  .. .. .. .. .. ..$ mean     : num 0.709
+  .. .. .. .. .. ..$ sd       : num 4.55
+  .. .. .. .. .. ..$ scoreFile: chr "/tmp/protamine-tools.cuttag.score/atac_102525_v6/atac_102525_v6.bin_scores.H3K27me3.H3K27me3_3.rds"
+  .. .. .. .. ..$ early_ES   :List of 7
+  .. .. .. .. .. ..$ dist     :Classes ‘data.table’ and 'data.frame':	72 obs. of  2 variables:
+  .. .. .. .. .. .. ..$ x: num [1:72] 0 1 2 3 4 5 6 7 8 9 ...
+  .. .. .. .. .. .. ..$ y: num [1:72] 0.83133 0.11547 0.03116 0.01059 0.00444 ...
+  .. .. .. .. .. .. ..- attr(*, "sorted")= chr "x"
+  .. .. .. .. .. .. ..- attr(*, ".internal.selfref")=<externalptr> 
+  .. .. .. .. .. ..$ peak     : num 0
+  .. .. .. .. .. ..$ median   : num 0
+  .. .. .. .. .. ..$ mean     : num 0.288
+  .. .. .. .. .. ..$ sd       : num 1.07
+  .. .. .. .. .. ..$ scoreFile: chr "/tmp/protamine-tools.cuttag.score/atac_102525_v6/atac_102525_v6.bin_scores.H3K27me3.early_ES.rds"
+  .. .. .. .. .. ..$ scores   : NULL
+  .. .. .. .. ..$ int_ES     :List of 6
+  .. .. .. .. .. ..$ dist     :Classes ‘data.table’ and 'data.frame':	81 obs. of  2 variables:
+  .. .. .. .. .. .. ..$ x: num [1:81] 0 1 2 3 4 5 6 7 8 9 ...
+  .. .. .. .. .. .. ..$ y: num [1:81] 0.83449 0.09668 0.0365 0.01404 0.00593 ...
+  .. .. .. .. .. .. ..- attr(*, "sorted")= chr "x"
+  .. .. .. .. .. .. ..- attr(*, ".internal.selfref")=<externalptr> 
+  .. .. .. .. .. ..$ peak     : num 0
+  .. .. .. .. .. ..$ median   : int 0
+  .. .. .. .. .. ..$ mean     : num 0.376
+  .. .. .. .. .. ..$ sd       : num 1.69
+  .. .. .. .. .. ..$ scoreFile: chr "/tmp/protamine-tools.cuttag.score/atac_102525_v6/atac_102525_v6.bin_scores.H3K27me3.H3K27me3_6.rds"
+  .. ..$ H4ac    :List of 2
+  .. .. ..$ sampleScores   :List of 2
+  .. .. .. ..$ H4ac_1:List of 6
+  .. .. .. .. ..$ dist     :Classes ‘data.table’ and 'data.frame':	48 obs. of  2 variables:
+  .. .. .. .. .. ..$ x: num [1:48] 0 1 2 3 4 5 6 7 8 9 ...
+  .. .. .. .. .. ..$ y: num [1:48] 0.5025 0.2223 0.1227 0.0667 0.0366 ...
+  .. .. .. .. .. ..- attr(*, "sorted")= chr "x"
+  .. .. .. .. .. ..- attr(*, ".internal.selfref")=<externalptr> 
+  .. .. .. .. ..$ peak     : num 0
+  .. .. .. .. ..$ median   : int 0
+  .. .. .. .. ..$ mean     : num 1.14
+  .. .. .. .. ..$ sd       : num 1.73
+  .. .. .. .. ..$ scoreFile: chr "/tmp/protamine-tools.cuttag.score/atac_102525_v6/atac_102525_v6.bin_scores.H4ac.H4ac_1.rds"
+  .. .. .. ..$ H4ac_2:List of 6
+  .. .. .. .. ..$ dist     :Classes ‘data.table’ and 'data.frame':	50 obs. of  2 variables:
+  .. .. .. .. .. ..$ x: num [1:50] 0 1 2 3 4 5 6 7 8 9 ...
+  .. .. .. .. .. ..$ y: num [1:50] 0.6703 0.209 0.075 0.0274 0.0104 ...
+  .. .. .. .. .. ..- attr(*, "sorted")= chr "x"
+  .. .. .. .. .. ..- attr(*, ".internal.selfref")=<externalptr> 
+  .. .. .. .. ..$ peak     : num 0
+  .. .. .. .. ..$ median   : int 0
+  .. .. .. .. ..$ mean     : num 0.533
+  .. .. .. .. ..$ sd       : num 1.01
+  .. .. .. .. ..$ scoreFile: chr "/tmp/protamine-tools.cuttag.score/atac_102525_v6/atac_102525_v6.bin_scores.H4ac.H4ac_2.rds"
+  .. .. ..$ aggregateScores:List of 1
+  .. .. .. ..$ by_stage:List of 2
+  .. .. .. .. ..$ earliest_ES:List of 6
+  .. .. .. .. .. ..$ dist     :Classes ‘data.table’ and 'data.frame':	48 obs. of  2 variables:
+  .. .. .. .. .. .. ..$ x: num [1:48] 0 1 2 3 4 5 6 7 8 9 ...
+  .. .. .. .. .. .. ..$ y: num [1:48] 0.5025 0.2223 0.1227 0.0667 0.0366 ...
+  .. .. .. .. .. .. ..- attr(*, "sorted")= chr "x"
+  .. .. .. .. .. .. ..- attr(*, ".internal.selfref")=<externalptr> 
+  .. .. .. .. .. ..$ peak     : num 0
+  .. .. .. .. .. ..$ median   : int 0
+  .. .. .. .. .. ..$ mean     : num 1.14
+  .. .. .. .. .. ..$ sd       : num 1.73
+  .. .. .. .. .. ..$ scoreFile: chr "/tmp/protamine-tools.cuttag.score/atac_102525_v6/atac_102525_v6.bin_scores.H4ac.H4ac_1.rds"
+  .. .. .. .. ..$ early_ES   :List of 6
+  .. .. .. .. .. ..$ dist     :Classes ‘data.table’ and 'data.frame':	50 obs. of  2 variables:
+  .. .. .. .. .. .. ..$ x: num [1:50] 0 1 2 3 4 5 6 7 8 9 ...
+  .. .. .. .. .. .. ..$ y: num [1:50] 0.6703 0.209 0.075 0.0274 0.0104 ...
+  .. .. .. .. .. .. ..- attr(*, "sorted")= chr "x"
+  .. .. .. .. .. .. ..- attr(*, ".internal.selfref")=<externalptr> 
+  .. .. .. .. .. ..$ peak     : num 0
+  .. .. .. .. .. ..$ median   : int 0
+  .. .. .. .. .. ..$ mean     : num 0.533
+  .. .. .. .. .. ..$ sd       : num 1.01
+  .. .. .. .. .. ..$ scoreFile: chr "/tmp/protamine-tools.cuttag.score/atac_102525_v6/atac_102525_v6.bin_scores.H4ac.H4ac_2.rds"
+ $ scoreTables:List of 4
+  ..$ H2B     :List of 2
+  .. ..$ score   :List of 2
+  .. .. ..$ bgzFile : chr "atac_102525_v6.H2B.score.bed.bgz"
+  .. .. ..$ colNames: chr [1:7] "chrom" "start0" "end1" "H2B_1" ...
+  .. ..$ quantile:List of 2
+  .. .. ..$ bgzFile : chr "atac_102525_v6.H2B.quantile.bed.bgz"
+  .. .. ..$ colNames: chr [1:7] "chrom" "start0" "end1" "H2B_1" ...
+  ..$ H4      :List of 2
+  .. ..$ score   :List of 2
+  .. .. ..$ bgzFile : chr "atac_102525_v6.H4.score.bed.bgz"
+  .. .. ..$ colNames: chr [1:7] "chrom" "start0" "end1" "H4_1" ...
+  .. ..$ quantile:List of 2
+  .. .. ..$ bgzFile : chr "atac_102525_v6.H4.quantile.bed.bgz"
+  .. .. ..$ colNames: chr [1:7] "chrom" "start0" "end1" "H4_1" ...
+  ..$ H3K27me3:List of 2
+  .. ..$ score   :List of 2
+  .. .. ..$ bgzFile : chr "atac_102525_v6.H3K27me3.score.bed.bgz"
+  .. .. ..$ colNames: chr [1:14] "chrom" "start0" "end1" "H3K27me3_5" ...
+  .. ..$ quantile:List of 2
+  .. .. ..$ bgzFile : chr "atac_102525_v6.H3K27me3.quantile.bed.bgz"
+  .. .. ..$ colNames: chr [1:14] "chrom" "start0" "end1" "H3K27me3_5" ...
+  ..$ H4ac    :List of 2
+  .. ..$ score   :List of 2
+  .. .. ..$ bgzFile : chr "atac_102525_v6.H4ac.score.bed.bgz"
+  .. .. ..$ colNames: chr [1:7] "chrom" "start0" "end1" "H4ac_1" ...
+  .. ..$ quantile:List of 2
+  .. .. ..$ bgzFile : chr "atac_102525_v6.H4ac.quantile.bed.bgz"
+  .. .. ..$ colNames: chr [1:7] "chrom" "start0" "end1" "H4ac_1" ...
+
+---
+job-manager:
+    exit_status: 0
+    walltime: 2:21.26
+    seconds: 141.26
+    maxvmem: 5369652K
+    swaps: 0
+---
+job-manager:
+    ended: Tue 11/18/25 13:53
+...
+====================================================================================================
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

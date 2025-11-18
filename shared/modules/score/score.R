@@ -171,7 +171,7 @@ scores$genome$stgm <- {
         sample_names <- collate$samples[stage == stage_, sample_name]
         rowMeans(cpm_smp[, sample_names, drop = FALSE], na.rm = TRUE)
     })
-    stage_mean <- apply(cpm_stg, 1, function(cpm) {
+    stage_mean <- apply(cpm_stg, 1, function(cpm) { # as with txn, cpm == rpkm at 1kb bins
         weightedMedian(1:nStageMeanStages, cpm, interpolate = TRUE, na.rm = TRUE) 
     })
     stgm <- analyzeScoreDist(stage_mean, scoreTypes$genome$stgm, scoreTypes$genome$stgm$name, return_scores = TRUE)

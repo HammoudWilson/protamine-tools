@@ -1,0 +1,38 @@
+---
+pipeline:
+    name: cuttag
+    description: "prepare histone Cut&Tag data for analysis in the interactive app"
+    # version: v0.0.1
+# suiteVersions:
+#     suiteName: v0.0.0
+actions: 
+    _global:   
+        environment: protamine-nascent # uses shared processing of input bigwig files as Pro-seq data
+        condaFamilies:
+            - base
+            - rtracklayer
+    score:
+        order: 1
+        optionFamilies:
+            - samples
+            - composite
+            - genome
+            - bin
+            - cuttag
+        resources:
+            required:
+                total-ram: 8G
+            recommended: 
+                n-cpu: 16 # number of samples
+                ram-per-cpu: 2G
+        job-manager:
+            recommended:
+                time-limit: 4:00:00
+        description: "tabulate Cut&Tag read counts data across all samples into fixed width bins"
+# Cut&Tag data are incorporated into data packages by re-running `atac collate` and `atac tss` 
+# after `cuttag score` has completed
+container:
+    supported: false
+    registry:  ghcr.io  # domain name of your OCI-compatible, oras-accessible, container registry [ghcr.io]
+    owner:     xxxxxxxx # the name of the owner, e.g., user or organization, at 'registry'
+    installer: apt-get  # the installer program used by the container OS, typically apt-get or yum [apt-get]

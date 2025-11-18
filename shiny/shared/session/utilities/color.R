@@ -75,18 +75,15 @@ trackMapColors <- list(
 )
 
 # implement color spreading functions for different score types
+# z-scores color from blue (cold) to red (hot) via grey (neutral)
+# with limit values coloring as pure red/blue
 z_score_color <- function(zScore, config){
     minZScore <- -config$Max_Z_Score
     z <- pmax(minZScore, pmin(config$Max_Z_Score, zScore))
     I <- floor(nTrackMapColorsPerSide * abs(z) / config$Max_Z_Score) + 1L
     ifelse(z < 0, trackMapColors$low[I], trackMapColors$high[I])
 }
-# quantile_score_color <- function(quantile, config){
-#     minQuantile <- 1 - maxQuantile
-#     quantile <- pmax(minQuantile, pmin(maxQuantile, quantile))
-#     I <- floor(nTrackMapColorsPerSide * abs(quantile - 0.5) / (maxQuantile - 0.5)) + 1L
-#     ifelse(quantile < 0.5, trackMapColors$low[I], trackMapColors$high[I])
-# }
+# quantile scores converted to z-scores for coloring assuming a (pseudo-)normal distribution
 quantile_score_color <- function(quantile, config){
     # prevent infinite Z-scores by clamping extreme quantiles to ~6 sigma, i.e., 1e-9
     quantile <- pmax(1e-9, pmin(1-1e-9, quantile))
@@ -94,13 +91,26 @@ quantile_score_color <- function(quantile, config){
     z <- qnorm(quantile)
     z_score_color(z, config)
 }
-cpm_score_color <- function(log10cpm, config){
+# quantile_score_color <- function(quantile, config){
+#     minQuantile <- 1 - maxQuantile
+#     quantile <- pmax(minQuantile, pmin(maxQuantile, quantile))
+#     I <- floor(nTrackMapColorsPerSide * abs(quantile - 0.5) / (maxQuantile - 0.5)) + 1L
+#     ifelse(quantile < 0.5, trackMapColors$low[I], trackMapColors$high[I])
+# }
+# Pro-seq transcription colored on a log scale from grey (no signal) to red (high signal)
+txn_score_color <- function(log10cpm, config){
     min <- config$Min_Txn_Log10_CPM
     max <- config$Max_Txn_Log10_CPM
     log10cpm <- pmax(min, pmin(max, log10cpm))
     I <- floor(nTrackMapColorsPerSide * (log10cpm - min) / (max - min)) + 1L
     trackMapColors$high[I]
 }
+cuttag_score_color <- function(rpkm, config){
+    quantile <- ecdf(rpkm[!is.na(rpkm)])(rpkm)
+    z <- qnorm(quantile)
+    z_score_color(z, config)
+}
+# insert size NRLL colored on a blue/grey/red scale with grey at mid NRLL value
 nrll_score_color <- function(nrll, config){
     NRLL_Limits <- as.numeric(strsplit(config$NRLL_Limits, ",")[[1]])
     low  <- NRLL_Limits[1]
@@ -138,8 +148,8 @@ getSeriesSummaryColors <- function(scoreTypeName, scoreValues, config){ # used t
         # genome scores here are equivalent to sample-level getSeriesSampleColors below
         # provided by scoreMapGroupImage as raw score values, used as is
         gc_z = z_score_color(  scoreValues, config), 
-        txn  = cpm_score_color(scoreValues, config),
-        # stgm = fraction_score_color(scoreValues, config),
+        txn  = txn_score_color(scoreValues, config),
+        stgm = quantile_score_color(scoreValues, config),
 
         # sample-level summary scores (deltas) use quantiles, i.e., assume non-parametric distributions
         # always provided as quantiles by scoreMapGroupImage
@@ -154,7 +164,8 @@ getSeriesSampleColors <- function(scoreTypeName, scoreValues, config){
         scoreTypeName,
         gcrz_obs = z_score_color(   scoreValues, config),  # these score values are already Z scores
         gcrz_wgt = z_score_color(   scoreValues, config),
-        nrll     = nrll_score_color(scoreValues, config)
+        nrll     = nrll_score_color(scoreValues, config),
+        cuttag_score_color(scoreValues, config)
     )
 }
 

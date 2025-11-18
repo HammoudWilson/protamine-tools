@@ -1,0 +1,13 @@
+﻿class,class_order,sub_directory,antibody_target,target_order,sample_name,bigwig_file,genotype,phenotype,staging,staging_order,stage,stage_long,n_reads,scale_factor,reads_per_bin,final_order
+core_histone,1,A8672_H4_H2B,H2B,1,H2B_1,day56_RS_H2b.count.bw,wt,wt,RS_7-ES_8,3,earliest_ES,Earliest Elongating Spermatids,5998418,16.867858,2.221636296,1
+core_histone,1,A8672_H4_H2B,H2B,1,H2B_2,day56_ES_H2b.count.bw,wt,wt,ES_9,4,early_ES,Early Elongating Spermatids,18332553,16.867858,6.789834444,2
+core_histone,1,A8672_H4_H2B,H4,2,H4_1,day56_RS_H4.count.bw,wt,wt,RS_7-ES_8,3,earliest_ES,Earliest Elongating Spermatids,15403163,16.867858,5.704875185,3
+core_histone,1,A8672_H4_H2B,H4,2,H4_2,day56_ES_H4.count.bw,wt,wt,ES_9,4,early_ES,Early Elongating Spermatids,57688492,16.867858,21.36610815,4
+modification,2,A8538_H3K27ME3_H4AC,H3K27me3,1,H3K27me3_5,Day34_SNF2H_loxP-WT_P1V5_homo-Rs2_H3K27me3.count.bw,SNF2H_loxP/wt,wt,RS_1-2,1,early_RS,Early Round Spermatids,1951624,1.6601875,0.722823704,5
+modification,2,A8538_H3K27ME3_H4AC,H3K27me3,1,H3K27me3_1,Day32_11-6-24-RS-H3K27me3.count.bw,wt,wt,RS_6,2,late_RS,Late Round Spermatids ,4291225,1.6601875,1.589342593,6
+modification,2,A8538_H3K27ME3_H4AC,H3K27me3,1,H3K27me3_3,Day34_11-8-24-RS-H3K27me3.count.bw,wt,wt,ES_8-9,3,earliest_ES,Earliest Elongating Spermatids,2064540,1.6601875,0.764644444,7
+modification,2,A8538_H3K27ME3_H4AC,H3K27me3,1,H3K27me3_2,Day32_11-6-24-ES-H3K27me3.count.bw,wt,wt,ES_9-12,4,early_ES,Early Elongating Spermatids,432323,1.6601875,0.16011963,8
+modification,2,A8538_H3K27ME3_H4AC,H3K27me3,1,H3K27me3_4,Day34_11-8-24-ES-H3K27me3.count.bw,wt,wt,ES_9-12,4,early_ES,Early Elongating Spermatids,435903,1.6601875,0.161445556,9
+modification,2,A8538_H3K27ME3_H4AC,H3K27me3,1,H3K27me3_6,Day34_SNF2H_loxP-WT_P1V5_homo-Es2_H3K27me3.count.bw,SNF2H_loxP/wt,wt,ES_13-14,5,int_ES,Intermediate Elongating Spermatids,1088859,1.6601875,0.403281111,10
+modification,2,A8538_H3K27ME3_H4AC,H4ac,2,H4ac_1,Day34_11-8-24-RS-H4ac.count.bw,wt,wt,ES_8-9,3,earliest_ES,Earliest Elongating Spermatids,2864096,1.6601875,1.060776296,11
+modification,2,A8538_H3K27ME3_H4AC,H4ac,2,H4ac_2,Day34_11-8-24-ES-H4ac.count.bw,wt,wt,ES_9-12,4,early_ES,Early Elongating Spermatids,1368751,1.6601875,0.506944815,12
