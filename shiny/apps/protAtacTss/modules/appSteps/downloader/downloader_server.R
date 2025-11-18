@@ -49,7 +49,7 @@ observeEvent(input$writeData, {
         scores <- getSampleScores_all(sourceId, input$scoreType)
         startSpinner(session, message = "creating output table")
         d <- merge(
-            bins[, .(chrom, start0, end1, included, gc, gc_z, txn)],
+            bins[, .(chrom, start0, end1, included, gc, gc_z, txn, stgm, hic)],
             scores,
             by = c("chrom", "start0", "end1"),
             all.x = TRUE,

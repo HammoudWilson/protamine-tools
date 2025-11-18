@@ -196,7 +196,9 @@ getSeriesAggNames <- function(metadata, config, samplesFilter = TRUE){
 # support score data download
 #----------------------------------------------------------------------
 getSampleScores_all <- function(sourceId, scoreTypeName){ # returns a list of sample-level score objects based on GC normalization
-    metadata <- paScores_metadata(sourceId)
+    cuttag <- scoreTypes$sample[[scoreTypeName]]$cuttag
+    metadata <- if(!is.null(cuttag) && cuttag) paCutTag_metadata(sourceId)
+                                          else paScores_metadata(sourceId)
     scoresDir <- metadata$env$SCORES_DIR
     scoreTable <- metadata$scoreTables[[scoreTypeName]]$score
     bgzFileName <- scoreTable$bgzFile

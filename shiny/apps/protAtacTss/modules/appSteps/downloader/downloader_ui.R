@@ -65,7 +65,7 @@ downloaderUI <- function(id, options) {
                 selectInput(
                     ns("scoreType"),
                     label = "Score Type",
-                    choices = c("gcrz_obs", "gcrz_wgt", "nrll", "dinuc_chains"),
+                    choices = c("gcrz_obs", "gcrz_wgt", "nrll", "dinuc_chains","H2B","H4","H4ac","H3K27me3"),
                     selected = "gcrz_obs"
                 ),
                 textInput(
