@@ -29,7 +29,9 @@ scoreTypes <- list(
             trackSummaryLabel = "Z Score",
             trackLegendLabel = "red/blue=high/low GC",
             class = "baseComposition",
-            valueLim = gcLimits
+            valueLim = gcLimits,
+            corrLim = c(0.3, 0.575),
+            allowCorrRange = FALSE
         ),
         txn = list(
             label = "Round Spermatid PRO-seq",
@@ -39,7 +41,9 @@ scoreTypes <- list(
             trackSummaryLabel = "log10 RPKM",
             trackLegendLabel = "red=transcribed",
             class = "transcription",
-            valueLim = log10(c(1e-3, 1e1))
+            valueLim = log10(c(1e-3, 1e1)),
+            corrUnit = "(log10 RPKM)",
+            allowCorrRange = FALSE
         ),
         hic = list(
             label = "HiC Compartment Score",
@@ -49,13 +53,14 @@ scoreTypes <- list(
             trackSummaryLabel = "quantile",
             trackLegendLabel = "red/blue=A/B",
             class = "compartment",
-            valueLim = c(-0.1, 0.1)
+            valueLim = c(-0.1, 0.1),
+            allowCorrRange = FALSE
         ),
         stgm = list(
-            label = "ATAC Bin Stage Mean",
+            label = "ATAC Stage Mean",
             log10 = FALSE,
             unit = "",
-            trackHeaderLabel = "ATAC Bin Stage Mean",
+            trackHeaderLabel = "ATAC Stage Mean",
             trackSummaryLabel = "quantile",
             trackLegendLabel = "red/blue=early/late",
             class = "timecourse",
@@ -69,9 +74,10 @@ scoreTypes <- list(
             log10 = FALSE,
             label = "ATAC GC Residual",
             unit = "Z Score",
-            enrichmentLabel = "ATAC GC Regression Observed (Z)",
-            trackHeaderLabel = "ATAC GC Regression Observed",
+            enrichmentLabel = "ATAC GC Regression (Z)",
+            trackHeaderLabel = "ATAC GC Regression",
             trackScoreLabel = "Z Score",
+            trackLegendLabel = "red/blue=high/low Z-score",
             class = "coverage",
             valueLim = c(-3, 3),
             deltaLim = c(-3, 3)
@@ -99,7 +105,8 @@ scoreTypes <- list(
             trackScoreLabel = "NRLL",
             class = "insertSize",
             valueLim = c(-1.5, 1.5),
-            deltaLim = c(-1.1, 0.1)
+            deltaLim = c(-1.1, 0.1),
+            corrUnit = "(NRLL)"
         ),
         H2B = list(
             distUnit = 1,
@@ -113,6 +120,8 @@ scoreTypes <- list(
             class = "chromatin",
             valueLim = c(0,50),
             deltaLim = c(-3, 3),
+            corrLim  = c(0, 2),
+            corrUnit = "(RPKM)",
             cuttag = TRUE
         ),
         H4 = list(
@@ -127,20 +136,8 @@ scoreTypes <- list(
             class = "chromatin",
             valueLim = c(0,50),
             deltaLim = c(-3, 3),
-            cuttag = TRUE
-        ),
-        H3K27me3 = list(
-            distUnit = 1,
-            include = c("quantile"),
-            log10 = FALSE,
-            label = "H3K27me3 Cut&Tag",
-            unit = "# Reads",
-            enrichmentLabel = "H3K27me3 (log10 RPKM)",
-            trackHeaderLabel = "H3K27me3 Cut&Tag",
-            trackScoreLabel = "RPKM",
-            class = "chromatin",
-            valueLim = c(0,50),
-            deltaLim = c(-3, 3),
+            corrLim  = c(0, 2),
+            corrUnit = "(RPKM)",
             cuttag = TRUE
         ),
         H4ac = list(
@@ -155,6 +152,24 @@ scoreTypes <- list(
             class = "chromatin",
             valueLim = c(0,50),
             deltaLim = c(-3, 3),
+            corrLim  = c(0, 2),
+            corrUnit = "(RPKM)",
+            cuttag = TRUE
+        ),
+        H3K27me3 = list(
+            distUnit = 1,
+            include = c("quantile"),
+            log10 = FALSE,
+            label = "H3K27me3 Cut&Tag",
+            unit = "# Reads",
+            enrichmentLabel = "H3K27me3 (log10 RPKM)",
+            trackHeaderLabel = "H3K27me3 Cut&Tag",
+            trackScoreLabel = "RPKM",
+            class = "chromatin",
+            valueLim = c(0,50),
+            deltaLim = c(-3, 3),
+            corrLim  = c(0, 2),
+            corrUnit = "(RPKM)",
             cuttag = TRUE
         )
     )

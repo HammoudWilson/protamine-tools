@@ -217,6 +217,17 @@ getSampleScores_all <- function(sourceId, scoreTypeName){ # returns a list of sa
         )
     )
 }
+getSampleScores_allBins <- function(sourceId, scoreTypeName, stage){
+    paScores_getCached(
+        "getSampleScores_allBins",
+        keyObject = list(sourceId, scoreTypeName, stage),
+        from = 'disk',
+        createFn = function(...) {
+            getSampleScores_all(sourceId, scoreTypeName)[[stage]]
+        },
+        spinnerMessage = paste("loading stage scores")
+    )
+}
 getStageTypeDelta_allBins <- function(sourceId, scoreTypeName){
     paScores_getCached(
         "getStageTypeDelta_allBins",

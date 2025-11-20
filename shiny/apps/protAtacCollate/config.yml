@@ -47,6 +47,8 @@ appSteps:
         module: scoreSummary
     cuttagSummary:
         module: cuttagSummary
+    scoreCorrelation:
+        module: scoreCorrelation
     # browser:
     #     module: genomex-mdi-tools//trackBrowser
     regionEnrichment:

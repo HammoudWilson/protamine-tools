@@ -31,12 +31,30 @@ packages: # required R packages
 #----------------------------------------------------------------------
 settings:
     Score_Correlation:
-        Random_Bin_Count:
+        N_Bins_Per_Point:
+            type:   selectInput
+            choices:
+                - 1
+                - 3
+                - 10
+                - 30
+                - 100
+            value: 1
+        Set_Axis_Limits:
+            type:   selectInput
+            choices:
+                - from_defaults
+                - from_data_range
+            value: from_data_range
+        N_Plot_Points:
             type:   numericInput
-            value:  50000
+            value:  5000
             min:    10000
             max:    200000
             step:   10000 
+        Data_Range_Min_Quantile:
+            type:   numericInput
+            value: 0.01
 #         Aggregate_Samples_By_Stage:
 #             type: checkboxInput
 #             value: false 
