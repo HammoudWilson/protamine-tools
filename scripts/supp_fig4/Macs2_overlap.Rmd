@@ -1,0 +1,143 @@
+```{r}
+library(ggplot2)
+library(GenomicRanges)
+library(rtracklayer)
+library(ggvenn)   # or VennDiagram/UpSetR if you prefer
+library(VennDiagram)
+
+```
+
+I want to load in all narrowpeaks called per datasets:
+  
+```{r}
+macs_early_rs <- read.delim2('/nfs/turbo/umms-hammou/mrabbani/DATA_STORAGE/ATAC-processed/Tim_Parnell_analysis/Mashiat_analysis/ATAC_alldatasets/macs_peaks_all_atac/all_early_RS_narrowpeaks.sorted.merged.bed', header = F)
+macs_int_rs <- read.delim2('/nfs/turbo/umms-hammou/mrabbani/DATA_STORAGE/ATAC-processed/Tim_Parnell_analysis/Mashiat_analysis/ATAC_alldatasets/macs_peaks_all_atac/all_int_RS_narrowpeaks.sorted.merged.bed', header = F)
+macs_late_rs <- read.delim2('/nfs/turbo/umms-hammou/mrabbani/DATA_STORAGE/ATAC-processed/Tim_Parnell_analysis/Mashiat_analysis/ATAC_alldatasets/macs_peaks_all_atac/all_late_RS_narrowpeaks.sorted.merged.bed', header = F)
+macs_earliest_es <- read.delim2('/nfs/turbo/umms-hammou/mrabbani/DATA_STORAGE/ATAC-processed/Tim_Parnell_analysis/Mashiat_analysis/ATAC_alldatasets/macs_peaks_all_atac/all_earliest_ES_narrowpeaks.sorted.merged.bed', header = F)
+macs_early_es <- read.delim2('/nfs/turbo/umms-hammou/mrabbani/DATA_STORAGE/ATAC-processed/Tim_Parnell_analysis/Mashiat_analysis/ATAC_alldatasets/macs_peaks_all_atac/all_early_ES_narrowpeaks.sorted.merged.bed', header = F)
+macs_int_es <- read.delim2('/nfs/turbo/umms-hammou/mrabbani/DATA_STORAGE/ATAC-processed/Tim_Parnell_analysis/Mashiat_analysis/ATAC_alldatasets/macs_peaks_all_atac/all_int_ES_narrowpeaks.sorted.merged.bed', header = F)
+macs_late_es <- read.delim2('/nfs/turbo/umms-hammou/mrabbani/DATA_STORAGE/ATAC-processed/Tim_Parnell_analysis/Mashiat_analysis/ATAC_alldatasets/macs_peaks_all_atac/all_late_ES_narrowpeaks.sorted.merged.bed', header = F)
+
+macs_RS <- read.delim2('/nfs/turbo/umms-hammou/mrabbani/DATA_STORAGE/ATAC-processed/Tim_Parnell_analysis/Mashiat_analysis/ATAC_alldatasets/macs_peaks_all_atac/all_RS_narrowpeaks.sorted.merged.bed', header = F)
+
+
+
+```
+
+Now I want find overlaps per stage between the methods and make venn diagrams
+
+```{r}
+colnames(macs_early_rs) <-c('chr', 'start', 'end')
+colnames(macs_int_rs) <-c('chr', 'start', 'end')
+colnames(macs_late_rs) <-c('chr', 'start', 'end')
+colnames(macs_earliest_es) <-c('chr', 'start', 'end')
+colnames(macs_early_es) <-c('chr', 'start', 'end')
+colnames(macs_int_es) <-c('chr', 'start', 'end')
+colnames(macs_late_es) <-c('chr', 'start', 'end')
+colnames(macs_RS) <-c('chr', 'start', 'end')
+
+```
+
+```{r}
+macs_early_rs_gr <- makeGRangesFromDataFrame(macs_early_rs, keep.extra.columns = TRUE)
+macs_int_rs_gr   <- makeGRangesFromDataFrame(macs_int_rs, keep.extra.columns = TRUE)
+macs_late_rs_gr  <- makeGRangesFromDataFrame(macs_late_rs, keep.extra.columns = TRUE)
+macs_earliest_es_gr <- makeGRangesFromDataFrame(macs_earliest_es, keep.extra.columns = TRUE)
+macs_early_es_gr    <- makeGRangesFromDataFrame(macs_early_es, keep.extra.columns = TRUE)
+macs_int_es_gr      <- makeGRangesFromDataFrame(macs_int_es, keep.extra.columns = TRUE)
+macs_late_es_gr     <- makeGRangesFromDataFrame(macs_late_es, keep.extra.columns = TRUE)
+macs_RS_gr <- makeGRangesFromDataFrame(macs_RS, keep.extra.columns = TRUE)
+```
+
+
+
+```{r}
+# Find overlaps
+overlaps_early_rs <- findOverlaps(macs_early_rs_gr, macs_int_rs_gr)
+
+# Indices of overlapping regions
+overlap_idx_mers <- queryHits(overlaps_early_rs)
+overlap_idx_ders <- subjectHits(overlaps_early_rs)
+
+```
+
+```{r}
+cat("Number of peaks in bed1:", length(macs_early_rs_gr), "\n")
+cat("Number of peaks in bed2:", length(macs_int_rs_gr), "\n")
+cat("Number of overlapping peaks:", length(unique(overlap_idx_mers)), "\n")
+
+```
+
+```{r}
+#pdf('macs_dinuc_overlap_early_rs.pdf', height = 4, width = 6)
+draw.pairwise.venn(
+  area1 = length(macs_early_rs_gr),
+  area2 = length(macs_int_rs_gr),
+  cross.area = length(unique(overlap_idx_mers)),
+  #category = c("MACS Peaks", "Dinuc Peaks"),
+  fill = c("steelblue", "orange"),
+  lty = "blank",
+  cat.cex = 0.8
+)
+#dev.off()
+```
+```{r}
+# Find overlaps
+overlaps_early_rs_late_es <- findOverlaps(macs_early_rs_gr, macs_late_es_gr)
+
+# Indices of overlapping regions
+overlap_idx_mers <- queryHits(overlaps_early_rs_late_es)
+overlap_idx_ders <- subjectHits(overlaps_early_rs_late_es)
+
+```
+
+```{r}
+cat("Number of peaks in bed1:", length(macs_early_rs_gr), "\n")
+cat("Number of peaks in bed2:", length(macs_late_es_gr), "\n")
+cat("Number of overlapping peaks:", length(unique(overlap_idx_mers)), "\n")
+
+```
+
+```{r}
+#pdf('macs_dinuc_overlap_early_rs.pdf', height = 4, width = 6)
+draw.pairwise.venn(
+  area1 = length(macs_early_rs_gr),
+  area2 = length(macs_late_es_gr),
+  cross.area = length(unique(overlap_idx_mers)),
+  #category = c("MACS Peaks", "Dinuc Peaks"),
+  fill = c("steelblue", "orange"),
+  lty = "blank",
+  cat.cex = 0.8
+)
+#dev.off()
+```
+```{r}
+# Find overlaps
+overlaps_rs <- findOverlaps(macs_RS_gr, macs_late_es_gr)
+
+# Indices of overlapping regions
+overlap_idx_mers <- queryHits(overlaps_rs)
+overlap_idx_ders <- subjectHits(overlaps_rs)
+
+```
+
+```{r}
+cat("Number of peaks in bed1:", length(macs_RS_gr), "\n")
+cat("Number of peaks in bed2:", length(macs_late_es_gr), "\n")
+cat("Number of overlapping peaks:", length(unique(overlap_idx_mers)), "\n")
+
+```
+
+```{r}
+#pdf('macs_dinuc_overlap_early_rs.pdf', height = 4, width = 6)
+draw.pairwise.venn(
+  area1 = length(macs_RS_gr),
+  area2 = length(macs_late_es_gr),
+  cross.area = length(unique(overlap_idx_mers)),
+  #category = c("MACS Peaks", "Dinuc Peaks"),
+  fill = c("steelblue", "orange"),
+  lty = "blank",
+  cat.cex = 0.8
+)
+#dev.off()
+```
