@@ -1,0 +1,50 @@
+#!/bin/bash
+
+#SBATCH --job-name=ATAC-all_data_multibam
+#SBATCH --mail-type=BEGIN,END,FAIL
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=1
+#SBATCH --cpus-per-task=4
+#SBATCH --mem-per-cpu=32GB 
+#SBATCH --time=40:00:00
+#SBATCH --account=junzli1
+#SBATCH --partition=standard
+
+module load Bioinformatics
+module load python/3.11.5
+
+
+multiBamSummary bins \
+  --bamfiles \
+/nfs/turbo/umms-hammou/mrabbani/DATA_STORAGE/ATAC-processed/Tim_Parnell_analysis/A8564_third_rep/Mm39/26104X2.mm39.bam \
+/nfs/turbo/umms-hammou/mrabbani/DATA_STORAGE/ATAC-processed/Tim_Parnell_analysis/A8564_third_rep/Mm39/26104X7.mm39.bam \
+/nfs/turbo/umms-hammou/mrabbani/DATA_STORAGE/ATAC-processed/Tim_Parnell_analysis/A8564_third_rep/Mm39/26104X4.mm39.bam \
+/nfs/turbo/umms-hammou/mrabbani/DATA_STORAGE/ATAC-processed/Tim_Parnell_analysis/A8378_10%_drosophila_spikein/Alignments/24290X4.mm39.bam \
+/nfs/turbo/umms-hammou/mrabbani/DATA_STORAGE/ATAC-processed/Tim_Parnell_analysis/A8564_third_rep/Mm39/26104X8.mm39.bam \
+/nfs/turbo/umms-hammou/mrabbani/DATA_STORAGE/ATAC-processed/Tim_Parnell_analysis/A8378_10%_drosophila_spikein/Alignments/24290X6.mm39.bam \
+/nfs/turbo/umms-hammou/mrabbani/DATA_STORAGE/ATAC-processed/Tim_Parnell_analysis/A8564_third_rep/Mm39/26104X10.mm39.bam \
+/nfs/turbo/umms-hammou/mrabbani/DATA_STORAGE/ATAC-processed/Tim_Parnell_analysis/A8564_third_rep/Mm39/26104X12.mm39.bam \
+/nfs/turbo/umms-hammou/mrabbani/DATA_STORAGE/ATAC-processed/Tim_Parnell_analysis/A8564_third_rep/Mm39/26104X14.mm39.bam \
+/nfs/turbo/umms-hammou/mrabbani/DATA_STORAGE/ATAC-processed/Tim_Parnell_analysis/A8378_10%_drosophila_spikein/Alignments/24290X10.mm39.bam \
+/nfs/turbo/umms-hammou/mrabbani/DATA_STORAGE/ATAC-processed/Tim_Parnell_analysis/A8378_10%_drosophila_spikein/Alignments/24290X8.mm39.bam \
+/nfs/turbo/umms-hammou/mrabbani/DATA_STORAGE/ATAC-processed/Tim_Parnell_analysis/A8257_mm39_10%spikein_ATAC/Alignments_mm39/23734X2.mm39.bam \
+/nfs/turbo/umms-hammou/mrabbani/DATA_STORAGE/ATAC-processed/Tim_Parnell_analysis/A8564_third_rep/Mm39/26104X3.mm39.bam \
+/nfs/turbo/umms-hammou/mrabbani/DATA_STORAGE/ATAC-processed/Tim_Parnell_analysis/A8564_third_rep/Mm39/26104X1.mm39.bam \
+/nfs/turbo/umms-hammou/mrabbani/DATA_STORAGE/ATAC-processed/Tim_Parnell_analysis/A8257_mm39_10%spikein_ATAC/Alignments_mm39/23734X3.mm39.bam \
+/nfs/turbo/umms-hammou/mrabbani/DATA_STORAGE/ATAC-processed/Tim_Parnell_analysis/A8378_10%_drosophila_spikein/Alignments/24290X3.mm39.bam \
+/nfs/turbo/umms-hammou/mrabbani/DATA_STORAGE/ATAC-processed/Tim_Parnell_analysis/A8257_mm39_10%spikein_ATAC/Alignments_mm39/23734X4.mm39.bam \
+/nfs/turbo/umms-hammou/mrabbani/DATA_STORAGE/ATAC-processed/Tim_Parnell_analysis/A8564_third_rep/Mm39/26104X6.mm39.bam \
+/nfs/turbo/umms-hammou/mrabbani/DATA_STORAGE/ATAC-processed/Tim_Parnell_analysis/A8564_third_rep/Mm39/26104X5.mm39.bam \
+/nfs/turbo/umms-hammou/mrabbani/DATA_STORAGE/ATAC-processed/Tim_Parnell_analysis/A8378_10%_drosophila_spikein/Alignments/24290X5.mm39.bam \
+/nfs/turbo/umms-hammou/mrabbani/DATA_STORAGE/ATAC-processed/Tim_Parnell_analysis/A8564_third_rep/Mm39/26104X9.mm39.bam \
+/nfs/turbo/umms-hammou/mrabbani/DATA_STORAGE/ATAC-processed/Tim_Parnell_analysis/A8378_10%_drosophila_spikein/Alignments/24290X2.mm39.bam \
+/nfs/turbo/umms-hammou/mrabbani/DATA_STORAGE/ATAC-processed/Tim_Parnell_analysis/A8378_10%_drosophila_spikein/Alignments/24290X7.mm39.bam \
+/nfs/turbo/umms-hammou/mrabbani/DATA_STORAGE/ATAC-processed/Tim_Parnell_analysis/A8564_third_rep/Mm39/26104X11.mm39.bam \
+/nfs/turbo/umms-hammou/mrabbani/DATA_STORAGE/ATAC-processed/Tim_Parnell_analysis/A8564_third_rep/Mm39/26104X13.mm39.bam \
+/nfs/turbo/umms-hammou/mrabbani/DATA_STORAGE/ATAC-processed/Tim_Parnell_analysis/A8564_third_rep/Mm39/26104X15.mm39.bam \
+/nfs/turbo/umms-hammou/mrabbani/DATA_STORAGE/ATAC-processed/Tim_Parnell_analysis/A8378_10%_drosophila_spikein/Alignments/24290X11.mm39.bam \
+/nfs/turbo/umms-hammou/mrabbani/DATA_STORAGE/ATAC-processed/Tim_Parnell_analysis/A8378_10%_drosophila_spikein/Alignments/24290X9.mm39.bam \
+  --binSize 10000 \
+  --outFileName multiBamSummary_results.npz \
+  --outRawCounts multiBamSummary_readCounts.tab
+
