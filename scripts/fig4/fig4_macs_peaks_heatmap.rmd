@@ -1,0 +1,157 @@
+```{r}
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(GenomicRanges)
+library(tidyverse)
+library(pheatmap)
+packageVersion("GenomicRanges")
+packageVersion("pheatmap")
+```
+
+```{r}
+# --- 1. SETTINGS & PATHS ---
+macs_peaks_dir <- "/nfs/turbo/umms-hammou/mrabbani/DATA_STORAGE/ATAC-processed/Tim_Parnell_analysis/Mashiat_analysis/ATAC_alldatasets/macs_peaks_all_atac"
+atac_rds_path  <- '/nfs/turbo/umms-hammou/mrabbani/DATA_STORAGE/ATAC-processed/Tim_Parnell_analysis/Mashiat_analysis/MDI_downloads/new_mdi/protAtacTss.gcrz_obs.rds'
+
+stages <- c("early_RS", "int_RS", "late_RS", "earliest_ES", "early_ES", "int_ES", "late_ES")
+signal_cols <- stages # Adjust if your columns have "_signal" suffixes
+```
+
+```{r}
+# --- 2. CREATE UNION PEAKSET ---
+# Use a named vector to read and label files in one go
+peak_files <- setNames(
+  paste0(macs_peaks_dir, "/all_", stages, "_narrowpeaks.sorted.merged.bed"),
+  stages
+)
+
+union_peaks_gr <- map_df(names(peak_files), function(stg) {
+  read.table(peak_files[stg], sep="\t") %>%
+    select(chrom=1, start=2, end=3)
+}) %>%
+  makeGRangesFromDataFrame() %>%
+  GenomicRanges::reduce() # Merges overlapping regions
+
+# Add a unique ID for tracking
+set.seed(42)
+# We pick 65k to ensure we have at least 50k left after drop_na()
+union_peaks_gr <- sample(union_peaks_gr, min(length(union_peaks_gr), 65000))
+union_peaks_gr$peak_id <- paste0("peak_", seq_along(union_peaks_gr))
+#union_peaks_gr$peak_id <- paste0("peak_", seq_along(union_peaks_gr))
+```
+
+```{r}
+# check the late ES atac scores at peak_11988 from union_peaks_gr
+peak_11988 <- union_peaks_gr[union_peaks_gr$peak_id == "peak_11988"]
+print(peak_11988)
+
+# look for the corresponding bin in the atac_data
+#atac_data <- readRDS(atac_rds_path)
+bin_11988 <- atac_data %>%
+  filter(chrom == as.character(seqnames(peak_11988)) &
+         start0 <= end(peak_11988) & end1 >= start(peak_11988))
+print(bin_11988)
+
+```
+
+```{r}
+# --- 3. LOAD ATAC BINS & AGGREGATE ---
+atac_data <- readRDS(atac_rds_path)
+
+# Convert to GRanges directly from the object
+bin_gr <- atac_data %>%
+  # Use the actual column names from your head() output
+  dplyr::rename(start = start0, end = end1) %>%
+  makeGRangesFromDataFrame(keep.extra.columns = TRUE)
+
+# Find overlaps: Query (Union Peaks) vs Subject (1kb Bins)
+ov <- findOverlaps(union_peaks_gr, bin_gr)
+
+# Aggregate signal: Map bin values to peaks and calculate Mean
+peak_signals <- as.data.frame(mcols(bin_gr)[subjectHits(ov), ]) %>%
+  # Attach the peak_id from the union_peaks query
+  mutate(peak_id = union_peaks_gr$peak_id[queryHits(ov)]) %>%
+  group_by(peak_id) %>%
+  # Calculate mean signal and mean stageType for the merged region
+  #summarise(across(all_of(c(signal_cols, "stageType")), mean, na.rm = TRUE)) %>%
+  summarise(across(all_of(signal_cols), mean, na.rm = TRUE), .groups = "drop") %>%
+  # 2. Only keep rows with complete data
+  drop_na(all_of(signal_cols)) #%>%
+  # CALCULATE STAGE_MEAN
+  # We use pmax(., 0) to ensure negative residuals don't break the weighted average
+  # 2. CENTER THE STAGES (The Fix)
+# This subtracts 0.57 from early_RS, 0.96 from late_ES, etc.
+centered_signals <- peak_signals %>%
+  mutate(across(all_of(signal_cols), ~ .x - mean(.x, na.rm = TRUE)))
+
+# 3. CALCULATE STAGE_MEAN (stgm)
+# We use the centered values. We use pmax(., 0) because 
+# a weighted average requires non-negative weights.
+peak_signals <- centered_signals %>%
+  mutate(
+    total_pos = rowSums(across(all_of(signal_cols), ~ pmax(.x, 0))),
+    stage_mean = ifelse(total_pos > 0, (
+      (pmax(early_RS, 0) * 1) + 
+      (pmax(int_RS, 0) * 2) + 
+      (pmax(late_RS, 0) * 3) + 
+      (pmax(earliest_ES, 0) * 4) + 
+      (pmax(early_ES, 0) * 5) + 
+      (pmax(int_ES, 0) * 6) + 
+      (pmax(late_ES, 0) * 7)
+    ) / total_pos, NA)
+  ) %>%
+  drop_na(stage_mean) %>% # Remove peaks with no positive signal across all stages
+  # Now trim to your exact target
+  slice_head(n = 50000)
+```
+
+```{r}
+# --- 4. SUBSAMPLE & ORDER ---
+set.seed(42)
+final_data <- peak_signals %>%
+  arrange(stage_mean) %>% # Order rows by stage_mean value
+  column_to_rownames("peak_id")
+
+# Create matrix for heatmap (removing stage_mean column from the plot itself)
+mat_ordered <- final_data %>% 
+  select(all_of(signal_cols)) %>% 
+  as.matrix()
+
+is_dynamic <- apply(mat_ordered, 1, function(x) max(x) - min(x) > 1.0)
+mat_filtered <- mat_ordered[is_dynamic, ]
+
+nrow(mat_filtered)
+```
+
+```{r}
+# group by signal col and calculate mean value for each stage
+group_means <- final_data %>%
+  summarise(across(all_of(signal_cols), mean, na.rm = TRUE))
+print(group_means)
+```
+
+
+
+
+```{r}
+pdf("figure_plots/stagetype_distribution.pdf", width = 6, height = 8)
+hist(final_data$stage_mean, breaks = 7, main = "Distribution of stage_mean values", xlab = "stage_mean")
+dev.off()
+```
+
+```{r}
+# --- 5. PLOT ---
+pdf("figure_plots/atac_macs_heatmap_filtered.pdf", width = 6, height = 8)
+pheatmap(
+  mat_filtered,
+  cluster_rows = FALSE,  # Keep our stage_mean ordering
+  cluster_cols = FALSE,  # Keep stage progression order
+  scale = "row",         # Z-score normalization
+  show_rownames = FALSE,
+  color = colorRampPalette(c("blue", "white", "red"))(100),
+  main = "Subsampled ATAC Signal (Ordered by Stage Mean)",
+  breaks = seq(-3, 3, length.out = 101) # <-- sets color scale from -3 to 3
+)
+dev.off()
+```

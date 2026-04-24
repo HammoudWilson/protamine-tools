@@ -1,0 +1,245 @@
+---
+title: "Modeling Transcription-Accessibility Coupling in Spermatogenesis"
+subtitle: "Figure 5A Analysis: RS to ES Transition"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+# Load essential libraries for modeling, statistics, and visualization
+library(ggplot2)   # Visualization
+library(lme4)      # Mixed-effects modeling
+library(lmerTest)  # Satterthwaite's d.f. for p-values
+library(emmeans)   # Post-hoc trend analysis
+library(dplyr)     # Data manipulation
+library(car)       # Hypothesis testing
+library(ggtext)    # Rich text for ggplot labels
+```
+
+# 1. Data Ingestion and Factors 
+The primary dataset consists of ATAC-seq signal and transcriptomic data (txn) across four developmental stages.
+``` {r}
+# Read regression data and standardize factor levels to developmental order
+df <- read.csv('txn_atac_AT_TSS_regression_data_ref_GRCm38.81.csv')
+df$stage <- factor(df$stage, levels = c("early_RS", "int_RS", "late_RS", "early_ES"))
+
+# Standardize column naming
+names(df)[names(df) == "mean_ATAC"] <- "ATAC"
+```
+
+# 2. QC & Filtering
+To ensure the model captures biological coupling rather than extreme outliers or background noise, specific gene filters are applied.
+## Remove early_ES highly transcribed genes
+Protamines and transition proteins (Prm1, Prm2, Tnp1, Tnp2) are excluded as they undergo massive transcriptional surges in early Elongating Spermatids (ES).
+``` {r}
+genes_to_remove <- c("Prm1", "Prm2", "Tnp1", "Tnp2")
+df_filtered <- df[!((df$gene_name %in% genes_to_remove)), ]
+```
+
+
+## Activity based filtering
+Genes in the bottom 25% of mean transcription are removed to focus on transcriptionally active loci.
+``` {r}
+# Identify genes above the bottom quartile of mean transcription
+gene_stats <- df %>%
+  group_by(gene_name) %>%
+  summarize(mean_txn = mean(txn))
+
+cutoff_val <- quantile(gene_stats$mean_txn, 0.25)
+
+df_clean <- df %>%
+  group_by(gene_name) %>%
+  filter(mean(txn) > cutoff_val) %>%
+  ungroup()
+
+# Final dataset excluding both low-activity and high-leverage genes
+df_final <- df_clean[!((df_clean$gene_name %in% genes_to_remove)), ]
+```
+
+
+# 3. Mixed Effect Modeling
+We employ a Linear Mixed-Effects Model (LMM) to model transcription and accessibility
+coupling. 
+
+``` {r}
+# Fit model with interaction between transcription and stage
+# A random intercept is assigned to each gene_name
+m_log <- lmer(ATAC ~ log1p(txn) * stage + (1|gene_name), 
+              data = df_final, 
+              na.action = na.exclude)
+
+summary(m_log)
+```
+
+
+# 4. Model Diagnostics
+
+``` {r}
+par(mfrow = c(1, 2))
+# Residuals vs Fitted: Checks for non-linear patterns or heteroscedasticity
+plot(fitted(m_log), resid(m_log),
+     main = "Residuals vs Fitted",
+     xlab = "Fitted Values", ylab = "Residuals",
+     pch = 20, col = rgb(0,0,0,0.1))
+abline(h = 0, col = "red")
+
+# Q-Q Plot: Checks for normality of residuals
+qqnorm(resid(m_log), pch = 20)
+qqline(resid(m_log), col = "red")
+```
+Visual inspection indicated minor heteroscedasticity; however, parameter estimates in LMMs remain unbiased even under violation of homoscedasticity, though precision may be affected (Schielzeth 2020)
+
+# 5. Post-hoc Slope Analysis
+We extract the marginal slopes (trends) for each stage to quantify the strength of coupling.
+``` {r}
+# Calculate slope estimates for log(txn) per stage
+emm_slopes <- emtrends(m_log, specs = "stage", var = "txn")
+print(emm_slopes)
+
+# Pairwise comparisons of slopes between all stages
+pairs(emm_slopes)
+```
+
+# 6. Joint Hypothesis Test
+To determine if the transcription-accessibility coupling in the early ES stage is distinct from the RS stages, we perform a Wald Test (Joint Hypothesis Test). This test evaluates whether the interaction terms involving the early_ES stage are significantly different from the reference stage and other RS stages simultaneously.
+```{r}
+# Perform a Joint Wald Test to compare the early_ES slope against all RS stages
+# This checks if the 'uncoupling' observed in ES is statistically significant across the transition
+joint_test <- linearHypothesis(m_log, c(
+  "log1p(txn):stageearly_ES = 0",                              # ES vs. Reference (early_RS)
+  "log1p(txn):stageint_RS - log1p(txn):stageearly_ES = 0",     # ES vs. int_RS
+  "log1p(txn):stagelate_RS - log1p(txn):stageearly_ES = 0"     # ES vs. late_RS
+))
+
+print(joint_test)
+```
+
+# 7. Visualizations
+
+## Fitted coupling trends
+This plot visualizes the regression lines for each stage, highlighting the uncoupling in the Early ES stage.
+```{r}
+# Generate prediction data
+plot_data_trends <- emmip(m_log, stage ~ txn, cov.reduce = range, CIs = TRUE, plotit = FALSE)
+plot_data_trends$stage_label <- factor(plot_data_trends$stage,
+                                       levels = c("early_RS", "int_RS", "late_RS", "early_ES"),
+                                       labels = c("Early RS", "Int RS", "Late RS", "Early ES"))
+
+p <- ggplot(plot_data_trends, aes(x = log1p(txn), y = yvar, color = stage_label, fill = stage_label)) +
+  geom_ribbon(aes(ymin = LCL, ymax = UCL), alpha = 0.1, color = NA) +
+  geom_line(linewidth = 1) + 
+  #scale_color_manual(values = c("Early RS" = "grey80", "Int RS" = "grey40", 
+  #                              "Late RS" = "grey10", "Early ES" = "#D55E00")) +
+  #scale_fill_manual(values = c("Early RS" = "grey80", "Int RS" = "grey40", 
+  #                              "Late RS" = "grey10", "Early ES" = "#D55E00")) +
+  scale_color_brewer(palette = "Dark2") +
+  scale_fill_brewer(palette = "Dark2") +
+  labs(y = "Fitted ATAC Signal\n(GC-residual)", x = "Transcription Level (log)", color = "Stage", fill = "Stage") +
+  theme_classic(base_size = 14)
+
+ggsave("/Users/zapell/Library/CloudStorage/Dropbox-UniversityofMichigan/Zachary Apell/HiC_collaborations/figure_plots/final_figs/fig5a_InteractionPlot_Dark2_color.png", plot = p, width = 4, height = 3.5, units = "in", dpi=300)
+```
+
+
+## Slope Estimates with confidence intervals
+A direct comparison of the coupling strength (slope) across development.
+```{r}
+plot_slopes <- as.data.frame(emm_slopes)
+
+#ggplot(plot_slopes, aes(x = stage, y = txn.trend, color = stage == "early_ES")) +
+#  geom_hline(yintercept = 0, linetype = "dashed", color = "grey60") +
+#  geom_pointrange(aes(ymin = asymp.LCL, ymax = asymp.UCL), size = 1, linewidth = 1) +
+#  scale_color_manual(values = c("FALSE" = "grey40", "TRUE" = "#D55E00")) +
+p2 <- ggplot(plot_slopes, aes(x = stage, y = txn.trend, color = stage)) + 
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey60") +
+  geom_pointrange(aes(ymin = asymp.LCL, ymax = asymp.UCL), size = 1, linewidth = 1) +
+  scale_color_brewer(palette = "Dark2", labels = c("Early RS", "Int RS", "Late RS", "Early ES")) +
+  scale_x_discrete(labels = c("early_RS" = "Early RS", "int_RS" = "Int RS", 
+                              "late_RS" = "Late RS", "early_ES" = "Early ES")) +
+  labs(y = "Slope Estimate (\u03B2) \u00B1 95% CI", x = NULL) +
+  theme_classic(base_size = 14) +
+  theme(legend.position = "none", axis.text.x = element_text(angle = 45, hjust = 1))
+
+ggsave("/Users/zapell/Library/CloudStorage/Dropbox-UniversityofMichigan/Zachary Apell/HiC_collaborations/figure_plots/final_figs/fig5a_slope_estimation_error_bar_filtered2_log_Dark2.png", plot = p2, width = 4, height = 3.5, units = "in", dpi=300)
+```
+
+
+
+## Pairwise Comparisons and Contrast Visualization
+While the joint test confirms an overall difference, pairwise comparisons identify specific shifts between developmental stages. We visualize these differences (Δβ) using a forest-style contrast plot.
+```{r}
+# 1. Generate all pairwise contrasts for the slope estimates
+contrasts_all <- as.data.frame(pairs(emm_slopes, infer = c(TRUE, TRUE)))
+
+# 2. Format p-values (using 'p < 0.001' notation for small values)
+contrasts_all$p_label <- ifelse(contrasts_all$p.value < 0.001, "p < 0.001",
+                         paste0("p = ", sprintf("%.3f", contrasts_all$p.value)))
+
+# 3. Define a consistent color scheme: Greyscale for RS, Orange for ES
+#color_map <- c(
+#  "early_RS"    = "grey80", "int_RS"      = "grey40",
+#  "late_RS"     = "grey10", "early_ES"    = "#D55E00"
+#)
+# Load the package at the top of your script or chunk
+library(RColorBrewer)
+
+# Automatically pull the first 4 colors from the Dark2 palette
+pal <- brewer.pal(n = 4, name = "Dark2")
+
+# 3. Define a consistent color scheme automatically
+color_map <- c(
+  "early_RS" = pal[1], "int_RS"   = pal[2],
+  "late_RS"  = pal[3], "early_ES" = pal[4]
+)
+
+# Helper function to clean stage names for labels
+clean_name <- function(x) {
+  x <- gsub("_", " ", x)
+  tools::toTitleCase(x)
+}
+
+# 4. Generate HTML-styled labels for the X-axis using ggtext
+contrasts_all$styled_label <- sapply(seq_len(nrow(contrasts_all)), function(i) {
+  x <- as.character(contrasts_all$contrast[i])
+  parts <- unlist(strsplit(x, " - "))
+  
+  col1 <- ifelse(parts[1] %in% names(color_map), color_map[parts[1]], "black")
+  col2 <- ifelse(parts[2] %in% names(color_map), color_map[parts[2]], "black")
+  
+  paste0("<span style='color:", col1, "'>", clean_name(parts[1]), "</span><br>",
+         "<span style='color:", col2, "'>", clean_name(parts[2]), "</span>")
+})
+
+# Sort contrasts by the magnitude of the estimate for visual clarity
+contrasts_all <- contrasts_all %>% arrange(estimate)
+contrasts_all$styled_label <- factor(contrasts_all$styled_label, 
+                                     levels = unique(contrasts_all$styled_label))
+
+# plot
+ggplot(contrasts_all, aes(x = styled_label, y = estimate)) +
+  # Zero line represents no difference in coupling strength
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey60") +
+  
+  # Error bars and point estimates
+  geom_pointrange(aes(ymin = asymp.LCL, ymax = asymp.UCL), 
+                  color = "black", size = 0.8, linewidth = 0.8) +
+  
+  # Annotated p-values
+  geom_text(aes(y = asymp.UCL, label = p_label), 
+            vjust = -0.5, color = "black", size = 3.5) +
+  
+  labs(
+    title = "All Pairwise Slope Comparisons",
+    x = "Contrast (Top Stage - Bottom Stage)",
+    y = "Difference in Slope Estimate (\u0394\u03B2)"
+  ) +
+  
+  # Expand Y-axis to prevent p-value labels from being cut off
+  scale_y_continuous(expand = expansion(mult = c(0.1, 0.15))) +
+  
+  theme_classic(base_size = 14) +
+  theme(
+    axis.text.x = element_markdown(lineheight = 1.2), # Enables HTML rendering
+    axis.text.y = element_text(color = "black"),
+    axis.title.x = element_text(size = 12, margin = margin(t = 10)) 
+  )
+```
