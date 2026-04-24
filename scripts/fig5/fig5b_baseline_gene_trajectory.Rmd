@@ -1,0 +1,510 @@
+
+
+``` {r}
+library(ggplot2)
+library(dplyr)
+library(lme4)
+library(lmerTest)
+library(emmeans)
+library(car)
+```
+
+``` {r}
+df = read.csv('txn_atac_AT_TSS_regression_data_ref_GRCm38.81.csv')
+df$stage <- factor(df$stage, levels = c("early_RS", "int_RS", "late_RS", "early_ES"))
+
+names(df)[names(df) == "mean_ATAC"] <- "ATAC"
+# 1. Isolate the 'Initial State' (Transcription in early_RS)
+initial_states <- df %>%
+  filter(stage == "early_RS") %>%
+  select(gene_name, txn) %>%
+  rename(txn_start = txn) %>%
+  distinct()
+
+# 2. Calculate specific cutoffs
+# We need the 25th, 50th, and 95th percentiles
+cuts <- quantile(initial_states$txn_start, probs = c(0.25, 0.50, 0.95))
+
+# 3. Assign groups based on your specific definition
+# Low: Between 25% and 50%
+# High: Above 95%
+initial_states <- initial_states %>%
+  mutate(txn_group = case_when(
+    txn_start > cuts["95%"] ~ "High_Top5",
+    txn_start >= cuts["25%"] & txn_start <= cuts["50%"] ~ "Low_25_50",
+    TRUE ~ "Medium" # Everything else (50-95%)
+  ))
+
+# 4. Merge back and filter out the "Medium" group
+df_stratified <- left_join(df, 
+                           select(initial_states, gene_name, txn_group), 
+                           by = "gene_name") %>%
+  filter(txn_group != "Medium")
+
+df_stratified$txn_group <- factor(df_stratified$txn_group, 
+                                  levels = c("Low_25_50", "High_Top5"))
+
+df_stratified <- df_stratified %>%
+  mutate(
+    time = case_when(
+      stage == "early_RS" ~ 0,
+      stage == "int_RS"   ~ 1,
+      stage == "late_RS"  ~ 2,
+      stage == "early_ES" ~ 3
+    ),
+    
+    time_post_knot = ifelse(time > 2, time - 2, 0)
+  )
+
+# Calculate baseline (early_RS) for each gene
+baselines <- df_stratified %>%
+  filter(stage == "early_RS") %>%
+  select(gene_name, ATAC_baseline = ATAC)
+
+# Join and calculate the change (Delta)
+df_delta <- df_stratified %>%
+  left_join(baselines, by = "gene_name") %>%
+  mutate(ATAC_delta = ATAC - ATAC_baseline)
+
+
+# Fit the piecewise model on the DELTA
+m_delta <- lmer(ATAC_delta ~ txn_group * time + 
+                             txn_group * time_post_knot + 
+                             (1 | gene_name),
+                na.action = na.exclude,
+                data = df_delta)
+```
+
+```{r}
+summary(m_delta)
+```
+
+
+```{r}
+# Categorical Model
+m_categorical <- lmer(ATAC_delta ~ txn_group * factor(stage) + (1 | gene_name), data = df_delta)
+
+
+summary(m_categorical)
+# Compare them
+anova(m_delta, m_categorical)
+```
+
+
+
+``` {r}
+# test beta4 = beta5 = 0
+library(car)
+linearHypothesis(m_piecewise, c("txn_groupHigh_Top5:time = 0", 
+                                "txn_groupHigh_Top5:time_post_knot = 0"))
+```
+
+```{r}
+# 3. Generate Predictions for Plotting ------------------------------------
+# Use the pred_data structure from your methods
+pred_delta <- pred_data 
+pred_delta$predicted_delta <- predict(m_delta, newdata = pred_delta, re.form = NA)
+```
+
+
+```{r}
+# 1. PREP: Labels
+n_counts <- df_delta %>%
+  group_by(txn_group) %>%
+  summarise(n = n_distinct(gene_name))
+
+n_high <- n_counts$n[n_counts$txn_group == "High_Top5"]
+n_low  <- n_counts$n[n_counts$txn_group == "Low_25_50"]
+
+# Labels for the main legend
+txn_labels <- c(
+  "High_Top5" = paste0("High (n=", n_high, ")"),
+  "Low_25_50" = paste0("Low (n=", n_low, ")")
+)
+```
+
+
+```{r}
+# 2. VISUALIZATION
+p = ggplot(pred_delta, aes(x = stage_label, y = predicted_delta)) +
+    # C. Ribbons (Mapped to FILL)
+  geom_ribbon(aes(ymin = lower, ymax = upper, fill = txn_group, group= txn_group), 
+              alpha = 0.15, color = NA) +
+  
+  # D. Trajectories (Mapped to COLOR)
+  # We force linetype="solid" here so it doesn't interfere with the Knot legend
+  geom_line(aes(color = txn_group, group = txn_group), 
+            linewidth = 1.5, linetype = "solid") +
+  
+  geom_point(aes(color = txn_group, group = txn_group), 
+             size = 4) +
+  # A. Baseline Reference
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey80") +
+  
+  # B. The Knot (Mapped to LINETYPE only)
+  # We set a fixed color (grey) but map linetype to a string to create a legend
+  geom_vline(aes(linetype = "knot", xintercept = "late_RS"), color = "grey50", linewidth = 0.8) +
+  
+  # 3. SCALES (Separated) -------------------------------------------------
+  
+  # LEGEND 1: TRANSCRIPTION GROUP (Color & Fill)
+  scale_color_manual(
+    name = "Transcription Group", 
+    values = c("High_Top5" = "#0072B2", "Low_25_50" = "#D55E00"),
+    labels = txn_labels
+  ) +
+  scale_fill_manual(
+    name = "Transcription Group",
+    values = c("High_Top5" = "#0072B2", "Low_25_50" = "#D55E00"),
+    labels = txn_labels
+  ) +
+  
+  # LEGEND 2: THE KNOT (Linetype only)
+  scale_linetype_manual(
+    name = NULL, # No header for this legend
+    values = c("knot" = "dotted"),
+    labels = c("knot" = "Linear Spline Knot")
+  ) +
+  
+  # 4. FORMATTING
+  scale_x_discrete(limits = c("early_RS", "int_RS", "late_RS", "early_ES"), 
+                   labels = c("Early RS", "Int RS", "Late RS", "Early ES")) +
+  
+  labs(title = "Rate of Remodeling: Change from Baseline",
+       y = expression(Delta * " ATAC Signal (Z-score)"),
+       x = "Developmental Stage") +
+  
+  theme_classic(base_size = 14) +
+  theme(
+    # 1. MAKE TICK MARKS THICKER
+    axis.ticks = element_line(linewidth = 2, color = "black"), 
+    axis.ticks.length = unit(0.25, "cm"), # Optional: Make them longer too
+    
+    # 2. MAKE TICK LABELS BIGGER
+    axis.text = element_text(size = 14, face = "bold", color = "black"),
+    # Stack the legends vertically
+    legend.box = "vertical",
+    legend.position = "right",
+    legend.background = element_rect(fill = "white", color = NA),
+    legend.title = element_text(face = "bold", size = 16),
+    # 1. MAKE LEGEND TEXT BIGGER
+    legend.text = element_text(size = 14),
+    # 2. MAKE THE COLORED BOXES/LINES BIGGER
+    legend.key.size = unit(1.5, "cm"),
+    legend.margin = margin(6, 6, 6, 6),
+    plot.margin = margin(t = 10, r = 30, b = 10, l = 10) 
+  )
+
+ggsave("/Users/zapell/Library/CloudStorage/Dropbox-UniversityofMichigan/Zachary Apell/HiC_collaborations/figure_plots/final_figs/fig5b_change_from_baseline_trajectory_plot_earlyRS.png", plot = p, width = 12, height = 6, units = "in")
+```
+
+```{r}
+n_counts <- df_delta %>%
+  group_by(txn_group) %>%
+  summarise(n = n_distinct(gene_name))
+
+n_high <- n_counts$n[n_counts$txn_group == "High_Top5"]
+n_low  <- n_counts$n[n_counts$txn_group == "Low_25_50"]
+
+custom_labels <- c(
+  "High_Top5" = paste0("High Txn (n=", n_high, ")"),
+  "Low_25_50" = paste0("Low Txn (n=", n_low, ")"),
+  "Knot"      = "Linear Spline Knot"
+)
+
+# Calculate SE for Delta predictions
+mm_d <- model.matrix(delete.response(terms(m_delta)), pred_delta)
+pred_delta$se <- sqrt(diag(mm_d %*% vcov(m_delta) %*% t(mm_d)))
+pred_delta$lower <- pred_delta$predicted_delta - 1.96 * pred_delta$se
+pred_delta$upper <- pred_delta$predicted_delta + 1.96 * pred_delta$se
+
+# 4. Visualization --------------------------------------------------------
+ggplot(pred_delta, aes(x = stage_label, y = predicted_delta, color = txn_group, group = txn_group)) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey50") + # Baseline marker
+  geom_vline(aes(xintercept = "late_RS", 
+                 color = "Knot", 
+                 linetype = "Knot"), 
+             linewidth = 0.8) +
+  
+  # Confidence intervals
+  geom_ribbon(aes(ymin = lower, ymax = upper, fill = txn_group), alpha = 0.15, color = NA) +
+  
+  # Trajectory lines
+  geom_line(linewidth = 1.5) +
+  geom_point(size = 4) +
+  
+  scale_color_manual(
+    name = NULL, # Remove legend title for a cleaner look
+    values = c("High_Top5" = "#0072B2", 
+               "Low_25_50" = "#D55E00", 
+               "Knot" = "grey60"), # Color for the knot
+    labels = custom_labels,
+    breaks = c("High_Top5", "Low_25_50", "Knot") # Force the order
+  ) +
+  
+  scale_linetype_manual(
+    name = NULL,
+    values = c("High_Top5" = "solid", 
+               "Low_25_50" = "solid", 
+               "Knot" = "dotted"), # Linetype for the knot
+    labels = custom_labels,
+    breaks = c("High_Top5", "Low_25_50", "Knot")
+  ) +
+  
+  scale_fill_manual(values = c("High_Top5" = "#0072B2", "Low_25_50" = "#D55E00")) +
+  
+  # 'limits' forces the X-axis to follow this exact sequence
+  scale_x_discrete(limits = c("early_RS", "int_RS", "late_RS", "early_ES"), 
+                   labels = c("Early RS", "Int RS", "Late RS", "Early ES")) +
+  
+  labs(title = "Rate of Remodeling: Change from Baseline",
+       y = expression(Delta * " ATAC Signal from early RS (Z-score)"),
+       x = "Developmental Stage") +
+  theme_classic(base_size = 14) +
+  theme(
+    legend.position = "right", 
+    legend.background = element_rect(fill = "white", color = NA),
+    legend.title = element_text(face = "bold", size = 12),
+    legend.text = element_text(size = 11),
+    
+    axis.text = element_text(color = "black"),
+    plot.margin = margin(t = 10, r = 30, b = 10, l = 10) 
+  )
+```
+
+``` {r}
+par(mfrow = c(1, 2)) 
+# Plot 1: Residuals vs Fitted (Linearity Check)
+plot(fitted(m_delta), resid(m_delta), 
+     xlab = "Fitted Values", ylab = "Residuals",
+     main = "Residuals vs Fitted",
+     col = rgb(0,0,0,0.2), pch = 19) # Transparency helps with many points
+abline(h = 0, col = "red", lwd = 2)
+# Plot 2: Q-Q Plot (Normality Check)
+qqnorm(resid(m_delta), main = "Q-Q Plot of Residuals")
+qqline(resid(m_delta), col = "red", lwd = 2)
+```
+
+```{r}
+hist(residuals(m_delta))
+```
+
+```{r}
+library(broom.mixed) # For easy model extraction
+
+# 1. Generate Predictions for the entire dataset
+# We use the 'df_delta' dataframe which contains the raw observed values
+df_delta$predicted_delta <- predict(m_delta)
+# 1. Filter out the baseline (early_RS) where Delta is always 0
+df_diag <- df_delta %>% 
+  filter(stage != "early_RS") # <--- CRITICAL STEP
+
+# 2. Calculate Correlation on the non-zero stages only
+# This gives you the "honest" accuracy of the model's predictions
+cor_val <- cor(df_diag$ATAC_delta, df_diag$predicted_delta, use = "complete.obs")
+r_squared <- cor_val^2
+
+# 3. Plot the diagnostic without the zero-anchor
+ggplot(df_diag, aes(x = ATAC_delta, y = predicted_delta, color = stage)) +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "grey40") +
+  
+  geom_point(alpha = 0.2, size = 1) +
+  
+  # Smooth line to check for bias
+  geom_smooth(method = "lm", color = "black", se = FALSE, linetype = "solid") +
+  
+  scale_color_viridis_d(option = "mako", name = "Stage (t > 0)") +
+  
+  annotate("text", x = min(df_diag$ATAC_delta), y = max(df_diag$predicted_delta), 
+           label = paste0("Pearson r = ", round(cor_val, 3), "\nR² = ", round(r_squared, 3)),
+           hjust = 0, fontface = "bold", size = 5) +
+  
+  labs(title = "Model Diagnostic: Predicted vs. Observed (Excluding Baseline)",
+       subtitle = "Accuracy of predicting change after t=0",
+       x = "Observed Delta",
+       y = "Predicted Delta") +
+  theme_minimal(base_size = 14)
+```
+
+
+```{r}
+library(performance)
+
+# Calculate the official R2 for Mixed Models
+r2_results <- r2(m_delta)
+
+print(r2_results)
+```
+
+```{r}
+# 1. Filter out the baseline
+df_diag <- df_delta %>% 
+  filter(stage != "early_RS")
+
+# 2. Calculate Correlation
+cor_val <- cor(df_diag$ATAC_delta, df_diag$predicted_delta, use = "complete.obs")
+r_squared <- cor_val^2
+
+# 3. Plot with Robust Annotation
+ggplot(df_diag, aes(x = ATAC_delta, y = predicted_delta, color = stage)) +
+  # THE DOTTED LINE: Perfect Prediction (y=x)
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "grey40") +
+  
+  geom_point(alpha = 0.2, size = 1) +
+  geom_smooth(method = "lm", color = "black", se = FALSE, linetype = "solid") +
+  
+  scale_color_viridis_d(option = "mako", name = "Stage (t > 0)") +
+  
+  # FIX: Use -Inf and Inf to pin text to Top-Left corner
+  # vjust = 1 puts it just inside the top margin, hjust = 0 puts it just inside the left margin
+  annotate("text", x = -Inf, y = Inf, 
+           label = paste0("  Pearson r = ", round(cor_val, 3), "\n  R² = ", round(r_squared, 3)),
+           hjust = 0, vjust = 1.2, fontface = "bold", size = 5) +
+  
+  labs(title = "Model Diagnostic: Predicted vs. Observed",
+       subtitle = "Dashed Line = Perfect Prediction (y=x)",
+       x = "Observed Delta",
+       y = "Predicted Delta") +
+  theme_minimal(base_size = 14)
+```
+
+
+
+
+```{r}
+# 1. Calculate Metagene Statistics (Mean & 95% CI)
+# We aggregate the Delta values to get the population average at each stage
+metagene_data <- df_delta %>%
+  group_by(stage, txn_group) %>%
+  summarise(
+    mean_delta = mean(ATAC_delta, na.rm = TRUE),
+    sd_delta   = sd(ATAC_delta, na.rm = TRUE),
+    n          = n(),
+    se         = sd_delta / sqrt(n),
+    # Calculate 95% Confidence Interval for the ribbon
+    ci_lower   = mean_delta - 1.96 * se,
+    ci_upper   = mean_delta + 1.96 * se,
+    .groups    = "drop"
+  )
+
+# Ensure the stage order is correct (Critical for line plots)
+metagene_data$stage <- factor(metagene_data$stage, 
+                              levels = c("early_RS", "int_RS", "late_RS", "early_ES"))
+
+# 2. Generate the Plot
+ggplot(metagene_data, aes(x = stage, y = mean_delta, group = txn_group, color = txn_group)) +
+  
+  # A. The Confidence Ribbon (95% CI)
+  # This shows how incredibly tight the "true mean" is, despite the individual gene noise
+  geom_ribbon(aes(ymin = ci_lower, ymax = ci_upper, fill = txn_group), 
+              alpha = 0.2, color = NA) +
+  
+  # B. The Metagene Line (The Trend)
+  geom_line(linewidth = 2) +
+  
+  # C. The Points (Visual Anchors)
+  geom_point(size = 5, shape = 21, fill = "white", stroke = 2) +
+  
+  # D. Reference Lines
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey50") +
+  
+  # Formatting
+  scale_color_manual(values = c("High_Top5" = "#0072B2", "Low_25_50" = "#D55E00"),
+                     labels = c("High Txn", "Low Txn")) +
+  scale_fill_manual(values = c("High_Top5" = "#0072B2", "Low_25_50" = "#D55E00"),
+                    labels = c("High Txn", "Low Txn")) +
+  
+  labs(title = "Metagene Analysis: Population Trajectories",
+       subtitle = "Aggregated Mean Delta +/- 95% Confidence Interval",
+       y = expression(Delta * " ATAC Signal (Z-score)"),
+       x = "Developmental Stage") +
+  
+  theme_classic(base_size = 14) +
+  theme(legend.position = "top", 
+        legend.title = element_blank(),
+        axis.text.x = element_text(face = "bold"),
+        panel.grid.major.y = element_line(color = "grey90"))
+```
+
+
+
+
+```{r}
+# 1. Calculate Observed Means and SE for Delta
+# Note: We group by 'stage' to see the raw mean change at each step
+raw_obs_delta <- df_delta %>%
+  group_by(stage, txn_group) %>%
+  summarise(
+    obs_mean = mean(ATAC_delta, na.rm = TRUE),
+    obs_se   = sd(ATAC_delta, na.rm = TRUE) / sqrt(n()), 
+    .groups = "drop"
+  ) %>%
+  mutate(stage_label = stage)
+
+# 2. Extract Sample Sizes
+n_counts <- df_delta %>%
+  group_by(txn_group) %>%
+  summarise(n = n_distinct(gene_name))
+
+n_high <- n_counts$n[n_counts$txn_group == "High_Top5"]
+n_low  <- n_counts$n[n_counts$txn_group == "Low_25_50"]
+
+custom_labels <- c(
+  "High_Top5" = paste0("High Txn (n=", n_high, ")"),
+  "Low_25_50" = paste0("Low Txn (n=", n_low, ")"),
+  "Knot"      = "Linear Spline Knot"
+)
+
+# 3. Enhanced Visualization -----------------------------------------------
+ggplot() +
+  # 1. MODEL UNCERTAINTY (Back Layer): The shaded ribbon
+  # This shows the 95% CI of the LMM.
+  geom_ribbon(data = pred_delta, 
+              aes(x = stage_label, ymin = lower, ymax = upper, fill = txn_group, group = txn_group), 
+              alpha = 0.15, color = NA) + 
+  
+  # 2. MODEL PREDICTION: The dotted lines
+  geom_line(data = pred_delta, 
+            aes(x = stage_label, y = predicted_delta, color = txn_group, group = txn_group), 
+            linetype = "dotted", linewidth = 1.2) +
+  
+  # 3. OBSERVED PRECISION (Front Layer): Thick error bars
+  # This shows the raw SE of the thousands of genes.
+  geom_errorbar(data = raw_obs_delta, 
+                aes(x = stage_label, ymin = obs_mean - obs_se, ymax = obs_mean + obs_se, color = txn_group),
+                width = 0.15, linewidth = 1.2) + 
+  
+  # 4. OBSERVED MEANS: The actual data points
+  geom_point(data = raw_obs_delta, 
+             aes(x = stage_label, y = obs_mean, fill = txn_group), 
+             shape = 21, size = 4, color = "white", stroke = 1) +
+  
+  # C. BASELINE & KNOT MARKERS
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey50") +
+  geom_vline(xintercept = "late_RS", linetype = "solid", alpha = 0.2) +
+
+  # Formatting
+  scale_color_manual(
+    name = NULL, # Remove legend title for a cleaner look
+    values = c("High_Top5" = "#0072B2", 
+               "Low_25_50" = "#D55E00", 
+               "Knot" = "grey60"), # Color for the knot
+    labels = custom_labels,
+    breaks = c("High_Top5", "Low_25_50", "Knot") # Force the order
+  ) +
+  scale_fill_manual(values = c("High_Top5" = "#0072B2", "Low_25_50" = "#D55E00")) +
+  
+  labs(title = "Chromatin Remodeling Dynamics",
+       subtitle = "Dotted lines: LMM predictions | Points: Raw Mean Delta +/- SE",
+       y = expression(Delta * " ATAC Signal (Z-score)"),
+       x = "Developmental Stage") +
+  theme_classic(base_size = 14) +
+  theme(legend.position = "top", legend.title = element_blank())
+```
+
+
+
+
+
+
+
