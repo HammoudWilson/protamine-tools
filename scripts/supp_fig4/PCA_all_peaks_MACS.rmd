@@ -1,0 +1,307 @@
+---
+title: "PCA_atac_datasets"
+author: "Mashiat"
+date: "2025-09-05"
+output: html_document
+---
+
+Load the required libraries
+```{r}
+library(data.table)
+library(ggplot2)
+library(ggrepel)
+library(dplyr)
+library(uwot) 
+```
+
+Read in all the bin counts per 1kb
+
+```{r}
+all_bins <- readRDS('/nfs/turbo/umms-hammou/mrabbani/DATA_STORAGE/ATAC-processed/Tim_Parnell_analysis/Mashiat_analysis/MDI_downloads/protAtacTss.gcrz_obs.rds')
+head(all_bins)
+```
+
+```{r}
+macs_all <- read.delim2('/nfs/turbo/umms-hammou/mrabbani/DATA_STORAGE/ATAC-processed/Tim_Parnell_analysis/Mashiat_analysis/ATAC_alldatasets/macs_peaks_all_atac/all_atac_stages_narrowpeaks_merged.bed', header = F)
+colnames(macs_all) <- c('chrom', 'start0', 'end1')
+head(macs_all)
+```
+
+
+Subset the macs peak regions from all_bins
+
+```{r}
+library(GenomicRanges)
+library(dplyr)
+
+# Convert all_bins into GRanges
+bins_gr <- GRanges(
+  seqnames = all_bins$chrom,
+  ranges = IRanges(start = all_bins$start0 + 1, end = all_bins$end1) # +1 if bins are 0-based
+)
+
+# Convert overlap_peaks into GRanges
+peaks_gr <- GRanges(
+  seqnames = macs_all$chrom,
+    ranges = IRanges(start = macs_all$start0 + 1, end = macs_all$end1)
+)
+
+# Find overlaps
+hits <- findOverlaps(bins_gr, peaks_gr)
+
+# Get overlapping bins
+overlapping_bins <- all_bins[queryHits(hits), ] %>%
+  mutate(peak_id = subjectHits(hits))
+
+head(overlapping_bins)
+
+```
+```{r}
+dim(overlapping_bins)
+```
+Now I will make a PCA from the overlapping bins
+
+```{r}
+scores_dt <- overlapping_bins[, !c("chrom", "start0", "end1", "included", "gc", "gc_z", "txn", 'mESC', 'early_RS', 'int_RS', 'late_RS','earliest_ES', 'early_ES', 'int_ES', 'late_ES', 'round','elong', 'stageType',"26104X7-MESC", "26104X2-MESC", "peak_id")]
+scores_map <- scores_dt
+```
+
+
+format the matrix
+
+```{r}
+head(scores_dt)
+dim(scores_dt)
+colnames(scores_dt) <- c(rep('Early_RS',5), rep('Int_RS',2), rep('Late_RS',2), rep('Earliest_ES',3), rep('Early_ES',4), rep('Int_ES',6), rep('Late_ES',4))
+head(scores_dt)
+# Transpose: PCA needs samples as rows, features as columns
+mat <- t(as.matrix(scores_dt))
+
+mat[1:5,1:5]
+mat[!is.finite(mat)] <- 0  
+
+```
+```{r}
+# Run PCA
+pca <- prcomp(mat, scale. = TRUE)
+
+# Make a data.frame for plotting
+pca_df <- data.frame(pca$x[,1:2])  # first two PCs
+pca_df$Sample <- rownames(pca_df)
+pca_df$stage <- colnames(scores_dt)
+
+pca_df2 <- data.frame(pca$x[,1:10])  # first two PCs
+pca_df2$Sample <- rownames(pca_df2)
+pca_df2$stage <- colnames(scores_dt)
+```
+
+
+```{r}
+ggplot(pca_df, aes(x = PC1, y = PC2, color = stage, label = Sample)) +
+  geom_point(size = 4) +
+  geom_text_repel(size = 3, show.legend = FALSE) +
+  theme_minimal() +
+  scale_color_manual(
+    values = c(
+      "Early_RS"    = "#1f77b4",
+      "Int_RS"      = "#ff7f0e",
+      "Late_RS"     = "#2ca02c",
+      "Earliest_ES" = "#9467bd",
+      "Early_ES"    = "#d62728",
+      "Int_ES"      = "yellow3",
+      "Late_ES"     = "cyan3"
+    )
+  )
+```
+
+```{r}
+ggplot(pca_df, aes(x = PC1, y = PC2, color = stage)) +
+  geom_point(size = 6) +   # increase point size here
+  theme_classic() +
+  scale_color_manual(
+    values = c(
+      "Early_RS"    = "#1f77b4",
+      "Int_RS"      = "#ff7f0e",
+      "Late_RS"     = "#2ca02c",
+      "Earliest_ES" = "#9467bd",
+      "Early_ES"    = "#d62728",
+      "Int_ES"      = "yellow3",
+      "Late_ES"     = "cyan3"
+    )
+  )
+
+```
+```{r}
+pca_df$stage <- factor(
+  pca_df$stage,
+  levels = c(
+    "Early_RS",
+    "Int_RS",
+    "Late_RS",
+    "Earliest_ES",
+    "Early_ES",
+    "Int_ES",
+    "Late_ES"
+  )
+)
+
+ggplot(pca_df, aes(x = PC1, y = PC2, color = stage)) +
+  geom_point(size = 6) +
+  theme_classic() +
+  scale_color_manual(
+    values = c(
+      "Early_RS"    = "#1f77b4",
+      "Int_RS"      = "#ff7f0e",
+      "Late_RS"     = "#2ca02c",
+      "Earliest_ES" = "#9467bd",
+      "Early_ES"    = "#d62728",
+      "Int_ES"      = "yellow3",
+      "Late_ES"     = "cyan3"
+    )
+  )
+
+e```
+
+
+```{r}
+ggplot(pca_df, aes(x = PC1, y = PC2, color = stage, label = colnames(scores_map))) +
+  geom_point(size = 4) +
+  geom_text_repel(size = 3, show.legend = FALSE) +
+  theme_minimal() +
+  scale_color_manual(
+    values = c(
+      "Early_RS"    = "#1f77b4",
+      "Int_RS"      = "#ff7f0e",
+      "Late_RS"     = "#2ca02c",
+      "Earliest_ES" = "#9467bd",
+      "Early_ES"    = "#d62728",
+      "Int_ES"      = "yellow3",
+      "Late_ES"     = "cyan3"
+    )
+  )
+```
+
+```{r}
+ggplot(pca_df2, aes(x = PC1, y = PC3, color = stage, label = Sample)) +
+  geom_point(size = 4) +
+  geom_text_repel(size = 3, show.legend = FALSE) +
+  theme_minimal() +
+  scale_color_manual(
+    values = c(
+      "Early_RS"    = "#1f77b4",
+      "Int_RS"      = "#ff7f0e",
+      "Late_RS"     = "#2ca02c",
+      "Earliest_ES" = "#9467bd",
+      "Early_ES"    = "#d62728",
+      "Int_ES"      = "yellow3",
+      "Late_ES"     = "cyan3"
+    )
+  )
+```
+
+```{r}
+ggplot(pca_df2, aes(x = PC1, y = PC3, color = stage, label = colnames(scores_map))) +
+  geom_point(size = 4) +
+  geom_text_repel(size = 3, show.legend = FALSE) +
+  theme_minimal() +
+  scale_color_manual(
+    values = c(
+      "Early_RS"    = "#1f77b4",
+      "Int_RS"      = "#ff7f0e",
+      "Late_RS"     = "#2ca02c",
+      "Earliest_ES" = "#9467bd",
+      "Early_ES"    = "#d62728",
+      "Int_ES"      = "yellow3",
+      "Late_ES"     = "cyan3"
+    )
+  )
+```
+
+```{r}
+ggplot(pca_df2, aes(x = PC1, y = PC4, color = stage, label = Sample)) +
+  geom_point(size = 4) +
+  geom_text_repel(size = 3, show.legend = FALSE) +
+  theme_minimal() +
+  scale_color_manual(
+    values = c(
+      "Early_RS"    = "#1f77b4",
+      "Int_RS"      = "#ff7f0e",
+      "Late_RS"     = "#2ca02c",
+      "Earliest_ES" = "#9467bd",
+      "Early_ES"    = "#d62728",
+      "Int_ES"      = "yellow3",
+      "Late_ES"     = "cyan3"
+    )
+  )
+```
+
+```{r}
+ggplot(pca_df2, aes(x = PC2, y = PC3, color = stage, label = Sample)) +
+  geom_point(size = 4) +
+  geom_text_repel(size = 3, show.legend = FALSE) +
+  theme_minimal() +
+  scale_color_manual(
+    values = c(
+      "Early_RS"    = "#1f77b4",
+      "Int_RS"      = "#ff7f0e",
+      "Late_RS"     = "#2ca02c",
+      "Earliest_ES" = "#9467bd",
+      "Early_ES"    = "#d62728",
+      "Int_ES"      = "yellow3",
+      "Late_ES"     = "cyan3"
+    )
+  )
+```
+
+```{r}
+ggplot(pca_df2, aes(x = PC1, y = PC4, color = stage, label = Sample)) +
+  geom_point(size = 4) +
+  geom_text_repel(size = 3, show.legend = FALSE) +
+  theme_minimal() +
+  scale_color_manual(
+    values = c(
+      "Early_RS"    = "#1f77b4",
+      "Int_RS"      = "#ff7f0e",
+      "Late_RS"     = "#2ca02c",
+      "Earliest_ES" = "#9467bd",
+      "Early_ES"    = "#d62728",
+      "Int_ES"      = "yellow3",
+      "Late_ES"     = "cyan3"
+    )
+  )
+```
+
+
+#I will also do UMAP on this matrix
+```{r}
+# make sure mat is numeric
+mat_umap <- umap(mat, n_neighbors = 15, min_dist = 0.1, metric = "euclidean")
+
+# convert to data frame for plotting
+umap_df <- as.data.frame(mat_umap)
+colnames(umap_df) <- c("UMAP1", "UMAP2")
+
+# keep rownames (your sample labels like Early_RS, Late_ES, etc.)
+umap_df$sample <- rownames(mat)
+
+```
+
+```{r}
+
+ggplot(umap_df, aes(x = UMAP1, y = UMAP2, color = sample, label= sample)) +
+  geom_point(size = 3, alpha = 0.8) +
+  theme_classic()
+
+```
+
+```{r}
+stage_order <- c("Early_RS", "Int_RS", "Late_RS","Earliest_ES", "Early_ES", "Int_ES", "Late_ES")
+
+umap_df$stage <- factor(umap_df$sample, levels = stage_order)
+ggplot(umap_df, aes(x = UMAP1, y = UMAP2, color = stage, label = stage)) +
+  geom_point(size = 3, alpha = 0.8) +
+  geom_text_repel(show.legend = FALSE, size = 3) +
+  theme_classic()
+
+```
+
