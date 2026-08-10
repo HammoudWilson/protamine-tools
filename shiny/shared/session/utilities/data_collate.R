@@ -61,7 +61,11 @@ paCollate_load_ram_reactive <- function(sourceId, type) reactive({
 paCollate_env <- function(sourceId) paCollate_load_ram(sourceId, "env")
 
 # samples sorted by staging_order
-paCollate_samples <- function(sourceId) paCollate_load_ram(sourceId, "samples")[order(staging_order)]
+paCollate_samples <- function(sourceId) {
+    x <- paCollate_load_ram(sourceId, "samples")[order(staging_order)]
+    x[, stage_genotype := paste(stage, genotype, sep = "-")]
+    x
+}
 paCollate_samples_reactive <- function(sourceId) reactive({
     sourceId <- sourceId()
     req(sourceId)

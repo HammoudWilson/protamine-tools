@@ -58,13 +58,17 @@ cuttagSummaryUI <- function(id, options) {
                             "H2B",
                             "H4",
                             "H3K27me3",
-                            "H4ac"
+                            "H4ac",
+                            "butyrylation",
+                            "crotonylation"
                         ),
                         choiceValues = c(
                             "H2B",
                             "H4",
                             "H3K27me3",
-                            "H4ac"
+                            "H4ac",
+                            "Bu",
+                            "KCr"
                         ),
                         selected = "H2B",
                         inline = TRUE,

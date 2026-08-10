@@ -39,9 +39,9 @@ settings:
             type:   selectInput
             choices:
                 - sample
-                - stage
+                - stage_genotype
                 - stage_type
-            value: stage
+            value: stage_genotype
         Plot_Inserts_As:
             type:   selectInput
             choices:
@@ -90,6 +90,34 @@ settings:
         Insert_Color_Alpha:
             type:   numericInput
             value:  0.5
+        Show_Stages:
+            type:   checkboxGroupInput
+            choices:
+                - mESC
+                - early_RS
+                - int_RS
+                - late_RS
+                - earliest_ES
+                - early_ES
+                - int_ES
+                - mixed_ES
+                - late_ES 
+            value:
+                - early_RS
+                - int_RS
+                - late_RS
+                - earliest_ES
+                - early_ES
+                - int_ES
+                - late_ES 
+        Show_Genotypes:
+            type:   checkboxGroupInput
+            choices:
+                - WT
+                - PRM1_Het
+                - PRM2_KO
+            value:
+                - WT
     Nucleosome_Chains:
         Show_Nucleosome_Chains:
             type:   checkboxInput

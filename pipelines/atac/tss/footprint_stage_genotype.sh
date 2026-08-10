@@ -2,7 +2,7 @@
 #     collect, weight, sort, and index all primary genome inserts for one spermatid stage
 # input:
 #     $STAGE_TYPE as arg1
-#     $STAGE as arg2
+#     $STAGE_GENOTYPE as arg2
 #     $BYTES_RAM_PER_SORT as arg3
 #     $SHM_DIR_WRK
 # outputs:
@@ -10,9 +10,9 @@
 
 # get arguments
 export STAGE_TYPE=$1
-export STAGE=$2
+export STAGE_GENOTYPE=$2
 export BYTES_RAM_PER_SORT=$3
-export BGZ_FILE_PREFIX=${STAGE_TYPE}.${STAGE}
+export BGZ_FILE_PREFIX=${STAGE_TYPE}.${STAGE_GENOTYPE}
 export BGZ_FILE_NAME=${BGZ_FILE_PREFIX}.bed.bgz
 export BGZ_FILE=${TASK_DIR}/inserts_bgz/${BGZ_FILE_NAME}
 export TALLY_GLOB=${TASK_DIR}/inserts_bgz/${BGZ_FILE_PREFIX}.*.tally.txt

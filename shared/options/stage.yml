@@ -19,5 +19,6 @@ options:
         short: x
         type: character
         required: false
-        default: round:early_RS,int_RS,late_RS;elong:early_ES,int_ES # deliberately omit earliest_ES, late_ES, which has low signal, and mESC
+        # deliberately omit earliest_ES, late_ES, which has low signal, mixed_ES, and mESC
+        default: round:early_RS,int_RS,late_RS;elong:early_ES,int_ES 
         description: "assignment of spermatid stages into two stage types as stageType1:stage1[,stage2...];stageType2:stage3[,stage4...]"

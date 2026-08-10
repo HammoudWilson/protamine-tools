@@ -6,7 +6,7 @@
 #     sample metadata file
 #     insert_spans file created by atac/sites
 # outputs:
-#     tabix-indexed bgz files for every sample, stage, and stage type
+#     tabix-indexed bgz files for every sample, stage_genotype, and stage type
 #=====================================================================================
 # script initialization
 #-------------------------------------------------------------------------------------
@@ -67,10 +67,18 @@ samples <- fread(env$METADATA_FILE)[order(staging_order)]
 # samples <- samples[filename_prefix %in% c("24290X11", "24290X9")]
 # samples <- samples[filename_prefix %in% c("24290X8", "24290X10")]
 nSamples <- nrow(samples)
+samples[, ":="(
+    is_wildtype = toupper(trimws(genotype)) == "WT",
+    stage_genotype = paste(stage, genotype, sep = "-")
+)]
 
 message("parsing stages")
 stages <- unique(samples$stage)
 nStages <- length(stages)
+
+message("parsing stage_genotypes")
+stage_genotypes <- unique(samples$stage_genotype)
+nStageGenotypes <- length(stage_genotypes)
 
 message("parsing stage types")
 stageTypes <- unpackStageTypes(env)
@@ -78,7 +86,8 @@ reverseStageTypes <- {
     reversed <- list()
     for (stageType in names(stageTypes)) {
         for (stage in stageTypes[[stageType]]) {
-            reversed[[stage]] <- stageType
+            stage_genotype <- paste(stage, "WT", sep = "-")
+            reversed[[stage_genotype]] <- stageType
         }
     }
     reversed
@@ -95,25 +104,28 @@ footprint$sample <- mclapply(1:nSamples, function(sampleI) {
 # footprint$sample <- lapply(1:nSamples, function(sampleI) {
     smp <- samples[sampleI] 
     message(paste0('   ', smp$filename_prefix, ' = ', smp$sample_name, " (", smp$staging, ")"))
-    stageType <- reverseStageTypes[[smp$stage]]
+    stageType <- reverseStageTypes[[smp$stage_genotype]]
     if(is.null(stageType)) stageType <- 'NA'
-    fread(cmd = paste("bash ", createFootprintFile, stageType, smp$stage, smp$sample_name, smp$filename_prefix, bytesRamPerSort))
+    fread(cmd = paste(
+        "bash ", createFootprintFile, stageType, smp$stage_genotype, 
+        smp$sample_name, smp$filename_prefix, bytesRamPerSort
+    ))
 }, mc.cores = env$N_CPU)
 # })
 names(footprint$sample) <- samples$sample_name
 
 message("creating footprinting file by stage")
-createFootprintFile <- file.path(env$ACTION_DIR, 'footprint_stage.sh')
-bytesRamPerSort <- getRamPerSort(nStages)
-footprint$stage <- mclapply(stages, function(stage) {
-# footprint$stage <- lapply(stages, function(stage) {
-    message(paste0('   ', stage))
-    stageType <- reverseStageTypes[[stage]]
+createFootprintFile <- file.path(env$ACTION_DIR, 'footprint_stage_genotype.sh')
+bytesRamPerSort <- getRamPerSort(nStageGenotypes)
+footprint$stage_genotype <- mclapply(stage_genotypes, function(stage_genotype) {
+# footprint$stage_genotype <- lapply(stage_genotypes, function(stage_genotype) {
+    message(paste0('   ', stage_genotype))
+    stageType <- reverseStageTypes[[stage_genotype]]
     if(is.null(stageType)) stageType <- 'NA'
-    fread(cmd = paste("bash ", createFootprintFile, stageType, stage, bytesRamPerSort))
+    fread(cmd = paste("bash ", createFootprintFile, stageType, stage_genotype, bytesRamPerSort))
 }, mc.cores = env$N_CPU)
 # })
-names(footprint$stage) <- stages
+names(footprint$stage_genotype) <- stage_genotypes
 
 message("creating footprinting file by stage type")
 createFootprintFile <- file.path(env$ACTION_DIR, 'footprint_stage_type.sh')
@@ -142,6 +154,7 @@ obj <- list(
     )],
     samples             = samples,
     stages              = stages,
+    stage_genotypes     = stage_genotypes,
     stageTypes          = stageTypes,
     reverseStageTypes   = reverseStageTypes,
     footprint           = footprint

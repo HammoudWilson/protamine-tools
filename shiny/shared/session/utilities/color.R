@@ -45,6 +45,19 @@ getStageColors <- function(allSamples, samples){
     names(colors) <- stages
     colors[samples[, unique(stage)]]
 }
+getStageGenotypeColors <- function(allSamples, samples){
+    orderedSamples <- allSamples[order(staging_order)]
+    stages <- orderedSamples[, unique(stage)]
+    colors <- stageColors[1:length(stages)]
+    names(colors) <- stages
+    stage_genotypes <- samples[, unique(stage_genotype)]
+    colors <- sapply(stage_genotypes, function(stage_genotype) {
+        stage <- strsplit(stage_genotype, "-")[[1]][1]
+        colors[stage]
+    })
+    names(colors) <- stage_genotypes
+    colors
+}
 getStageTypeColor <- function(metadata, stageType){
     stageTypeStages <- metadata$stageTypes[[stageType]]
     getStageColor(metadata, stageTypeStages[1])
@@ -68,6 +81,7 @@ paColors <- list(
     GREY = rgb(0.75, 0.75, 0.75),
     BLUE = rgb(0,   0,   1)
 )
+paSaturationColor <- "#BBBB00"
 nTrackMapColorsPerSide <- 30
 trackMapColors <- list(
     low  = colorRampPalette(c(paColors$GREY, paColors$BLUE))(nTrackMapColorsPerSide + 1), # blue color is cold/depleted,
@@ -77,19 +91,20 @@ trackMapColors <- list(
 # implement color spreading functions for different score types
 # z-scores color from blue (cold) to red (hot) via grey (neutral)
 # with limit values coloring as pure red/blue
-z_score_color <- function(zScore, config){
+z_score_color <- function(zScore, config, saturate = FALSE){
     minZScore <- -config$Max_Z_Score
     z <- pmax(minZScore, pmin(config$Max_Z_Score, zScore))
     I <- floor(nTrackMapColorsPerSide * abs(z) / config$Max_Z_Score) + 1L
-    ifelse(z < 0, trackMapColors$low[I], trackMapColors$high[I])
+    col <- ifelse(z < 0, trackMapColors$low[I], trackMapColors$high[I])
+    ifelse(saturate & is.na(col), paSaturationColor, col)
 }
 # quantile scores converted to z-scores for coloring assuming a (pseudo-)normal distribution
-quantile_score_color <- function(quantile, config){
+quantile_score_color <- function(quantile, config, saturate = FALSE){
     # prevent infinite Z-scores by clamping extreme quantiles to ~6 sigma, i.e., 1e-9
     quantile <- pmax(1e-9, pmin(1-1e-9, quantile))
     # use normal distribution to weight quantiles
     z <- qnorm(quantile)
-    z_score_color(z, config)
+    z_score_color(z, config, saturate)
 }
 # quantile_score_color <- function(quantile, config){
 #     minQuantile <- 1 - maxQuantile
@@ -108,7 +123,7 @@ txn_score_color <- function(log10cpm, config){
 cuttag_score_color <- function(rpkm, config){
     quantile <- ecdf(rpkm[!is.na(rpkm)])(rpkm)
     z <- qnorm(quantile)
-    z_score_color(z, config)
+    z_score_color(z, config, saturate = FALSE)
 }
 # insert size NRLL colored on a blue/grey/red scale with grey at mid NRLL value
 nrll_score_color <- function(nrll, config){
@@ -141,29 +156,30 @@ fraction_score_color <- function(fraction, config){
 # color the top group-level summary row of every track heatmap group
 # this is the single score value for genome-level scores
 # or the stageType delta for sample-level scores
-getSeriesSummaryColors <- function(scoreTypeName, scoreValues, config){ # used to color the top group-level summary row of every track heatmap group
+getSeriesSummaryColors <- function(scoreTypeName, scoreValues, config, included = TRUE){ # used to color the top group-level summary row of every track heatmap group
+    saturate <- scoreTypeName == "gcrz_obs"
     switch(
         scoreTypeName,
 
         # genome scores here are equivalent to sample-level getSeriesSampleColors below
         # provided by scoreMapGroupImage as raw score values, used as is
-        gc_z = z_score_color(  scoreValues, config), 
+        gc_z = z_score_color(  scoreValues, config, saturate = FALSE), 
         txn  = txn_score_color(scoreValues, config),
         stgm = quantile_score_color(scoreValues, config),
 
         # sample-level summary scores (deltas) use quantiles, i.e., assume non-parametric distributions
         # always provided as quantiles by scoreMapGroupImage
-        quantile_score_color(scoreValues, config)
+        quantile_score_color(scoreValues, config, saturate & included)
     )
 }
 
 # color the subsequent sample-level rows of every track heatmap group
 # i.e., these values are provided as absolute scores by scoreMapGroupImage
-getSeriesSampleColors <- function(scoreTypeName, scoreValues, config){ 
+getSeriesSampleColors <- function(scoreTypeName, scoreValues, config, ...){ 
     switch(
         scoreTypeName,
-        gcrz_obs = z_score_color(   scoreValues, config),  # these score values are already Z scores
-        gcrz_wgt = z_score_color(   scoreValues, config),
+        gcrz_obs = z_score_color(   scoreValues, config, saturate = TRUE),  # these score values are already Z scores
+        gcrz_wgt = z_score_color(   scoreValues, config, saturate = TRUE),
         nrll     = nrll_score_color(scoreValues, config),
         cuttag_score_color(scoreValues, config)
     )
@@ -172,6 +188,7 @@ getSeriesSampleColors <- function(scoreTypeName, scoreValues, config){
 # color final quantile rows for intra-sample/intra-group relative scores
 # these values are always provided as quantiles by scoreMapGroupImage
 # also used for GCRZ scores if the user requested quantiles
-getSeriesQuantileColors <- function(scoreTypeName, scoreValues, config){  # scoreTypeName unused but needed for consistency
-    quantile_score_color(scoreValues, config)
+getSeriesQuantileColors <- function(scoreTypeName, scoreValues, config, included = TRUE){  # scoreTypeName unused but needed for consistency
+    saturate <- scoreTypeName == "gcrz_obs"
+    quantile_score_color(scoreValues, config, saturate & included)
 }

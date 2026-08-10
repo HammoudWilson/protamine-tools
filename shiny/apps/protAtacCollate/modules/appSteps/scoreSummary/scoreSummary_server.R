@@ -123,7 +123,7 @@ stageDistributionPlot <- staticPlotBoxServer(
             plot        = stageDistributionPlot, 
             scoreType   = getScoreType(input$scoreType), 
             metadata    = getStageMetadata(sourceId, input$scoreType, samples),
-            colors      = getStageColors(allSamples, samples),
+            colors      = getStageGenotypeColors(allSamples, samples),
             message     = "plotting stages"
         )
     }

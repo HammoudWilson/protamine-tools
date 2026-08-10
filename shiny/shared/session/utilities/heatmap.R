@@ -31,17 +31,18 @@ scoreMapLegendImage <- function(trackHeight, labelHeight, config, label = NULL){
 }
 # ...group header, representing a single score type; text identifies the score type and input data
 scoreMapHeaderImage <- function(scoreType, config){
-    x <- matrix("white", nrow = config$plotWidthPixels, ncol = config$headerHeightPixels) %>% 
-    matrixToCImg(config$plotWidthPixels, config$headerHeightPixels) %>% 
-    imager::draw_text(1, 2, scoreType$trackHeaderLabel, "black", fsize = config$headerHeightPixels - 2)
+    height <- config$headerHeightPixels * config$printMultiplier
+    x <- matrix("white", nrow = config$plotWidthPixels, ncol = height) %>% 
+    matrixToCImg(config$plotWidthPixels, height) %>% 
+    imager::draw_text(1, 2, scoreType$trackHeaderLabel, "black", fsize = height - 2)
     paScoreMapYBreaks <<- rbind(paScoreMapYBreaks, data.table(
-        height = config$headerHeightPixels + 1, scoreTypeName = "NA", rowType = "header", seriesName = "NA"
+        height = height + 1, scoreTypeName = "NA", rowType = "header", seriesName = "NA"
     ))
     imager::imappend(
         list(
-            scoreMapLabelImage(config$headerHeightPixels, config$headerHeightPixels, config),
+            scoreMapLabelImage(height, height, config),
             x,
-            scoreMapLegendImage(config$headerHeightPixels, config$headerHeightPixels, config)
+            scoreMapLegendImage(height, height, config)
         ),
         axis = 'x'
     )
@@ -49,18 +50,19 @@ scoreMapHeaderImage <- function(scoreType, config){
 
 # create subimages as track image rows representing one sample or group score value across display bins
 scoreMapRowImage <- function(scoreTypeName, isCutTagScore, isLog10, binI, b, scoreValues, 
-                             colorFn, config, rowType, labelLabel = NULL, legendLabel = NULL){
+                             colorFn, config, rowType, included, labelLabel = NULL, legendLabel = NULL){
     isCutTagHeatmap <- isCutTagScore && config$CutTag_As_HeatMap
     rowHeightPixels <- if(isCutTagScore){
         k_bin   <- config$binSize / 1e3
         m_reads <- config$samples[
-            sample_name == legendLabel | stage == legendLabel, 
+            sample_name == legendLabel | stage == legendLabel | stage_genotype == legendLabel, 
             sum(n_reads) / 1e6
         ]
         if(isCutTagHeatmap) config$Row_Height_Pixels else config$Row_Height_Pixels * 2
     } else {
         config$Row_Height_Pixels
     }
+    rowHeightPixels <- rowHeightPixels * config$printMultiplier
     x <- merge(
         b, 
         data.table(
@@ -92,7 +94,7 @@ scoreMapRowImage <- function(scoreTypeName, isCutTagScore, isLog10, binI, b, sco
             else c(rep("white", rowHeightPixels - y), rep("black", y))
         })))
     } else {
-        colorFn(scoreTypeName, x$val, config) %>% 
+        colorFn(scoreTypeName, x$val, config, included) %>% 
         rep(rowHeightPixels)
     }
 
@@ -100,11 +102,12 @@ scoreMapRowImage <- function(scoreTypeName, isCutTagScore, isLog10, binI, b, sco
     paScoreMapYBreaks <<- rbind(paScoreMapYBreaks, data.table(
         height = rowHeightPixels + 1, scoreTypeName = scoreTypeName, rowType = rowType, seriesName = seriesName
     ))
+    labelHeight <- config$Row_Height_Pixels * config$printMultiplier
     imager::imappend(
         list(
-            scoreMapLabelImage(rowHeightPixels, config$Row_Height_Pixels, config, labelLabel),
+            scoreMapLabelImage(rowHeightPixels, labelHeight, config, labelLabel),
             matrixToCImg(x, config$plotWidthPixels, rowHeightPixels),
-            scoreMapLegendImage(rowHeightPixels, config$Row_Height_Pixels, config, legendLabel)
+            scoreMapLegendImage(rowHeightPixels, labelHeight, config, legendLabel)
         ),
         axis = 'x'
     )
@@ -128,6 +131,7 @@ scoreMapGroupImage <- function(scoreTypeName, sourceId, atac_metadata, cuttag_me
     } else {
         getGenomeScores(sourceId, scoreTypeName, binI, stgmQuantile = TRUE, hicQuantile = TRUE)
     }
+    included <- b[, .(included = sum(basesInPixel) > 0), keyby = .(pixel)]$included
     imager::imappend(c(
 
         # a single row representing the fully aggregated score results for a scoreType
@@ -142,7 +146,7 @@ scoreMapGroupImage <- function(scoreTypeName, sourceId, atac_metadata, cuttag_me
                 scoreTypeName, isCutTagScore, !isSampleScore && scoreType$log10,
                 binI, b, 
                 summaryScores, 
-                getSeriesSummaryColors, config, "summary", 
+                getSeriesSummaryColors, config, "summary", included, 
                 labelLabel  = if(isSampleScore) "delta" else scoreType$trackSummaryLabel,
                 legendLabel = if(isSampleScore) "round - elong" else scoreType$trackLegendLabel
             ),
@@ -150,7 +154,13 @@ scoreMapGroupImage <- function(scoreTypeName, sourceId, atac_metadata, cuttag_me
         ) else list(),
         if(isSampleScore && config$Aggregate_By != "none") {
             metadata <- if(isCutTagScore) cuttag_metadata else atac_metadata
-            samplesFilter <- if(isCutTagScore) metadata$samples$antibody_target == scoreTypeName else TRUE
+            samplesFilter <- if(isCutTagScore) {
+                antibody_target <- scoreTypes$sample[[scoreTypeName]]$antibodyTarget
+                metadata$samples$antibody_target == antibody_target 
+            } else TRUE
+            samplesFilter <- samplesFilter & 
+                metadata$samples$stage    %in% config$Show_Stages & 
+                metadata$samples$genotype %in% config$Show_Genotypes
             seriesAggNames <- getSeriesAggNames(metadata, config, samplesFilter)
             isGcrz <- startsWith(scoreTypeName, "gcrz")
             if(isGcrz && config$GCRZ_As_Quantiles) { # give user the option to plot GCRZ scores as quantiles
@@ -172,7 +182,7 @@ scoreMapGroupImage <- function(scoreTypeName, sourceId, atac_metadata, cuttag_me
                         scoreTypeName, isCutTagScore, scoreType$log10,
                         binI, b, 
                         scores$data[[seriesName]], 
-                        colorFn, config, "score",
+                        colorFn, config, "score", included,
                         labelLabel = if(seriesAggNames[1] == seriesName) labelLabel else NULL,
                         legendLabel = seriesName
                     )
@@ -190,7 +200,7 @@ scoreMapGroupImage <- function(scoreTypeName, sourceId, atac_metadata, cuttag_me
                             scoreTypeName, isCutTagScore, FALSE,
                             binI, b,  
                             scores$quantile[[seriesName]], 
-                            getSeriesQuantileColors, config, "quantile",
+                            getSeriesQuantileColors, config, "quantile", included,
                             labelLabel = if(seriesAggNames[1] == seriesName) "quantile" else NULL,
                             legendLabel = seriesName
                         )

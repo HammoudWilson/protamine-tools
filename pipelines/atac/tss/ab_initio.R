@@ -66,6 +66,8 @@ options(warn = 2)
 message("parsing stages")
 stages <- strsplit(env$AB_INITIO_STAGES, ',')[[1]]
 nStages <- length(stages)
+stage_genotypes <- paste(stages, "WT", sep = "-")
+nStageGenotypes <- length(stage_genotypes)
 stage_score_cols  <- paste(stages, "score",  sep = '_')
 stage_count_cols  <- paste(stages, "count",  sep = '_')
 stage_rpkm_cols   <- paste(stages, "rpkm",   sep = '_')
@@ -81,18 +83,20 @@ reverseStageTypes <- {
     reversed <- list()
     for (stageType in names(stageTypes)) {
         for (stage in stageTypes[[stageType]]) {
-            reversed[[stage]] <- stageType
+            stage_genotype <- paste(stage, "WT", sep = "-")
+            reversed[[stage_genotype]] <- stageType
         }
     }
     reversed
 }
 nStageTypes <- length(stageTypes)
 
-message("finding stage insert files")
+message("finding stage-genotype insert files")
 stageInsertFiles <- sapply(stages, function(stage) {
-    stageType <- reverseStageTypes[[stage]]
+    stage_genotype <- paste(stage, "WT", sep = "-")
+    stageType <- reverseStageTypes[[stage_genotype]]
     if(is.null(stageType)) stageType <- 'NA'
-    bgzFilePrefix <- paste(stageType, stage, sep = '.')
+    bgzFilePrefix <- paste(stageType, stage_genotype, sep = '.')
     bgzFileName <- paste(bgzFilePrefix, 'bed.bgz', sep = '.')
     insertFile <- file.path(env$TASK_DIR, 'inserts_bgz', bgzFileName)
     if(!file.exists(insertFile)) stop(paste("missing insert file:", insertFile))
@@ -106,9 +110,12 @@ setnames(chroms, c('chrom', 'length'))
 chroms <- chroms[!grepl('_', chrom) & !grepl('chrM', chrom) & !grepl('chrEBV', chrom)]
 
 message("loading nInserts by stage")
-fp_stage <- readRDS(paste(env$DATA_FILE_PREFIX, "footprint.rds", sep = '.'))$footprint$stage
-nInserts <- sapply(stages, function(stage) fp_stage[[stage]]$nInserts, simplify = FALSE, USE.NAMES = TRUE)
-rm(fp_stage)
+fp_stage_genotype <- readRDS(paste(env$DATA_FILE_PREFIX, "footprint.rds", sep = '.'))$footprint$stage_genotype
+nInserts <- sapply(stages, function(stage) {
+    stage_genotype <- paste(stage, "WT", sep = "-")
+    fp_stage_genotype[[stage_genotype]]$nInserts
+}, simplify = FALSE, USE.NAMES = TRUE)
+rm(fp_stage_genotype)
 
 message("finding positioned dinucleosomes by chromosome")
 scoreAbInitio <- file.path(env$MDI_DIR, 'suites/definitive/protamine-tools/resources/ab_initio') # compiled Rust binary
@@ -117,6 +124,7 @@ scoreAbInitio <- file.path(env$MDI_DIR, 'suites/definitive/protamine-tools/resou
 regions <- do.call(rbind, lapply(1:nrow(chroms), function(chromI) {
     message(paste0("  ", chroms[chromI, chrom], " = ", chroms[chromI, length], " bp"))
     regions <- fread(cmd = paste(
+        "RUST_BACKTRACE=1", 
         scoreAbInitio,
         chroms[chromI, chrom],
         chroms[chromI, length],
@@ -217,15 +225,21 @@ for(umap_type in umap_types) { # use for loops since umap is parallelized
     for(index_stage_ in index_stages) {
         message(paste0("    ", index_stage_))
         indexI <- regions[, passed_rpkm_filters & index_stage == index_stage_]
-        umap <- umap2(
-            regions[indexI, ..stage_cols],
-            n_neighbors = env$UMAP_N_NEIGHBORS, 
-            metric      = umap_type_parts[2],
-            nn_method   = "hnsw",
-            n_threads   = env$N_CPU - 1
-        )
-        regions[[umap1_col]][indexI] <- umap[, 1]
-        regions[[umap2_col]][indexI] <- umap[, 2]
+        tryCatch({
+            umap <- umap2(
+                regions[indexI, ..stage_cols],
+                n_neighbors = env$UMAP_N_NEIGHBORS, 
+                metric      = umap_type_parts[2],
+                nn_method   = "hnsw",
+                n_threads   = env$N_CPU - 1
+            )
+            regions[[umap1_col]][indexI] <- umap[, 1]
+            regions[[umap2_col]][indexI] <- umap[, 2]
+        }, error = function(e) {
+            message(paste("umap failed for", umap_type, index_stage_))
+            regions[[umap1_col]][indexI] <- NA
+            regions[[umap2_col]][indexI] <- NA
+        })
     }
 }
 
@@ -289,6 +303,7 @@ obj <- list(
         'UMAP_N_NEIGHBORS'
     )],
     stages            = stages,
+    stage_genotypes   = stage_genotypes,
     clusteredStages   = clusteredStages,
     indexedStages     = indexedStages,
     stageTypes        = stageTypes,

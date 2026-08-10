@@ -2,7 +2,7 @@
 #     collect, weight, sort, and index all primary genome inserts for one sample
 # input:
 #     $STAGE_TYPE as arg1
-#     $STAGE as arg2
+#     $STAGE_GENOTYPE as arg2
 #     $SAMPLE_NAME as arg3
 #     $FILENAME_PREFIX as arg4
 #     $BYTES_RAM_PER_SORT as arg5
@@ -19,11 +19,11 @@
 
 # get arguments
 export STAGE_TYPE=$1
-export STAGE=$2
+export STAGE_GENOTYPE=$2
 export SAMPLE_NAME=$3
 export FILENAME_PREFIX=$4
 export BYTES_RAM_PER_SORT=$5
-export BGZ_FILE_PREFIX=${STAGE_TYPE}.${STAGE}.${SAMPLE_NAME}
+export BGZ_FILE_PREFIX=${STAGE_TYPE}.${STAGE_GENOTYPE}.${SAMPLE_NAME}
 export BGZ_FILE_NAME=${BGZ_FILE_PREFIX}.bed.bgz
 export BGZ_FILE=${TASK_DIR}/inserts_bgz/${BGZ_FILE_NAME}
 export TALLY_FILE=${TASK_DIR}/inserts_bgz/${BGZ_FILE_PREFIX}.tally.txt

@@ -78,7 +78,7 @@ getSampleMetadata <- function(sourceId, scoreTypeName, samples){ # returns a lis
     getSampleMetadataList(sourceId, scoreTypeName)$sampleScores[samples$sample_name]
 }
 getStageMetadata <- function(sourceId, scoreTypeName, samples){ # returns a list of stage-level score objects matching a list of samples
-    getSampleMetadataList(sourceId, scoreTypeName)$aggregateScores$by_stage[unique(samples$stage)]
+    getSampleMetadataList(sourceId, scoreTypeName)$aggregateScores$by_stage[samples[, unique(stage_genotype)]]
 }
 getStageTypeMetadata <- function(sourceId, scoreTypeName, samples){ # returns a list of stageType-level score objects matching a list of samples
     stageTypes <- getStageTypesByStage(sourceId, samples$stage)
@@ -186,9 +186,10 @@ getSampleScores_regions <- function(metadata, config, scoreTypeName, dataType){ 
 getSeriesAggNames <- function(metadata, config, samplesFilter = TRUE){
     switch(
         config$Aggregate_By,
-        sample     = metadata$samples[samplesFilter]$sample_name,
-        stage      = unique(metadata$samples[samplesFilter]$stage),
-        stage_type = names(metadata$stageTypes)
+        sample         = metadata$samples[samplesFilter]$sample_name,
+        stage          = unique(metadata$samples[samplesFilter]$stage),
+        stage_genotype = unique(metadata$samples[samplesFilter]$stage_genotype), # since v7
+        stage_type     = names(metadata$stageTypes)
     )
 }
 
@@ -217,15 +218,15 @@ getSampleScores_all <- function(sourceId, scoreTypeName){ # returns a list of sa
         )
     )
 }
-getSampleScores_allBins <- function(sourceId, scoreTypeName, stage){
+getSampleScores_allBins <- function(sourceId, scoreTypeName, column){
     paScores_getCached(
         "getSampleScores_allBins",
-        keyObject = list(sourceId, scoreTypeName, stage),
+        keyObject = list(sourceId, scoreTypeName, column),
         from = 'disk',
         createFn = function(...) {
-            getSampleScores_all(sourceId, scoreTypeName)[[stage]]
+            getSampleScores_all(sourceId, scoreTypeName)[[column]]
         },
-        spinnerMessage = paste("loading stage scores")
+        spinnerMessage = paste("loading sample/stage scores")
     )
 }
 getStageTypeDelta_allBins <- function(sourceId, scoreTypeName){

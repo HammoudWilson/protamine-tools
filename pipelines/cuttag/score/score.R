@@ -95,14 +95,18 @@ primaryIncludedBins <- isPrimaryGenome & isIncluded
 
 message("loading Cut&Tag sample metadata")
 cuttagSamples <- fread(env$METADATA_FILE, sep = ",", header = TRUE)
+cuttagSamples[, ":="(
+    is_wildtype = toupper(trimws(genotype)) == "WT",
+    stage_genotype = paste(stage, genotype, sep = "-")
+)]
 
 message("analyzing sample-level scores")
 scores <- list() # maintain the same file structure as ATAC sample scores
-scores$sample <- sapply(names(scoreTypes$sample), function(antibody_target){
-    message(paste(" ", antibody_target))
-    scoreType <- scoreTypes$sample[[antibody_target]]
-    sampleScores <- analyzeSampleScores(scoreType, antibody_target)
-    aggregateScores <- aggregateSampleScores(sampleScores, scoreType, antibody_target)
+scores$sample <- sapply(names(scoreTypes$sample), function(scoreTypeName){
+    message(paste(" ", scoreTypeName))
+    scoreType <- scoreTypes$sample[[scoreTypeName]]
+    sampleScores <- analyzeSampleScores(scoreType, scoreType$antibodyTarget)
+    aggregateScores <- aggregateSampleScores(sampleScores, scoreType, scoreType$antibodyTarget)
     # now that aggregation is complete, remove scores from sampleScores
     for(sample_name in names(sampleScores)) sampleScores[[sample_name]]$scores <- NULL
     list(

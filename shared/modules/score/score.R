@@ -116,11 +116,16 @@ getScoresDir <- function(){
 #-------------------------------------------------------------------------------------
 message("loading collate step output")
 collate <- readRDS(getCollateFile())
+collate$samples[, ":="(
+    is_wildtype = toupper(trimws(genotype)) == "WT",
+    stage_genotype = paste(stage, genotype, sep = "-")
+)]
 
 message("parsing spermiogenic stage types and GC limits")
 stageTypes <- unpackStageTypes(env)
 allStages <- unique(collate$samples$stage)
-stageMeanStages <- allStages[!(allStages %in% c("mESC", "late_ES"))]
+allGenotypes <- unique(collate$samples$genotype)
+stageMeanStages <- allStages[!(allStages %in% c("mESC", "mixed_ES", "late_ES"))]
 nStageMeanStages <- length(stageMeanStages)
 gcLimits <- strsplit(env$GC_LIMITS, ",")[[1]]
 
@@ -168,7 +173,7 @@ scores$genome$stgm <- {
         cpm
     })
     cpm_stg <- sapply(stageMeanStages, function(stage_) {
-        sample_names <- collate$samples[stage == stage_, sample_name]
+        sample_names <- collate$samples[stage == stage_ & is_wildtype == TRUE, sample_name]
         rowMeans(cpm_smp[, sample_names, drop = FALSE], na.rm = TRUE)
     })
     stage_mean <- apply(cpm_stg, 1, function(cpm) { # as with txn, cpm == rpkm at 1kb bins

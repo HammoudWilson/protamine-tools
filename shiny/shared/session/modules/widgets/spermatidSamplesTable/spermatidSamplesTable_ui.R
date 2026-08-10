@@ -10,7 +10,7 @@ spermatidSamplesTableUI <- function(id, width = 4) {
 
     # known stages
     stages <- c("mESC", "early_RS", "int_RS", "late_RS",
-                "earliest_ES", "early_ES", "int_ES", "late_ES")
+                "earliest_ES", "early_ES", "int_ES", "mixed_ES", "late_ES")
 
     tagList(
         # box with table filter inputs

@@ -71,7 +71,7 @@ replaceNaN <- function(x){
 # extract the histone- and protamine-associated insert size distributions for NRLL calculation
 # where a single specific stage is taken as being a sufficiently pure representation of a state
 getStateEmissProbs <- function(samples, f_obs_isl_smp, stage_){ 
-    stage_samples <- samples[stage == stage_, sample_name]
+    stage_samples <- samples[stage == stage_ & is_wildtype == TRUE, sample_name]
     f_obs_isl <- rowSums(f_obs_isl_smp[, stage_samples])
     f_obs_isl <- f_obs_isl / sum(f_obs_isl) # express as a proportion of the total
     f_obs_isl <- pmax(1e-5, f_obs_isl)      # prevent log(0) and impossible values
@@ -173,7 +173,7 @@ get_nrll <- function(sample_name_, emissProbsFile){
 }
 
 # analyze and aggregate distributions of different bin scores
-# all scores are expected to be one a comparable scale between samples
+# all scores are expected to be on a comparable scale between samples
 analyzeScoreDist <- function(scores, scoreType, data_set_name, return_scores = FALSE){
 
     # take log as needed, preventing log(0) and impossible values
@@ -225,22 +225,22 @@ aggregateAndAnalyzeScores <- function(sampleScores, sample_names, scoreType, dat
 }
 aggregateSampleScores <- function(sampleScores, scoreType){
 
-    # aggregate scores by spermatid stage
-    allStages <- unique(collate$samples$stage)
-    by_stage <- mclapply(allStages, function(stage_){
-    # by_stage <- lapply(allStages, function(stage_){
-        message(paste("   ", "aggregateSampleScores by_stage", stage_))
-        sample_names <- collate$samples[stage == stage_, sample_name]
-        aggregateAndAnalyzeScores(sampleScores, sample_names, scoreType, stage_)
+    # aggregate scores by spermatid stage per genotype
+    allStageGenotypes <- unique(collate$samples$stage_genotype)
+    by_stage <- mclapply(allStageGenotypes, function(stage_genotype_){
+    # by_stage <- lapply(allStageGenotypes, function(stage_genotype_){
+        message(paste("   ", "aggregateSampleScores by_stage_genotype", stage_genotype_))
+        sample_names <- collate$samples[stage_genotype == stage_genotype_, sample_name]
+        aggregateAndAnalyzeScores(sampleScores, sample_names, scoreType, stage_genotype_)
     }, mc.cores = env$N_CPU)
     # })
-    names(by_stage) <- allStages
+    names(by_stage) <- allStageGenotypes
 
     # aggregate scores by spermatid stage type (round vs. elong)
     by_stageType <- mclapply(names(stageTypes), function(stageType){
     # by_stageType <- lapply(names(stageTypes), function(stageType){
         message(paste("   ", "aggregateSampleScores by_stageType", stageType))
-        sample_names <- collate$samples[stage %in% stageTypes[[stageType]], sample_name]
+        sample_names <- collate$samples[stage %in% stageTypes[[stageType]] & is_wildtype == TRUE, sample_name]
         aggregateAndAnalyzeScores(
             sampleScores, sample_names, scoreType, stageType, 
             return_scores = stageType %in% names(stageTypes)[1:2]
@@ -263,8 +263,8 @@ aggregateSampleScores <- function(sampleScores, scoreType){
     by_stageType[[stageType1]]$scores <- NULL
     by_stageType[[stageType2]]$scores <- NULL
     list(
-        by_stage     = by_stage,
-        by_stageType = by_stageType,
+        by_stage     = by_stage,     # !! now keyed by stage-genotype !!
+        by_stageType = by_stageType, # stageType and delta are restricted to wildtype only
         delta        = delta
     )
 }

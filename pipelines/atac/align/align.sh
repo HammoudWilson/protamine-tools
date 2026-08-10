@@ -22,7 +22,12 @@ mkdir -p ${BAM_OUTPUT_DIR}
 # collect the input samples
 BATCH_DIR=${INPUT_DIR}/${ALIGNMENT_BATCH}
 cd "${BATCH_DIR}" || { echo "Error: Cannot cd to ${BATCH_DIR}"; exit 1; }
-FILENAME_PREFIXES=$(ls *_S*R1*.fastq.gz | cut -d'_' -f1 | uniq)
+FILENAME_PREFIXES=$(ls *_S*R1*.fastq.gz 2>/dev/null | cut -d'_' -f1 | uniq)
+IS_ORA_COMPRESSED=""
+if [ "${FILENAME_PREFIXES}" = "" ]; then
+    FILENAME_PREFIXES=$(ls *interleaved_*.fastq.ora 2>/dev/null | cut -d'_' -f1 | uniq)
+    IS_ORA_COMPRESSED="true"
+fi
 
 # align one sample at a time
 echo "aligning samples in batch $ALIGNMENT_BATCH"
@@ -42,6 +47,26 @@ for FILENAME_PREFIX in ${FILENAME_PREFIXES}; do
     UNMERGED_R2_FASTQ=${TMP_FILE_PREFIX}.unmerged.R2.fastq.gz
     FASTP_LOG_PREFIX=${TMP_FILE_PREFIX}.fastp # will be dropped eventually
 
+    # remove any old temporary files
+    rm -f ${TMP_DIR_WRK}/*.fastq.gz
+    rm -f ${TMP_DIR_WRK}/*.bam
+    rm -f ${FASTP_LOG_PREFIX}.*
+
+    # as needed, decompress ORA-compressed FASTQ files
+    if [ "${IS_ORA_COMPRESSED}" = "" ]; then
+        FASTQ_1_GZ=${FILENAME_PREFIX}_*_S*R1*.fastq.gz
+        FASTQ_2_GZ=${FILENAME_PREFIX}_*_S*R2*.fastq.gz
+    else 
+        ${MDI_DIR}/bin/orad \
+            --gz --empty-third-line --force \
+            --ora-reference ${MDI_DIR}/resources/ora/genomes/mus_musculus \
+            --threads ${N_CPU} \
+            --path ${TMP_DIR_WRK} \
+            ${FILENAME_PREFIX}_*.fastq.ora
+        FASTQ_1_GZ=${TMP_DIR_WRK}/*R1.fastq.gz
+        FASTQ_2_GZ=${TMP_DIR_WRK}/*R2.fastq.gz
+    fi
+
     # use fastp for one-pass adapter trimming, read merging, and quality filtering
     #   prepare_fastq.pl trims to 150 bases
     #   fastp enforces MIN_INSERT_SIZE
@@ -49,11 +74,11 @@ for FILENAME_PREFIX in ${FILENAME_PREFIXES}; do
     #   adapter CTGTCTCTTATACACATCT is the Tn5 mosaic sequence
     fastp \
         --in1 <(
-            zcat ${FILENAME_PREFIX}_*_S*R1*.fastq.gz | 
+            zcat ${FASTQ_1_GZ} | 
             perl ${ACTION_DIR}/prepare_fastq.pl 1
         ) \
         --in2 <(
-            zcat ${FILENAME_PREFIX}_*_S*R2*.fastq.gz | 
+            zcat ${FASTQ_2_GZ} | 
             perl ${ACTION_DIR}/prepare_fastq.pl 2
         ) \
         --dont_eval_duplication \
@@ -118,8 +143,8 @@ for FILENAME_PREFIX in ${FILENAME_PREFIXES}; do
     checkPipe
 
     # remove the temporary files
-    rm -f ${TMP_FILE_PREFIX}.*.fastq.gz
-    rm -f ${TMP_FILE_PREFIX}.*.bam
+    rm -f ${TMP_DIR_WRK}/*.fastq.gz
+    rm -f ${TMP_DIR_WRK}/*.bam
     rm -f ${FASTP_LOG_PREFIX}.*
 done
 

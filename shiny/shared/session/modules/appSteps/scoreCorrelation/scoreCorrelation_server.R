@@ -33,6 +33,13 @@ sourceId <- dataSourceTableServer(
     "dataSourceTable", 
     selection = "single"
 )
+samples <- paCollate_samples_reactive(sourceId)
+observeEvent(samples(), {
+    samples <- samples()
+    updateSelectInput(session, "xScoreStageGenotype", choices = unique(samples$stage_genotype))
+    updateSelectInput(session, "yScoreStageGenotype", choices = unique(samples$stage_genotype))
+    updateSelectInput(session, "zScoreStageGenotype", choices = unique(samples$stage_genotype))
+})
 nBinsPerPoint <- reactive({
     as.integer(settings$get("Score_Correlation", "N_Bins_Per_Point"))
 })
@@ -73,7 +80,7 @@ binIndices <- reactive({
 # plot outputs
 #----------------------------------------------------------------------
 roundMinusElong <- "round - elong"
-getScoreTypeData <- function(scoreTypeName, stage_, isZAxis = FALSE){
+getScoreTypeData <- function(scoreTypeName, stage_genotype_, isZAxis = FALSE){
     if(isZAxis && scoreTypeName == "gc") scoreTypeName <- "gc_z"
     sourceId <- req(sourceId())
     nBinsPerPoint <- nBinsPerPoint()
@@ -82,13 +89,13 @@ getScoreTypeData <- function(scoreTypeName, stage_, isZAxis = FALSE){
     scoreType <- scoreTypes[[scoreLevel]][[scoreTypeName]]
     isSampleScore <- scoreLevel == "sample"
     isCutTagScore <- !is.null(scoreType$cuttag) && scoreType$cuttag
-    isDeltaScore <- isSampleScore && stage_ == roundMinusElong
+    isDeltaScore <- isSampleScore && stage_genotype_ == roundMinusElong
     scores <- if(isSampleScore) {
         if(isDeltaScore){
             req(!isCutTagScore)
             getStageTypeDelta_allBins(sourceId, scoreTypeName)
         } else {
-            getSampleScores_allBins(sourceId, scoreTypeName, stage_)
+            getSampleScores_allBins(sourceId, scoreTypeName, stage_genotype_)
         }
     } else {
         # do not apply quantile transform to genome scores for X and Y axes, but do for Z axis coloring
@@ -98,7 +105,11 @@ getScoreTypeData <- function(scoreTypeName, stage_, isZAxis = FALSE){
         atac_metadata <- paScores_metadata(sourceId)
         samples <- paCutTag_samples(sourceId)
         k_bin <- atac_metadata$env$BIN_SIZE / 1e3
-        m_reads <- samples[antibody_target == scoreTypeName & stage == stage_, sum(n_reads) / 1e6]
+        antibody_target_ <- scoreTypes$sample[[scoreTypeName]]$antibodyTarget
+        m_reads <- samples[
+            antibody_target == antibody_target_ & stage_genotype == stage_genotype_, 
+            sum(n_reads) / 1e6
+        ]
     }
     scores <- if(nBinsPerPoint == 1){
         if(isCutTagScore) scores[randomBinI] / k_bin / m_reads else scores[randomBinI]
@@ -121,8 +132,8 @@ getScoreTypeData <- function(scoreTypeName, stage_, isZAxis = FALSE){
         scores        = scores
     )
 }
-getScoreTypeAxis <- function(scoreTypeName, stage_, isZAxis = FALSE){
-    d <- getScoreTypeData(scoreTypeName, stage_, isZAxis)
+getScoreTypeAxis <- function(scoreTypeName, stage_genotype_, isZAxis = FALSE){
+    d <- getScoreTypeData(scoreTypeName, stage_genotype_, isZAxis)
     unit <- d$scoreType[if(!is.null(d$scoreType$corrUnit)) "corrUnit" else "unit"]
     label <- paste(d$scoreType$label, unit)
     minQuantile <- minQuantile()
@@ -135,7 +146,7 @@ getScoreTypeAxis <- function(scoreTypeName, stage_, isZAxis = FALSE){
         unit          = unit,
         label         = if(d$isSampleScore) {
             if(d$isDeltaScore) paste(label, "(Round - Elong)")
-                          else paste(stage_, label)
+                          else paste(stage_genotype_, label)
         } else label,
         lim           = c(min, max),
         col = if(isZAxis) {
@@ -150,13 +161,13 @@ getScoreTypeAxis <- function(scoreTypeName, stage_, isZAxis = FALSE){
 # correlation plot output
 #----------------------------------------------------------------------
 xAxis <- reactive({
-    getScoreTypeAxis(input$xScoreType, input$xScoreStage)
+    getScoreTypeAxis(input$xScoreType, input$xScoreStageGenotype)
 })
 yAxis <- reactive({
-    getScoreTypeAxis(input$yScoreType, input$yScoreStage)
+    getScoreTypeAxis(input$yScoreType, input$yScoreStageGenotype)
 })
 zAxis <- reactive({
-    getScoreTypeAxis(input$zScoreType, input$zScoreStage, TRUE)
+    getScoreTypeAxis(input$zScoreType, input$zScoreStageGenotype, TRUE)
 })
 getAxisLimits <- function(axis){
     limType <- settings$get("Score_Correlation", "Set_Axis_Limits")
@@ -256,8 +267,6 @@ pca <- reactive({
         scoreType <- scoreTypes[[scoreLevel]][[scoreTypeName]]
         isCutTagScore <- !is.null(scoreType$cuttag) && scoreType$cuttag
         if(isCutTagScore){
-            # getScoreTypeData(scoreTypeName, "earliest_ES")$scores -
-            # getScoreTypeData(scoreTypeName, "early_ES")$scores
             cbind(
                 getScoreTypeData(scoreTypeName, "earliest_ES")$scores,
                 getScoreTypeData(scoreTypeName, "early_ES")$scores

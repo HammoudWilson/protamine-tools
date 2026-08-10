@@ -283,9 +283,10 @@ paTSS_add_series <- function(inserts, yOffset, ylim_series, seriesRange, seriesN
         color <- if(config$Color_Inserts_By == "stage"){
             switch(
                 config$Aggregate_By,
-                sample     = getSampleColorsByStage(metadata$samples, metadata$samples[sample_name == seriesName]),
-                stage      = getStageColor(metadata, seriesName),
-                stage_type = getStageTypeColor(metadata, seriesName)
+                sample         = getSampleColorsByStage(metadata$samples, metadata$samples[sample_name == seriesName]),
+                stage          = getStageColor(metadata, seriesName),
+                stage_genotype = getStageColor(metadata, seriesName),
+                stage_type     = getStageTypeColor(metadata, seriesName)
             )
         } else { 
             CONSTANTS$plotlyColors[[config$Color_Inserts_By]] 
@@ -545,10 +546,14 @@ getAtacInserts <- function(metadata, config, coord, footprint){ # returns a list
 
 # load ATAC inserts in a browser window, grouped by sample/stage/stageType as requested
 paTss_get_inserts <- function(metadata, coord, config){
+    samples <- metadata$samples[
+        stage    %in% config$Show_Stages & 
+        genotype %in% config$Show_Genotypes
+    ]
     switch(
         config$Aggregate_By,
         sample = {
-            sapply(metadata$samples$sample_name, function(sample_name) {
+            sapply(samples$sample_name, function(sample_name) {
                 footprint <- metadata$footprint$sample[[sample_name]]
                 getAtacInserts(metadata, config, coord, footprint)
             }, simplify = FALSE, USE.NAMES = TRUE)
@@ -556,6 +561,15 @@ paTss_get_inserts <- function(metadata, coord, config){
         stage = {
             sapply(metadata$stages, function(stage) {
                 footprint <- metadata$footprint$stage[[stage]]
+                getAtacInserts(metadata, config, coord, footprint)
+            }, simplify = FALSE, USE.NAMES = TRUE)
+        },
+        stage_genotype = {
+            stage_genotypes <- metadata$stage_genotypes[
+                metadata$stage_genotypes %in% samples$stage_genotype
+            ]
+            sapply(stage_genotypes, function(stage_genotype) {
+                footprint <- metadata$footprint$stage_genotype[[stage_genotype]]
                 getAtacInserts(metadata, config, coord, footprint)
             }, simplify = FALSE, USE.NAMES = TRUE)
         },

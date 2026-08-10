@@ -6,6 +6,7 @@ scoreTypes <- list(
     sample = list(
         H2B = list(
             name = "H2B",
+            antibodyTarget = "H2B",
             distUnit = 1,
             include = c("quantile"), 
             log10 = FALSE,
@@ -13,6 +14,7 @@ scoreTypes <- list(
         ),
         H4 = list(
             name = "H4",
+            antibodyTarget = "H4",
             distUnit = 1,
             include = c("quantile"), 
             log10 = FALSE,
@@ -20,6 +22,7 @@ scoreTypes <- list(
         ),
         H3K27me3 = list(
             name = "H3K27me3",
+            antibodyTarget = "H3K27me3",
             distUnit = 1,
             include = c("quantile"), 
             log10 = FALSE,
@@ -27,6 +30,23 @@ scoreTypes <- list(
         ),
         H4ac = list(
             name = "H4ac",
+            antibodyTarget = "H4ac",
+            distUnit = 1,
+            include = c("quantile"), 
+            log10 = FALSE,
+            minValue = 1e-3
+        ),
+        Bu = list(
+            name = "Bu",
+            antibodyTarget = "butyrylation",
+            distUnit = 1,
+            include = c("quantile"), 
+            log10 = FALSE,
+            minValue = 1e-3
+        ),
+        KCr = list(
+            name = "KCr",
+            antibodyTarget = "crotonylation",
             distUnit = 1,
             include = c("quantile"), 
             log10 = FALSE,
@@ -95,24 +115,24 @@ analyzeSampleScores <- function(scoreType, antibody_target_){
 }
 aggregateSampleScores <- function(sampleScores, scoreType, antibody_target_){
 
-    # aggregate scores by spermatid stage
-    allStages <- cuttagSamples[antibody_target == antibody_target_, unique(stage)]
-    by_stage <- mclapply(allStages, function(stage_){
-    # by_stage <- lapply(allStages, function(stage_){
-        sample_names <- cuttagSamples[antibody_target == antibody_target_ & stage == stage_, sample_name]
+    # aggregate scores by spermatid stage per genotype
+    allStageGenotypes <- cuttagSamples[antibody_target == antibody_target_, unique(stage_genotype)]
+    by_stage <- mclapply(allStageGenotypes, function(stage_genotype_){
+    # by_stage <- lapply(allStageGenotypes, function(stage_genotype_){
+        sample_names <- cuttagSamples[antibody_target == antibody_target_ & stage_genotype == stage_genotype_, sample_name]
         if(length(sample_names) == 1){
-            message(paste("   ", "single-sample stage", stage_))
+            message(paste("   ", "single-sample stage_genotype", stage_genotype_))
             x <-sampleScores[[sample_names]]
             x$scores <- NULL
             x
         } else {
-            message(paste("   ", "aggregateSampleScores by_stage", stage_))
-            aggregateAndAnalyzeScores(sampleScores, sample_names, scoreType, stage_, rowAggFn = rowSums)
+            message(paste("   ", "aggregateSampleScores by_stage_genotype", stage_genotype_))
+            aggregateAndAnalyzeScores(sampleScores, sample_names, scoreType, stage_genotype_, rowAggFn = rowSums)
         }
     }, mc.cores = env$N_CPU)
     # })
-    names(by_stage) <- allStages
+    names(by_stage) <- allStageGenotypes
     list(
-        by_stage     = by_stage
+        by_stage = by_stage # !! now keyed by stage-genotype !!
     )
 }

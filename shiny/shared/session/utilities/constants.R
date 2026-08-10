@@ -109,6 +109,7 @@ scoreTypes <- list(
             corrUnit = "(NRLL)"
         ),
         H2B = list(
+            antibodyTarget = "H2B",
             distUnit = 1,
             include = c("quantile"),
             log10 = FALSE,
@@ -125,6 +126,7 @@ scoreTypes <- list(
             cuttag = TRUE
         ),
         H4 = list(
+            antibodyTarget = "H4",
             distUnit = 1,
             include = c("quantile"),
             log10 = FALSE,
@@ -141,6 +143,7 @@ scoreTypes <- list(
             cuttag = TRUE
         ),
         H4ac = list(
+            antibodyTarget = "H4ac",
             distUnit = 1,
             include = c("quantile"),
             log10 = FALSE,
@@ -157,6 +160,7 @@ scoreTypes <- list(
             cuttag = TRUE
         ),
         H3K27me3 = list(
+            antibodyTarget = "H3K27me3",
             distUnit = 1,
             include = c("quantile"),
             log10 = FALSE,
@@ -164,6 +168,40 @@ scoreTypes <- list(
             unit = "# Reads",
             enrichmentLabel = "H3K27me3 (log10 RPKM)",
             trackHeaderLabel = "H3K27me3 Cut&Tag",
+            trackScoreLabel = "RPKM",
+            class = "chromatin",
+            valueLim = c(0,50),
+            deltaLim = c(-3, 3),
+            corrLim  = c(0, 2),
+            corrUnit = "(RPKM)",
+            cuttag = TRUE
+        ),
+        Bu = list(
+            antibodyTarget = "butyrylation",
+            distUnit = 1,
+            include = c("quantile"),
+            log10 = FALSE,
+            label = "But. Cut&Tag",
+            unit = "# Reads",
+            enrichmentLabel = "Butyrylation (log10 RPKM)",
+            trackHeaderLabel = "But. Cut&Tag",
+            trackScoreLabel = "RPKM",
+            class = "chromatin",
+            valueLim = c(0,50),
+            deltaLim = c(-3, 3),
+            corrLim  = c(0, 2),
+            corrUnit = "(RPKM)",
+            cuttag = TRUE
+        ),
+        KCr = list(
+            antibodyTarget = "crotonylation",
+            distUnit = 1,
+            include = c("quantile"),
+            log10 = FALSE,
+            label = "Crotonylation Cut&Tag",
+            unit = "# Reads",
+            enrichmentLabel = "Crot. (log10 RPKM)",
+            trackHeaderLabel = "Crot. Cut&Tag",
             trackScoreLabel = "RPKM",
             class = "chromatin",
             valueLim = c(0,50),

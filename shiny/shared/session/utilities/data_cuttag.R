@@ -76,5 +76,5 @@ getCutTagSampleMetadata <- function(sourceId, scoreTypeName, samples){ # returns
     getCutTagSampleMetadataList(sourceId, scoreTypeName)$sampleScores[samples$sample_name]
 }
 getCutTagStageMetadata <- function(sourceId, scoreTypeName, samples){ # returns a list of stage-level score objects matching a list of samples
-    getCutTagSampleMetadataList(sourceId, scoreTypeName)$aggregateScores$by_stage[unique(samples$stage)]
+    getCutTagSampleMetadataList(sourceId, scoreTypeName)$aggregateScores$by_stage[unique(samples$stage_genotype)]
 }

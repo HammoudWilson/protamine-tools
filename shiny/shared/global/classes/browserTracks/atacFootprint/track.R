@@ -80,7 +80,7 @@ build.atacFootprintTrack <- function(track, reference, coord, layout){
             xaxs = "i", yaxs = "i") # always set `xaxs` and `yaxs` to "i"
 
         # overplot the called nucleosome chains as rectangles
-        if(config$Show_Nucleosome_Chains && config$Aggregate_By == "stage"){
+        if(config$Show_Nucleosome_Chains && config$Aggregate_By == "stage_genotype"){
             intervals <- paTss_ab_initio(sourceId)$intervals[
                 chrom  == coord$chrom & 
                 start0 <  coordEnd1 & # wider than the plotted spans, includes the analysis flanks
@@ -101,9 +101,10 @@ build.atacFootprintTrack <- function(track, reference, coord, layout){
                 )
 
                 # overplot the called nucleosome chains by stage
-                for(stageI in 1:nSeries){
-                    yOffset <- nSeries - stageI
-                    intervals_stage <- intervals[index_stage == seriesNames[stageI]]
+                for(stageGenotypeI in 1:nSeries){
+                    if (!endsWith(seriesNames[stageGenotypeI], "WT")) next
+                    yOffset <- nSeries - stageGenotypeI
+                    intervals_stage <- intervals[startsWith(seriesNames[stageGenotypeI], index_stage)]
                     nChains <- nrow(intervals_stage)
                     if(nChains == 0) next
                     rect(

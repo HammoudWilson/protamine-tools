@@ -38,7 +38,8 @@ cuttagSamplesTable <- cuttagSamplesTableServer(
     selection = "multiple"
 )
 selectedSamples <- reactive({
-    cuttagSamplesTable$selectedSamples()[antibody_target == input$scoreType]
+    antibody_target_ <- scoreTypes$sample[[input$scoreType]]$antibodyTarget
+    cuttagSamplesTable$selectedSamples()[antibody_target == antibody_target_]
 })
 selectedSampleNames <- reactive({
     selectedSamples()$sample_name
@@ -129,10 +130,15 @@ stageDistributionPlot <- staticPlotBoxServer(
         req(sourceId)
         samples <- selectedSamples()
         allSamples <- allSamples()
+        scoreType <- getScoreType(input$scoreType)
         plotDistributions(
             plot        = stageDistributionPlot, 
-            scoreType   = getScoreType(input$scoreType), 
-            metadata    = getCutTagStageMetadata(sourceId, input$scoreType, samples),
+            scoreType   = scoreType, 
+            metadata    = getCutTagStageMetadata(
+                sourceId, 
+                input$scoreType, 
+                samples
+            ),
             colors      = getStageColors(allSamples, samples),
             message     = "plotting stages",
             samples     = NULL

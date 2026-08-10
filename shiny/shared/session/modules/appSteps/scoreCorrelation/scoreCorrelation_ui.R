@@ -32,7 +32,9 @@ scoreCorrelationUI <- function(id, options) {
                     "H2B",
                     "H4",
                     "H4ac",
-                    "H3K27me3"
+                    "H3K27me3",
+                    "Butyrylation",
+                    "Crotonylation"
                 ),
                 choiceValues = c(
                     "gc", 
@@ -44,7 +46,9 @@ scoreCorrelationUI <- function(id, options) {
                     "H2B",
                     "H4",
                     "H4ac",
-                    "H3K27me3"
+                    "H3K27me3",
+                    "Bu",
+                    "KCr"
                 ),
                 selected = selected,
                 inline = TRUE,
@@ -61,7 +65,7 @@ scoreCorrelationUI <- function(id, options) {
             width = 2,
             selectInput(
                 ns(id),
-                paste0("Spermatid Stage, ", axis, "-axis"),
+                paste0("Spermatid Stage+Gentoype, ", axis, "-axis"),
                 choices = c(
                     "early_RS",
                     "int_RS",
@@ -69,6 +73,7 @@ scoreCorrelationUI <- function(id, options) {
                     "earliest_ES",
                     "early_ES",
                     "int_ES",
+                    "mixed_ES",
                     "late_ES",
                     "round - elong"
                 ),
@@ -143,15 +148,15 @@ scoreCorrelationUI <- function(id, options) {
         ),
         fluidRow(
             scoreRadioButtons("xScoreType", "X", "hic"),
-            scoreStageSelecton("xScoreStage", "X")
+            scoreStageSelecton("xScoreStageGenotype", "X")
         ),
         fluidRow(
             scoreRadioButtons("yScoreType", "Y", "gc"),
-            scoreStageSelecton("yScoreStage", "Y")
+            scoreStageSelecton("yScoreStageGenotype", "Y")
         ),
         fluidRow(
             scoreRadioButtons("zScoreType", "Z", "txn"),
-            scoreStageSelecton("zScoreStage", "Z")
+            scoreStageSelecton("zScoreStageGenotype", "Z")
         ),
         fluidRow(
             staticPlotBoxUI(
@@ -164,20 +169,20 @@ scoreCorrelationUI <- function(id, options) {
                 collapsed = FALSE
             )
         ),
-        fluidRow(
-            scoreCheckboxGroup("pcaScoreTypes")
-        ),
-        fluidRow(
-            staticPlotBoxUI(
-                ns("pcaPlot"), 
-                "PCA Plot",
-                width = 6,
-                status = "primary",
-                collapsible = TRUE,
-                solidHeader = TRUE,
-                collapsed = TRUE
-            )
-        ),
+        # fluidRow(
+        #     scoreCheckboxGroup("pcaScoreTypes")
+        # ),
+        # fluidRow(
+        #     staticPlotBoxUI(
+        #         ns("pcaPlot"), 
+        #         "PCA Plot",
+        #         width = 6,
+        #         status = "primary",
+        #         collapsible = TRUE,
+        #         solidHeader = TRUE,
+        #         collapsed = TRUE
+        #     )
+        # ),
         NULL
     )
 }

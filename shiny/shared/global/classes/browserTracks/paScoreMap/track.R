@@ -36,7 +36,8 @@ build.paScoreMapTrack <- function(track, reference, coord, layout){
         legendWidthPixels  = as.integer(layout$mai$right * layout$dpi),
         Scores_Dir         = track$settings$get("Data_Path","Scores_Dir"),
         CutTag_Dir         = track$settings$get("Data_Path","CutTag_Dir"),
-        basesPerPixel      = basesPerPixel
+        basesPerPixel      = basesPerPixel,
+        printMultiplier    = layout$printMultiplier
     )
     config <- c(config, sapply(
         names(track$settings$Score_Map()), 
@@ -132,12 +133,6 @@ build.paScoreMapTrack <- function(track, reference, coord, layout){
 # track interaction methods
 click.paScoreMapTrack <- function(track, click, regionI){
     req(click$coord$y > 0)
-    d <- paScoreBuffers[[track$id]]
-    yInv <- d$maxY - paScoreMapYBreaks$y
-    i <- which.min(yInv > click$coord$y)
-    row <- paScoreMapYBreaks[i]
-    if(row$rowType == "header") return(NULL)
-    paExpandReactive(row)
     app$browser$expandingTrack(regionI, list(trackId = track$id, row = row) )
 }
 brush.paScoreMapTrack <- function(track, brush, regionI){
@@ -178,38 +173,40 @@ items.paScoreMapTrack <- showTrackSourcesDialog
 # one expansion image can be shown per region, with same width as the main plots
 # regionI must be passed to app$browser$expandingTrack
 expand.paScoreMapTrack <- function(track, reference, coord, layout, regionI){
-    row <- paExpandReactive()
-    d <- paScoreBuffers[[track$id]]
-    if(is.null(row)) return(NULL)
-    if(is.null(d)) return(NULL)
-    # req(row, d)
-
-    startSpinner(session, message = "loading expansion data")
-    scoreType <- getScoreType(row$scoreTypeName)
-    bd <- paBinData(d$sourceId)
-    x <- bd$bins$genome[d$binI][, start0 + (end1 - start0) / 2]
-    y <- switch(
-        row$rowType,
-        summary  = getStageTypeDeltaScores(d$sourceId, row$scoreTypeName)[[1]][[scoreType$summaryType]][d$binI],
-        score    = getSeriesAggScores(d$sourceId, row$scoreTypeName, bd$samples, d$config)[[row$seriesName]]$score[d$binI],
-        quantile = getSeriesAggScores(d$sourceId, row$scoreTypeName, bd$samples, d$config)[[row$seriesName]]$quantile[d$binI]
-    )
-
-    # use generic methods and any other custom code to determine the track's (dynamic) Y span
-    startSpinner(session, message = "rendering expansion plot")
+    config <- paScoreBuffers[[track$id]]$config
+    req(config)
+    startSpinner(session, message = "rendering color scales")
     padding <- padding(track, layout)
-    height <- 2 # or set a known, fixed height in inches
-    ylim <- range(y, na.rm = TRUE)
+
+    n_scales <- 4
+
+# z_score_color <- function(zScore, config, saturate = FALSE){
+# quantile_score_color <- function(quantile, config, saturate = FALSE){
+# txn_score_color <- function(log10cpm, config){
+# cuttag_score_color <- function(rpkm, config){
+
+# fraction_score_color <- function(fraction, config){
+
+    height <- 0.5 * n_scales # or set a known, fixed height in inches
+    # ylim <- range(y, na.rm = TRUE)
+    ylim <- c(0, 1) # placeholder
 
     # use the mdiTrackImage helper function to create the track image
     mai <- NULL
     image <- mdiTrackImage(layout, height, function(...){
         mai <<- setMdiTrackMai(layout, padding, mar = list(top = 0, bottom = 0))
         plot(0, 0, type = "n", bty = "n",
-            xlim = coord$range, xlab = "", xaxt = "n", # nearly always set `xlim`` to `coord$range`
-            ylim = ylim,  ylab = row$scoreTypeName, # yaxt = "n",
+            xlim = ylim, xlab = "", xaxt = "n", # nearly always set `xlim`` to `coord$range`
+            ylim = ylim,  ylab = "row$scoreTypeName", # yaxt = "n",
             xaxs = "i", yaxs = "i") # always set `xaxs` and `yaxs` to "i"
-        points(x, y, pch = 16, col = rgb(0, 0, 0, 0.5))
+
+
+        points(0.5, 0.5, pch = 16, col = rgb(0, 0, 0, 0.5))
+
+
+
+
+
     })
 
     stopSpinner(session)

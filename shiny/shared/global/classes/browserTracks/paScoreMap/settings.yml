@@ -18,9 +18,9 @@ settings:
             choices:
                 - none
                 - sample
-                - stage
+                - stage_genotype
                 - stage_type
-            value: stage
+            value: stage_genotype
         Row_Height_Pixels:
             type:   numericInput
             value:  13
@@ -54,6 +54,34 @@ settings:
         CutTag_As_HeatMap:
             type:   checkboxInput
             value:  true
+        Show_Stages:
+            type:   checkboxGroupInput
+            choices:
+                - mESC
+                - early_RS
+                - int_RS
+                - late_RS
+                - earliest_ES
+                - early_ES
+                - int_ES
+                - mixed_ES
+                - late_ES 
+            value:
+                - early_RS
+                - int_RS
+                - late_RS
+                - earliest_ES
+                - early_ES
+                - int_ES
+                - late_ES 
+        Show_Genotypes:
+            type:   checkboxGroupInput
+            choices:
+                - WT
+                - PRM1_Het
+                - PRM2_KO
+            value:
+                - WT
         # Spacer:
         #     type:   spacer 
         Show_Tracks:
@@ -69,6 +97,8 @@ settings:
                 - H4
                 - H4ac
                 - H3K27me3
+                - Bu
+                - KCr
             value:
                 - gc_z
                 - txn
